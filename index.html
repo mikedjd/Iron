@@ -3109,8 +3109,12 @@ function renderBuild() {
         </div>
         <div class="sync-setup">
           <p class="text-xs text-dim mb-8">Free cloud backup. Get an API key from <a href="https://jsonbin.io" target="_blank" style="color:var(--accent);">jsonbin.io</a> (Access Keys → Create).</p>
-          <input type="text" id="sync-api-key" placeholder="Paste your JSONBin API key" autocomplete="off">
-          <button class="btn btn-ghost mt-8" onclick="setupSync()" style="width:100%;">Connect Cloud Sync</button>
+          <input type="text" id="sync-api-key" placeholder="Paste your JSONBin Master Key" autocomplete="off">
+          <button class="btn btn-ghost mt-8" onclick="setupSync()" style="width:100%;">New Backup</button>
+          <div class="divider" style="margin:12px 0;"></div>
+          <p class="text-xs text-dim mb-8">Restore from an existing backup:</p>
+          <input type="text" id="sync-bin-id" placeholder="Paste your Bin ID" autocomplete="off">
+          <button class="btn btn-ghost mt-8" onclick="restoreFromCloud()" style="width:100%;">Restore from Cloud</button>
         </div>
       `}
     </div>
@@ -3504,6 +3508,40 @@ async function cloudPull() {
     renderBuild();
   } catch (e) {
     alert('Pull failed. Check your connection.');
+  }
+}
+
+async function restoreFromCloud() {
+  const keyInput = document.getElementById('sync-api-key');
+  const binInput = document.getElementById('sync-bin-id');
+  const apiKey = keyInput?.value.trim();
+  const binId = binInput?.value.trim();
+  if (!apiKey) { alert('Paste your Master Key in the first field.'); return; }
+  if (!binId) { alert('Paste your Bin ID.'); return; }
+
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
+      headers: { 'X-Master-Key': apiKey }
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert('Could not fetch: ' + (err.message || res.statusText));
+      return;
+    }
+    const result = await res.json();
+    const cloud = result.record;
+    if (!cloud.sessions && !cloud.programs) {
+      alert('Cloud data looks empty or invalid.');
+      return;
+    }
+    if (!confirm('Replace all local data with cloud backup?')) return;
+    Object.assign(data, cloud, { syncApiKey: apiKey, syncBinId: binId, lastSyncTime: Date.now() });
+    save();
+    load();
+    switchTab('build');
+    renderBuild();
+  } catch (e) {
+    alert('Restore failed. Check your key and Bin ID.');
   }
 }
 
