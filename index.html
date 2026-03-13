@@ -370,6 +370,98 @@
       padding: 14px 24px;
       font-style: normal;
     }
+    .prep-target {
+      font-family: 'Teko', sans-serif;
+      font-weight: 500;
+      font-size: 22px;
+      color: var(--text-2);
+      text-align: center;
+      margin-top: 20px;
+      letter-spacing: 0.02em;
+    }
+
+    /* Note toggle on tracking screen */
+    .note-toggle {
+      font-size: 12px;
+      color: var(--text-3);
+      cursor: pointer;
+      margin-bottom: 12px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .note-toggle:active { color: var(--text-2); }
+    .note-chevron { font-size: 10px; margin-left: 4px; }
+
+    /* Rest timer note + feedback */
+    .timer-note {
+      font-size: 14px;
+      line-height: 1.4;
+      color: var(--text-2);
+      text-align: center;
+      padding: 12px 20px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      margin: 16px auto 0;
+      max-width: 280px;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 500;
+    }
+    .timer-feedback {
+      margin: 16px auto 0;
+      max-width: 280px;
+    }
+    .timer-feedback input {
+      width: 100%;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      outline: none;
+      text-align: center;
+    }
+    .timer-feedback input::placeholder { color: var(--text-3); }
+    .timer-feedback input:focus { border-color: var(--accent); }
+    .timer-feedback-label {
+      font-size: 11px;
+      color: var(--text-3);
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    /* Weight increase warning */
+    .weight-warning {
+      position: fixed;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 340px;
+      width: calc(100% - 40px);
+      padding: 16px 20px;
+      background: var(--surface-2);
+      border: 1px solid rgba(255, 149, 0, 0.4);
+      border-radius: 14px;
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.5;
+      text-align: center;
+      z-index: 1000;
+      animation: slideDown 0.3s ease-out;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    .weight-warning-title {
+      font-family: 'Teko', sans-serif;
+      font-weight: 600;
+      font-size: 20px;
+      color: var(--warning);
+      margin-bottom: 6px;
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
     .set-indicator {
       font-family: 'Teko', sans-serif;
       font-weight: 500;
@@ -1636,6 +1728,7 @@ let historyPeriod = 'all'; // '1w', '1m', '3m', 'all'
 let dietTrendPeriod = 7; // days: 7, 14, 30, 0 for all, or 'custom'
 let dietCustomFrom = '';
 let dietCustomTo = '';
+let workoutNotesExpanded = false;
 
 function getPrograms() {
   const base = data.programs || { ...PROGRAMS };
@@ -2121,7 +2214,9 @@ function startWorkout() {
         restPause: !!ex.restPause,
         notes: ex.notes || '',
         isBodyweight: !!ex.isBodyweight,
-        progressionBadge
+        progressionBadge,
+        startWeight: w,
+        weightWarningShown: false
       };
     }),
     currentExerciseIndex: 0,
@@ -2228,12 +2323,22 @@ function renderExercise() {
       ? `<div class="prep-note">${ex.notes}</div>`
       : `<div class="prep-note empty" onclick="showWorkoutNoteInput()">+ add note</div>`;
 
+    // Static target display (no +/− buttons)
+    let prepWeightHtml = '';
+    if (!ex.isBodyweight && ex.currentWeight) {
+      const progBadge = ex.progressionBadge
+        ? `<div class="progression-badge" style="justify-content:center;margin-top:6px;">▲ ${ex.progressionBadge} <span style="opacity:0.5;">was ${displayWeight(ex.previousWeight)}</span></div>` : '';
+      prepWeightHtml = `<div class="prep-target">${displayWeight(ex.currentWeight)} ${weightLabel()} × ${ex.targetReps} reps${progBadge}</div>`;
+    } else if (ex.isBodyweight) {
+      prepWeightHtml = `<div class="prep-target">${ex.targetSets} × ${ex.targetReps} reps</div>`;
+    }
+
     bodyEl.innerHTML = `
       ${typeBadge}
       <div class="exercise-label">Exercise ${workout.currentExerciseIndex + 1} of ${totalExercises}</div>
       <div class="exercise-name">${ex.name}</div>
-      ${weightHtml}
       ${prepNoteDisplay}
+      ${prepWeightHtml}
       <button class="done-btn" onclick="exerciseReady()" style="margin-top:32px;">Let's Go</button>
       <button class="skip-btn mt-8" onclick="workout.exerciseReady=true;skipExercise()" style="margin-top:12px;">Skip Exercise</button>
     `;
@@ -2242,10 +2347,17 @@ function renderExercise() {
   }
 
   // ── TRACKING SCREEN: log sets ──
-  // Notes (editable)
-  const notesHtml = ex.notes
-    ? `<textarea class="exercise-note-edit" rows="2" onblur="updateWorkoutNote(this.value)" onfocus="this.style.borderColor='var(--accent)'">${ex.notes}</textarea>`
-    : `<div class="exercise-note-add" onclick="showWorkoutNoteInput()">+ add note</div>`;
+  // Notes (collapsible toggle)
+  let notesHtml = '';
+  if (ex.notes || workoutNotesExpanded) {
+    const toggleLabel = ex.notes ? 'Notes' : 'Add note';
+    notesHtml = `<div class="note-toggle" onclick="toggleWorkoutNotes()">\u{1F4DD} ${toggleLabel} <span class="note-chevron">${workoutNotesExpanded ? '\u25BE' : '\u25B8'}</span></div>`;
+    if (workoutNotesExpanded) {
+      notesHtml += `<textarea class="exercise-note-edit" rows="2" onblur="updateWorkoutNote(this.value)" onfocus="this.style.borderColor='var(--accent)'">${ex.notes || ''}</textarea>`;
+    }
+  } else {
+    notesHtml = `<div class="note-toggle" onclick="toggleWorkoutNotes()">\u{1F4DD} Add note <span class="note-chevron">\u25B8</span></div>`;
+  }
 
   bodyEl.innerHTML = `
     ${typeBadge}
@@ -2298,6 +2410,29 @@ function adjustWeight(delta) {
   saveWorkoutState();
   const el = document.querySelector('.weight-display');
   if (el) el.textContent = displayWeight(ex.currentWeight);
+
+  // Warning if weight increased >10% above session start
+  if (ex.startWeight && ex.startWeight > 0 && !ex.weightWarningShown) {
+    const increase = (ex.currentWeight - ex.startWeight) / ex.startWeight;
+    if (increase > 0.10) {
+      ex.weightWarningShown = true;
+      showWeightWarning();
+    }
+  }
+}
+
+function showWeightWarning() {
+  const existing = document.querySelector('.weight-warning');
+  if (existing) existing.remove();
+  const el = document.createElement('div');
+  el.className = 'weight-warning';
+  el.innerHTML = `
+    <div class="weight-warning-title">Slow Down!</div>
+    Tendons adapt slower than muscles and injury kills gains. Slow and steady wins this race.
+  `;
+  document.body.appendChild(el);
+  setTimeout(() => { if (el.parentNode) el.remove(); }, 4000);
+  el.onclick = () => el.remove();
 }
 
 function updateWorkoutNote(val) {
@@ -2312,6 +2447,17 @@ function updateWorkoutNote(val) {
     if (match) { match.notes = ex.notes; save(); }
   }
   saveWorkoutState();
+}
+
+function toggleWorkoutNotes() {
+  workoutNotesExpanded = !workoutNotesExpanded;
+  renderExercise();
+  if (workoutNotesExpanded) {
+    setTimeout(() => {
+      const ta = document.querySelector('.exercise-note-edit');
+      if (ta) ta.focus();
+    }, 50);
+  }
 }
 
 function showWorkoutNoteInput() {
@@ -2558,6 +2704,18 @@ function startRestTimer(onComplete, duration) {
     }
   }
 
+  // Add note reminder + feedback input below context
+  if (workout) {
+    const ex = workout.exercises[workout.currentExerciseIndex];
+    const noteHtml = ex.notes ? `<div class="timer-note">${ex.notes}</div>` : '';
+    const feedbackHtml = `
+      <div class="timer-feedback">
+        <div class="timer-feedback-label">How was that?</div>
+        <input type="text" id="set-feedback" placeholder="e.g., felt heavy, good form" autocomplete="off">
+      </div>`;
+    contextEl.innerHTML += noteHtml + feedbackHtml;
+  }
+
   timerScreen.classList.add('active');
   arc.style.strokeDashoffset = '0';
   secondsEl.textContent = restDuration;
@@ -2573,10 +2731,21 @@ function startRestTimer(onComplete, duration) {
     if (remaining <= 0) {
       clearInterval(timerInterval);
       timerInterval = null;
+      saveSetFeedback();
       timerScreen.classList.remove('active');
       if (window._timerCallback) window._timerCallback();
     }
   }, 100);
+}
+
+function saveSetFeedback() {
+  const input = document.getElementById('set-feedback');
+  if (!input || !input.value.trim() || !workout) return;
+  const ex = workout.exercises[workout.currentExerciseIndex];
+  if (ex.completedSets.length > 0) {
+    ex.completedSets[ex.completedSets.length - 1].feedback = input.value.trim();
+    saveWorkoutState();
+  }
 }
 
 function skipRest() {
@@ -2584,6 +2753,7 @@ function skipRest() {
     clearInterval(timerInterval);
     timerInterval = null;
   }
+  saveSetFeedback();
   document.getElementById('timer-screen').classList.remove('active');
   if (window._timerCallback) window._timerCallback();
 }
