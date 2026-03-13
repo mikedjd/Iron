@@ -2118,9 +2118,9 @@ function renderExercise() {
     ? `<textarea class="exercise-note-edit" rows="1" onblur="updateWorkoutNote(this.value)" onfocus="this.style.borderColor='var(--accent)'">${ex.notes}</textarea>`
     : `<div class="exercise-note-add" onclick="showWorkoutNoteInput()">+ add note</div>`;
 
-  // Weight display
+  // Weight display (always show for non-bodyweight exercises)
   let weightHtml = '';
-  if (ex.currentWeight && !ex.isBodyweight) {
+  if (!ex.isBodyweight) {
     const progBadge = ex.progressionBadge && currentSet === 1 && ex.completedSets.length === 0
       ? `<div class="progression-badge">▲ ${ex.progressionBadge}</div>` : '';
     weightHtml = `
