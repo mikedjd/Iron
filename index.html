@@ -1241,8 +1241,16 @@
     }
     .split-chip.current { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
     .split-add { border-style: dashed; color: var(--text-3); }
-    .data-actions { display: flex; gap: 10px; }
+    .data-actions { display: flex; gap: 10px; flex-wrap: wrap; }
     .data-actions .btn { font-size: 13px; padding: 10px 12px; }
+    .sync-status { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: var(--text-3); }
+    .sync-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .sync-dot.connected { background: var(--accent); }
+    .sync-dot.disconnected { background: var(--danger); }
+    .sync-setup { margin-top: 12px; }
+    .sync-setup input { width: 100%; padding: 8px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; font-family: 'Outfit', sans-serif; outline: none; }
+    .sync-setup input:focus { border-color: var(--accent); }
+    .sync-setup input::placeholder { color: var(--text-3); }
 
     /* ═══════════════════════════════════════════════
        DELOAD
@@ -3076,11 +3084,35 @@ function renderBuild() {
     <div class="card fade-in" style="margin-top:16px;">
       <span class="label">Data</span>
       <div class="data-actions mt-12">
-        <button class="btn btn-ghost" onclick="exportData()" style="flex:1;">Export Backup</button>
-        <button class="btn btn-ghost" onclick="document.getElementById('import-file').click()" style="flex:1;">Import Backup</button>
+        <button class="btn btn-ghost" onclick="exportData()" style="flex:1;">Export</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('import-file').click()" style="flex:1;">Import</button>
+        <button class="btn btn-ghost" onclick="shareData()" style="flex:1;">${navigator.share ? 'Share' : 'Copy'}</button>
         <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
       </div>
-      <p class="text-xs text-dim mt-8">Export saves all your programs, history, diet and settings as a JSON file. Import restores from a backup.</p>
+      <div class="divider"></div>
+      <span class="label">Cloud Sync</span>
+      ${data.syncBinId ? `
+        <div class="sync-status">
+          <span class="sync-dot connected"></span>
+          <span>Auto-syncing to JSONBin</span>
+          <span style="margin-left:auto;opacity:0.5;">${data.lastSyncTime ? new Date(data.lastSyncTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : ''}</span>
+        </div>
+        <div class="data-actions mt-8">
+          <button class="btn btn-ghost" onclick="cloudPull()" style="flex:1;font-size:12px;">Pull from Cloud</button>
+          <button class="btn btn-ghost" onclick="cloudPush()" style="flex:1;font-size:12px;">Push to Cloud</button>
+        </div>
+        <p class="text-xs text-dim mt-8">Bin ID: ${data.syncBinId.slice(0,8)}… · <a href="#" onclick="disconnectSync();return false;" style="color:var(--danger);">Disconnect</a></p>
+      ` : `
+        <div class="sync-status">
+          <span class="sync-dot disconnected"></span>
+          <span>Not connected</span>
+        </div>
+        <div class="sync-setup">
+          <p class="text-xs text-dim mb-8">Free cloud backup. Get an API key from <a href="https://jsonbin.io" target="_blank" style="color:var(--accent);">jsonbin.io</a> (Access Keys → Create).</p>
+          <input type="text" id="sync-api-key" placeholder="Paste your JSONBin API key" autocomplete="off">
+          <button class="btn btn-ghost mt-8" onclick="setupSync()" style="width:100%;">Connect Cloud Sync</button>
+        </div>
+      `}
     </div>
   `;
 }
@@ -3367,6 +3399,133 @@ function importData(event) {
   reader.readAsText(file);
   event.target.value = '';
 }
+
+function shareData() {
+  const json = JSON.stringify(data, null, 2);
+  const date = new Date().toISOString().slice(0, 10);
+  if (navigator.share) {
+    const file = new File([json], `iron-backup-${date}.json`, { type: 'application/json' });
+    navigator.share({ title: 'IRON Backup', files: [file] }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(json).then(() => {
+      alert('Backup copied to clipboard. Paste it somewhere safe.');
+    }).catch(() => {
+      // Fallback: select from a textarea
+      const ta = document.createElement('textarea');
+      ta.value = json;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      alert('Backup copied to clipboard.');
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   CLOUD SYNC (JSONBin.io)
+   ═══════════════════════════════════════════════ */
+let syncInFlight = false;
+
+function getSyncData() {
+  // Strip sync metadata from the payload to avoid recursion
+  const { syncApiKey, syncBinId, lastSyncTime, ...rest } = data;
+  return rest;
+}
+
+async function setupSync() {
+  const keyInput = document.getElementById('sync-api-key');
+  const apiKey = keyInput?.value.trim();
+  if (!apiKey) { alert('Please paste your JSONBin API key.'); return; }
+
+  try {
+    const res = await fetch('https://api.jsonbin.io/v3/b', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': apiKey,
+        'X-Bin-Name': 'IRON Backup',
+        'X-Bin-Private': 'true'
+      },
+      body: JSON.stringify(getSyncData())
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert('Could not connect: ' + (err.message || res.statusText));
+      return;
+    }
+    const result = await res.json();
+    data.syncApiKey = apiKey;
+    data.syncBinId = result.metadata.id;
+    data.lastSyncTime = Date.now();
+    save();
+    renderBuild();
+  } catch (e) {
+    alert('Connection failed. Check your API key and try again.');
+  }
+}
+
+async function cloudPush() {
+  if (!data.syncApiKey || !data.syncBinId || syncInFlight) return;
+  syncInFlight = true;
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${data.syncBinId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': data.syncApiKey
+      },
+      body: JSON.stringify(getSyncData())
+    });
+    if (res.ok) {
+      data.lastSyncTime = Date.now();
+      save();
+    }
+  } catch (e) { /* silent fail */ }
+  syncInFlight = false;
+}
+
+async function cloudPull() {
+  if (!data.syncApiKey || !data.syncBinId) return;
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${data.syncBinId}/latest`, {
+      headers: { 'X-Master-Key': data.syncApiKey }
+    });
+    if (!res.ok) { alert('Could not fetch from cloud.'); return; }
+    const result = await res.json();
+    const cloud = result.record;
+    if (!cloud.sessions && !cloud.programs) { alert('Cloud data looks empty.'); return; }
+    if (!confirm('Replace local data with cloud backup?')) return;
+    const { syncApiKey, syncBinId } = data; // preserve sync credentials
+    Object.assign(data, cloud, { syncApiKey, syncBinId, lastSyncTime: Date.now() });
+    save();
+    load();
+    switchTab('build');
+    renderBuild();
+  } catch (e) {
+    alert('Pull failed. Check your connection.');
+  }
+}
+
+function disconnectSync() {
+  if (!confirm('Disconnect cloud sync? Your cloud backup will remain on JSONBin but won\'t auto-update.')) return;
+  delete data.syncApiKey;
+  delete data.syncBinId;
+  delete data.lastSyncTime;
+  save();
+  renderBuild();
+}
+
+// Auto-sync: debounced push after every save
+let syncTimer = null;
+const _origSave = save;
+save = function() {
+  _origSave();
+  if (data.syncApiKey && data.syncBinId) {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(cloudPush, 5000); // 5s debounce
+  }
+};
 
 /* ═══════════════════════════════════════════════════════════
    INIT
