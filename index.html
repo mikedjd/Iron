@@ -2782,10 +2782,9 @@ function adjustWeight(delta) {
   if (el) el.textContent = displayWeight(ex.currentWeight);
 
   // Warning if weight increased >10% above session start
-  if (ex.startWeight && ex.startWeight > 0 && !ex.weightWarningShown) {
+  if (ex.startWeight && ex.startWeight > 0) {
     const increase = (ex.currentWeight - ex.startWeight) / ex.startWeight;
     if (increase > 0.10) {
-      ex.weightWarningShown = true;
       showWeightWarning();
     }
   }
@@ -2801,7 +2800,6 @@ function showWeightWarning() {
     Tendons adapt slower than muscles and injury kills gains. Slow and steady wins this race.
   `;
   document.body.appendChild(el);
-  setTimeout(() => { if (el.parentNode) el.remove(); }, 4000);
   el.onclick = () => el.remove();
 }
 
