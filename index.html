@@ -253,16 +253,13 @@
     .rest-badge.rest { background: rgba(255, 149, 0, 0.12); color: var(--warning); }
     .rest-badge.ready { background: var(--accent-dim); color: var(--accent); }
     .next-session-type {
-      margin-top: 24px;
-      padding: 16px 0;
+      margin-top: 0;
+      padding: 16px 0 8px;
       text-align: center;
     }
     .session-preview {
-      margin-top: 16px;
-      background: var(--surface);
-      border: none;
-      border-radius: 18px;
-      padding: 16px;
+      margin-top: 0;
+      padding: 4px 0 0;
     }
     .session-preview-row {
       display: flex;
@@ -2448,11 +2445,13 @@ function renderTrainHome() {
           <p class="text-sm text-dim mt-8">${getTypeLabel(last.type)} session complete. Let your muscles recover.</p>
         </div>
       </div>
-      <div class="next-session-type fade-in stagger-1">
-        <span class="label">Next session</span>
-        <div class="display display-sm mt-8">${nextDayInfo}</div>
+      <div class="card fade-in stagger-1">
+        <div class="next-session-type">
+          <span class="label">Next session</span>
+          <div class="display display-sm mt-8">${nextDayInfo}</div>
+        </div>
+        ${previewHtml}
       </div>
-      ${previewHtml}
       <button class="btn btn-ghost mt-16 fade-in stagger-2" onclick="showPreview()">Ready to train anyway</button>`;
   } else if (state === 'rest-recovery') {
     content = `
@@ -2464,11 +2463,13 @@ function renderTrainHome() {
           <p class="text-sm text-dim mt-8">Yesterday's session is doing its work. Rest up.</p>
         </div>
       </div>
-      <div class="next-session-type fade-in stagger-1">
-        <span class="label">Next session</span>
-        <div class="display display-sm mt-8">${nextDayInfo}</div>
+      <div class="card fade-in stagger-1">
+        <div class="next-session-type">
+          <span class="label">Next session</span>
+          <div class="display display-sm mt-8">${nextDayInfo}</div>
+        </div>
+        ${previewHtml}
       </div>
-      ${previewHtml}
       <button class="btn btn-secondary mt-20 fade-in stagger-2" onclick="showPreview()">Ready to Train</button>`;
   } else if (state === 'rest-scheduled') {
     content = `
@@ -2480,11 +2481,13 @@ function renderTrainHome() {
           <p class="text-sm text-dim mt-8">No training scheduled today.</p>
         </div>
       </div>
-      <div class="next-session-type fade-in stagger-1">
-        <span class="label">Next session</span>
-        <div class="display display-sm mt-8">${nextDayInfo}</div>
+      <div class="card fade-in stagger-1">
+        <div class="next-session-type">
+          <span class="label">Next session</span>
+          <div class="display display-sm mt-8">${nextDayInfo}</div>
+        </div>
+        ${previewHtml}
       </div>
-      ${previewHtml}
       <button class="btn btn-ghost mt-16 fade-in stagger-2" onclick="showPreview()">Ready to train anyway</button>`;
   } else {
     content = `
