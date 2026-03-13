@@ -1006,6 +1006,16 @@
       color: var(--text-3);
       margin-top: 2px;
     }
+    .activity-cal-warning {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: rgba(255, 152, 0, 0.08);
+      border: 1px solid rgba(255, 152, 0, 0.2);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--warning);
+      line-height: 1.4;
+    }
 
     .calorie-override {
       display: flex;
@@ -1079,17 +1089,14 @@
       border-radius: 3px;
       overflow: hidden;
     }
-    .food-total-bar .bar-track {
-      background: var(--border-light);
-    }
-    .food-total-bar .bar-fill {
+    .bar-fill {
       height: 100%;
       border-radius: 3px;
       background: var(--accent);
       transition: width 0.3s ease;
     }
-    .food-total-bar .bar-fill.over { background: var(--warning); }
-    .food-total-bar .bar-fill.way-over { background: var(--danger); }
+    .bar-fill.over { background: var(--warning); }
+    .bar-fill.way-over { background: var(--danger); }
     .food-total-bar .bar-label {
       font-size: 10px;
       font-weight: 600;
@@ -1354,6 +1361,7 @@
     }
     .cardio-entry .entry-duration { font-weight: 600; }
     .cardio-entry .entry-distance { color: var(--text-2); font-size: 13px; }
+    .cardio-entry .entry-kcal { color: var(--accent); font-size: 12px; font-weight: 600; }
     .cardio-entry .entry-date { color: var(--text-3); font-size: 12px; }
     .cardio-entry .entry-delete {
       width: 28px;
@@ -2076,7 +2084,8 @@ let data = {
   cardioLog: [],
   cardioWeeklyCap: 150,
   distanceUnit: 'km',
-  cardioIntensity: { run: 'moderate', cycle: 'moderate', swim: 'moderate', hiit: 'vigorous', class: 'vigorous' }
+  cardioIntensity: { run: 'moderate', cycle: 'moderate', swim: 'moderate', hiit: 'vigorous', class: 'vigorous' },
+  addActivityCalories: false
 };
 
 let workout = null;   // active workout state
@@ -2143,6 +2152,7 @@ function load() {
   if (!data.cardioWeeklyCap) data.cardioWeeklyCap = 150;
   if (!data.distanceUnit) data.distanceUnit = 'km';
   if (!data.cardioIntensity) data.cardioIntensity = { run: 'moderate', cycle: 'moderate', swim: 'moderate', hiit: 'vigorous', class: 'vigorous' };
+  if (data.addActivityCalories === undefined) data.addActivityCalories = false;
   // Keep nextType in sync
   data.nextType = data.schedule.pattern[data.schedule.patternIndex % data.schedule.pattern.length];
 
@@ -3308,15 +3318,19 @@ function renderDiet() {
       </div>`;
   }
 
-  const calRemaining = Math.max(0, data.targetCalories - todayTotals.calories);
+  const activityCals = data.addActivityCalories ? getTodayCardioCalories() : 0;
+  const effectiveCalTarget = data.targetCalories + activityCals;
+  const calRemaining = Math.max(0, effectiveCalTarget - todayTotals.calories);
   const proRemaining = Math.max(0, proteinGrams - todayTotals.protein);
+  const effCalPct = effectiveCalTarget > 0 ? (todayTotals.calories / effectiveCalTarget) * 100 : 0;
+  const effCalBarClass = effCalPct > 120 ? 'way-over' : effCalPct > 100 ? 'over' : '';
 
   el.innerHTML = `
     <div class="card fade-in" style="padding-bottom:16px;">
       <div class="target-display" style="margin-bottom:16px;">
         <div class="target-box cal">
-          <div class="value">${data.targetCalories.toLocaleString()}</div>
-          <div class="unit">Cal Goal</div>
+          <div class="value">${effectiveCalTarget.toLocaleString()}</div>
+          <div class="unit">Cal Goal${activityCals > 0 ? ` <span style="font-size:10px;color:var(--accent);">(+${activityCals})</span>` : ''}</div>
         </div>
         <div class="target-box">
           <div class="value">${proteinGrams}g</div>
@@ -3328,7 +3342,7 @@ function renderDiet() {
           <span style="font-size:13px;font-weight:600;">${todayTotals.calories.toLocaleString()} <span style="color:var(--text-3);font-weight:400;">eaten</span></span>
           <span style="font-size:13px;color:${calRemaining === 0 ? 'var(--good)' : 'var(--text-2)'};">${calRemaining.toLocaleString()} under</span>
         </div>
-        <div class="bar-track" style="height:10px;border-radius:5px;"><div class="bar-fill ${calBarClass}" style="width:${Math.min(calPct, 100)}%;border-radius:5px;"></div></div>
+        <div class="bar-track" style="height:10px;border-radius:5px;"><div class="bar-fill ${effCalBarClass}" style="width:${Math.min(effCalPct, 100)}%;border-radius:5px;"></div></div>
       </div>
       <div>
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
@@ -3378,6 +3392,13 @@ function renderDiet() {
           <button onclick="setManualCalories()">Set</button>
         </div>
       ` : ''}
+      <div class="divider"></div>
+      <div class="toggle-row">
+        <span class="toggle-label">Add activity calories</span>
+        <button class="toggle ${data.addActivityCalories ? 'on' : ''}" onclick="toggleActivityCalories()"></button>
+      </div>
+      <p class="text-xs text-dim">Adds estimated cardio burn to your daily calorie goal.</p>
+      ${data.addActivityCalories ? `<div class="activity-cal-warning">Exercise calorie estimates are notoriously inaccurate. Your weight trend already accounts for activity — this risks double-counting. Use with caution.</div>` : ''}
     </div>
 
     ${recHtml}
@@ -4484,6 +4505,21 @@ const CARDIO_TYPES = [
   { key: 'class', label: 'Class', icon: '🏋️' }
 ];
 
+// MET values per activity type and intensity (source: Compendium of Physical Activities)
+const CARDIO_METS = {
+  run:   { moderate: 8.0, vigorous: 11.5 },
+  cycle: { moderate: 6.8, vigorous: 10.0 },
+  swim:  { moderate: 5.8, vigorous: 9.8 },
+  hiit:  { moderate: 6.0, vigorous: 10.0 },
+  class: { moderate: 5.5, vigorous: 8.0 }
+};
+
+function estimateCaloriesBurned(type, intensity, durationMin) {
+  const met = (CARDIO_METS[type] || CARDIO_METS.run)[intensity] || 6.0;
+  const bw = getCurrentBodyweight() || 75; // fallback 75kg
+  return Math.round(met * bw * (durationMin / 60));
+}
+
 function getWeekBounds(weeksAgo = 0) {
   const now = new Date();
   const day = now.getDay(); // 0=Sun
@@ -4544,6 +4580,19 @@ function getCardioProgression() {
   }
 }
 
+function getTodayCardioCalories() {
+  const t = today();
+  return data.cardioLog
+    .filter(c => c.date === t)
+    .reduce((sum, c) => sum + (c.caloriesBurned || estimateCaloriesBurned(c.type, c.intensity || 'moderate', c.duration)), 0);
+}
+
+function toggleActivityCalories() {
+  data.addActivityCalories = !data.addActivityCalories;
+  save();
+  renderDiet();
+}
+
 function setCardioType(type) {
   selectedCardioType = type;
   renderCardio(true);
@@ -4563,7 +4612,8 @@ function logCardio() {
     date: today(),
     type: selectedCardioType,
     duration: dur,
-    intensity: intensity
+    intensity: intensity,
+    caloriesBurned: estimateCaloriesBurned(selectedCardioType, intensity, dur)
   };
   if (dist && dist > 0) entry.distance = dist;
 
@@ -4608,6 +4658,7 @@ function renderCardio(quick) {
 
   const currentIntensity = data.cardioIntensity[selectedCardioType] || 'moderate';
   const distLabel = data.distanceUnit === 'mi' ? 'miles' : 'km';
+  const weekKcal = thisWeek.reduce((s, e) => s + (e.caloriesBurned || estimateCaloriesBurned(e.type, e.intensity || 'moderate', e.duration)), 0);
 
   // Weekly volume bar
   const volumeHtml = `
@@ -4617,7 +4668,7 @@ function renderCardio(quick) {
         <span class="volume-target">/ ${cap} adj min</span>
       </div>
       <div class="volume-track"><div class="volume-fill ${barClass}" style="width:${Math.min(pct, 100)}%"></div></div>
-      <div class="volume-label">This week · ${thisWeek.length} session${thisWeek.length !== 1 ? 's' : ''} · ${rawMin} min actual</div>
+      <div class="volume-label">This week · ${thisWeek.length} session${thisWeek.length !== 1 ? 's' : ''} · ${rawMin} min actual · ~${weekKcal} kcal</div>
       ${pct > 100 ? `<div class="volume-warning">Recovery at risk — volume is high for ${(DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk']).label.toLowerCase()}</div>` : ''}
     </div>`;
 
@@ -4674,12 +4725,14 @@ function renderCardio(quick) {
             const typeInfo = CARDIO_TYPES.find(t => t.key === e.type) || { label: e.type };
             const intensity = e.intensity || data.cardioIntensity[e.type] || 'moderate';
             const distStr = e.distance ? ` · ${e.distance} ${data.distanceUnit}` : '';
+            const kcal = e.caloriesBurned || estimateCaloriesBurned(e.type, intensity, e.duration);
             return `
               <div class="cardio-entry">
                 <span class="entry-type">${typeInfo.label}</span>
                 <span class="entry-detail">
                   <span class="entry-duration">${e.duration} min</span>
                   <span class="entry-distance">${distStr}</span>
+                  <span class="entry-kcal">${kcal} kcal</span>
                   <span class="intensity-badge ${intensity}">${intensity === 'vigorous' ? 'V' : 'M'}</span>
                 </span>
                 <span class="entry-date">${formatDate(e.date)}</span>
@@ -4729,16 +4782,20 @@ function renderCardio(quick) {
           paceStr = ` · ${pace.toFixed(1)} min/${data.distanceUnit}`;
         }
 
+        const totalKcal = entries.reduce((s, e) => s + (e.caloriesBurned || estimateCaloriesBurned(e.type, e.intensity || 'moderate', e.duration)), 0);
+
         const entryRows = entries.map(e => {
           const typeInfo = CARDIO_TYPES.find(t => t.key === e.type) || { label: e.type };
           const intensity = e.intensity || data.cardioIntensity[e.type] || 'moderate';
           const distStr = e.distance ? ` · ${e.distance} ${data.distanceUnit}` : '';
+          const kcal = e.caloriesBurned || estimateCaloriesBurned(e.type, intensity, e.duration);
           return `
             <div class="cardio-entry">
               <span class="entry-type">${typeInfo.label}</span>
               <span class="entry-detail">
                 <span class="entry-duration">${e.duration} min</span>
                 <span class="entry-distance">${distStr}</span>
+                <span class="entry-kcal">${kcal} kcal</span>
                 <span class="intensity-badge ${intensity}">${intensity === 'vigorous' ? 'V' : 'M'}</span>
               </span>
               <span class="entry-date">${formatDate(e.date)}</span>
@@ -4750,7 +4807,7 @@ function renderCardio(quick) {
           <div style="border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px;">
             <div class="week-summary-header">
               <span class="week-label">Week of ${formatDate(wk)}</span>
-              <span class="week-stats">${sessions} sessions · ${totalMin} min (${adjMin} adj)${paceStr}</span>
+              <span class="week-stats">${sessions} sessions · ${totalMin} min (${adjMin} adj) · ${totalKcal} kcal${paceStr}</span>
             </div>
             ${entryRows}
           </div>`;
