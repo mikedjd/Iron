@@ -2327,7 +2327,7 @@ function renderExercise() {
     let prepWeightHtml = '';
     if (!ex.isBodyweight && ex.currentWeight) {
       const progBadge = ex.progressionBadge
-        ? `<div class="progression-badge" style="justify-content:center;margin-top:6px;">▲ ${ex.progressionBadge} <span style="opacity:0.5;">was ${displayWeight(ex.previousWeight)}</span></div>` : '';
+        ? `<div class="progression-badge" style="justify-content:center;margin-top:6px;">▲ ${ex.progressionBadge}</div>` : '';
       prepWeightHtml = `<div class="prep-target">${displayWeight(ex.currentWeight)} ${weightLabel()} + ${ex.targetReps} reps${progBadge}</div>`;
     } else if (ex.isBodyweight) {
       prepWeightHtml = `<div class="prep-target">${ex.targetSets} × ${ex.targetReps} reps</div>`;
