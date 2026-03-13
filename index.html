@@ -1176,6 +1176,211 @@
     }
 
     /* ═══════════════════════════════════════════════
+       CARDIO TAB
+       ═══════════════════════════════════════════════ */
+    .cardio-types { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .cardio-type-btn {
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-2);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.15s;
+    }
+    .cardio-type-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-dim);
+      font-weight: 600;
+    }
+    .cardio-log-row {
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
+      margin-top: 12px;
+    }
+    .cardio-log-row input {
+      flex: 1;
+      min-width: 0;
+      padding: 14px 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-variant-numeric: tabular-nums;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .cardio-log-row input:focus { border-color: var(--accent); }
+    .cardio-log-row input::placeholder { color: var(--text-3); }
+    .cardio-log-row button {
+      padding: 14px 20px;
+      border: none;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #0a0a0a;
+      font-family: 'Teko', sans-serif;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .cardio-log-row button:active { background: #a8e000; }
+    .volume-bar-container {
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      margin-bottom: 12px;
+    }
+    .volume-header {
+      display: flex;
+      justify-content: center;
+      align-items: baseline;
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+    .volume-value {
+      font-family: 'Teko', sans-serif;
+      font-weight: 600;
+      font-size: 28px;
+      line-height: 1;
+    }
+    .volume-target {
+      font-size: 13px;
+      color: var(--text-3);
+    }
+    .volume-track {
+      height: 8px;
+      background: var(--surface-3);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .volume-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
+    .volume-fill.over { background: var(--warning); }
+    .volume-fill.way-over { background: var(--danger); }
+    .volume-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-2);
+      margin-top: 8px;
+      text-align: center;
+    }
+    .volume-warning {
+      margin-top: 8px;
+      padding: 10px 14px;
+      background: rgba(255, 149, 0, 0.1);
+      border: 1px solid rgba(255, 149, 0, 0.3);
+      border-radius: 10px;
+      font-size: 12px;
+      color: var(--warning);
+      text-align: center;
+    }
+    .intensity-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--text-2);
+    }
+    .intensity-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .intensity-badge.moderate { background: rgba(191, 255, 0, 0.12); color: var(--accent); }
+    .intensity-badge.vigorous { background: rgba(255, 149, 0, 0.12); color: var(--warning); }
+    .progression-card {
+      padding: 14px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .progression-card.suggest {
+      background: rgba(48, 209, 88, 0.08);
+      border: 1px solid rgba(48, 209, 88, 0.25);
+      color: var(--good);
+    }
+    .progression-card.hold {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+    }
+    .cardio-entry {
+      display: flex;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+      gap: 10px;
+    }
+    .cardio-entry:last-child { border-bottom: none; }
+    .cardio-entry .entry-type {
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      width: 48px;
+      flex-shrink: 0;
+    }
+    .cardio-entry .entry-detail {
+      flex: 1;
+      display: flex;
+      gap: 10px;
+      font-variant-numeric: tabular-nums;
+      align-items: center;
+    }
+    .cardio-entry .entry-duration { font-weight: 600; }
+    .cardio-entry .entry-distance { color: var(--text-2); font-size: 13px; }
+    .cardio-entry .entry-date { color: var(--text-3); font-size: 12px; }
+    .cardio-entry .entry-delete {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-3);
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.15s;
+    }
+    .cardio-entry .entry-delete:active { border-color: var(--danger); color: var(--danger); }
+    .week-summary-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .week-summary-header .week-label { font-weight: 600; font-size: 13px; }
+    .week-summary-header .week-stats { font-size: 12px; color: var(--text-2); }
+
+    /* ═══════════════════════════════════════════════
        HISTORY TAB
        ═══════════════════════════════════════════════ */
     .progress-row {
@@ -1696,6 +1901,15 @@
       <div id="build-content"></div>
     </section>
 
+    <!-- ═══════════ CARDIO TAB ═══════════ -->
+    <section id="tab-cardio" class="tab">
+      <div class="tab-header">
+        <div class="brand">IRON</div>
+        <span class="label">Cardio</span>
+      </div>
+      <div id="cardio-content"></div>
+    </section>
+
     <!-- ═══════════ BOTTOM NAV ═══════════ -->
     <nav id="nav">
       <button class="nav-btn active" data-tab="train" onclick="switchTab('train')">
@@ -1726,6 +1940,16 @@
           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
         </svg>
         <span>Build</span>
+      </button>
+      <button class="nav-btn" data-tab="cardio" onclick="switchTab('cardio')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="7" cy="6" r="2.5"/>
+          <path d="M5 21l2-7 3 3 4-5 3 7"/>
+          <path d="M10 12l4-5"/>
+          <path d="M17 7l-3 0"/>
+          <path d="M14 4l0 3"/>
+        </svg>
+        <span>Cardio</span>
       </button>
     </nav>
   </div>
@@ -1845,7 +2069,11 @@ let data = {
     dismissedUntilSession: null
   },
   calorieRecommendation: null,
-  foodLog: []
+  foodLog: [],
+  cardioLog: [],
+  cardioWeeklyCap: 150,
+  distanceUnit: 'km',
+  cardioIntensity: { run: 'moderate', cycle: 'moderate', swim: 'moderate', hiit: 'vigorous', class: 'vigorous' }
 };
 
 let workout = null;   // active workout state
@@ -1859,6 +2087,7 @@ let dietTrendPeriod = 7; // days: 7, 14, 30, 0 for all, or 'custom'
 let dietCustomFrom = '';
 let dietCustomTo = '';
 let workoutNotesExpanded = false;
+let selectedCardioType = 'run';
 
 function getPrograms() {
   const base = data.programs || { ...PROGRAMS };
@@ -1906,6 +2135,11 @@ function load() {
   if (data.calorieRecommendation === undefined) data.calorieRecommendation = null;
   // Migration: foodLog
   if (!data.foodLog) data.foodLog = [];
+  // Migration: cardio
+  if (!data.cardioLog) data.cardioLog = [];
+  if (!data.cardioWeeklyCap) data.cardioWeeklyCap = 150;
+  if (!data.distanceUnit) data.distanceUnit = 'km';
+  if (!data.cardioIntensity) data.cardioIntensity = { run: 'moderate', cycle: 'moderate', swim: 'moderate', hiit: 'vigorous', class: 'vigorous' };
   // Keep nextType in sync
   data.nextType = data.schedule.pattern[data.schedule.patternIndex % data.schedule.pattern.length];
 
@@ -1940,6 +2174,7 @@ function switchTab(tab) {
   if (tab === 'diet') renderDiet();
   if (tab === 'history') renderHistory();
   if (tab === 'build') renderBuild();
+  if (tab === 'cardio') renderCardio();
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -4252,6 +4487,313 @@ save = function() {
     syncTimer = setTimeout(cloudPush, 5000); // 5s debounce
   }
 };
+
+/* ═══════════════════════════════════════════════════════════
+   CARDIO TAB
+   ═══════════════════════════════════════════════════════════ */
+
+const CARDIO_TYPES = [
+  { key: 'run', label: 'Run', icon: '🏃' },
+  { key: 'cycle', label: 'Cycle', icon: '🚴' },
+  { key: 'swim', label: 'Swim', icon: '🏊' },
+  { key: 'hiit', label: 'HIIT', icon: '⚡' },
+  { key: 'class', label: 'Class', icon: '🏋️' }
+];
+
+function getWeekBounds(weeksAgo = 0) {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + mondayOffset - (weeksAgo * 7));
+  monday.setHours(0, 0, 0, 0);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+  const from = monday.toISOString().split('T')[0];
+  const to = sunday.toISOString().split('T')[0];
+  return { from, to };
+}
+
+function getWeekCardio(weeksAgo = 0) {
+  const { from, to } = getWeekBounds(weeksAgo);
+  return data.cardioLog.filter(c => c.date >= from && c.date <= to);
+}
+
+function getAdjustedMinutes(entries) {
+  return entries.reduce((sum, e) => {
+    const intensity = e.intensity || data.cardioIntensity[e.type] || 'moderate';
+    return sum + (intensity === 'vigorous' ? e.duration * 2 : e.duration);
+  }, 0);
+}
+
+function getRawMinutes(entries) {
+  return entries.reduce((sum, e) => sum + e.duration, 0);
+}
+
+function getCardioProgression() {
+  // Need at least 2 full previous weeks
+  const week1 = getWeekCardio(1);
+  const week2 = getWeekCardio(2);
+  if (week1.length === 0 && week2.length === 0) return null;
+
+  const adj1 = getAdjustedMinutes(week1);
+  const adj2 = getAdjustedMinutes(week2);
+  const baseline = (adj1 + adj2) / 2;
+
+  if (baseline === 0) return null;
+
+  const cap = data.cardioWeeklyCap;
+  // Both weeks had activity?
+  const consistent = week1.length > 0 && week2.length > 0;
+  // Both weeks hit at least 80% of baseline?
+  const bothHit = adj1 >= baseline * 0.8 && adj2 >= baseline * 0.8;
+
+  if (consistent && bothHit) {
+    const suggestion = Math.min(Math.round(baseline * 1.1), cap);
+    if (suggestion <= baseline) return null; // already at cap
+    return { type: 'suggest', message: `Ready to progress — try ${suggestion} adjusted min next week (+10%)`, target: suggestion };
+  } else if (week1.length === 0) {
+    return { type: 'hold', message: 'No sessions last week — hold steady, consistency first' };
+  } else {
+    return { type: 'hold', message: 'Building consistency — keep it up before increasing' };
+  }
+}
+
+function setCardioType(type) {
+  selectedCardioType = type;
+  renderCardio();
+}
+
+function logCardio() {
+  const durInput = document.getElementById('cardio-dur-input');
+  const distInput = document.getElementById('cardio-dist-input');
+  const dur = parseInt(durInput.value);
+  if (!dur || dur < 1 || dur > 600) return;
+
+  const dist = distInput.value ? parseFloat(distInput.value) : null;
+  const intensity = data.cardioIntensity[selectedCardioType] || 'moderate';
+
+  const entry = {
+    id: Date.now(),
+    date: today(),
+    type: selectedCardioType,
+    duration: dur,
+    intensity: intensity
+  };
+  if (dist && dist > 0) entry.distance = dist;
+
+  data.cardioLog.push(entry);
+  save();
+  renderCardio();
+}
+
+function deleteCardio(id) {
+  data.cardioLog = data.cardioLog.filter(c => c.id !== id);
+  save();
+  renderCardio();
+}
+
+function toggleCardioIntensity(type) {
+  data.cardioIntensity[type] = data.cardioIntensity[type] === 'vigorous' ? 'moderate' : 'vigorous';
+  save();
+  renderCardio();
+}
+
+function setDistanceUnit(u) {
+  data.distanceUnit = u;
+  save();
+  renderCardio();
+}
+
+function renderCardio() {
+  const el = document.getElementById('cardio-content');
+  const thisWeek = getWeekCardio();
+  const adjustedMin = getAdjustedMinutes(thisWeek);
+  const rawMin = getRawMinutes(thisWeek);
+  const cap = data.cardioWeeklyCap;
+  const pct = cap > 0 ? (adjustedMin / cap) * 100 : 0;
+  const barClass = pct > 120 ? 'way-over' : pct > 100 ? 'over' : '';
+  const progression = getCardioProgression();
+
+  const currentIntensity = data.cardioIntensity[selectedCardioType] || 'moderate';
+  const distLabel = data.distanceUnit === 'mi' ? 'miles' : 'km';
+
+  // Weekly volume bar
+  const volumeHtml = `
+    <div class="volume-bar-container fade-in">
+      <div class="volume-header">
+        <span class="volume-value">${adjustedMin}</span>
+        <span class="volume-target">/ ${cap} adj min</span>
+      </div>
+      <div class="volume-track"><div class="volume-fill ${barClass}" style="width:${Math.min(pct, 100)}%"></div></div>
+      <div class="volume-label">This week · ${thisWeek.length} session${thisWeek.length !== 1 ? 's' : ''} · ${rawMin} min actual</div>
+      ${pct > 100 ? `<div class="volume-warning">Recovery at risk — volume is high for ${(DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk']).label.toLowerCase()}</div>` : ''}
+    </div>`;
+
+  // Activity type buttons
+  const typeBtns = CARDIO_TYPES.map(t =>
+    `<button class="cardio-type-btn ${selectedCardioType === t.key ? 'active' : ''}" onclick="setCardioType('${t.key}')">${t.label}</button>`
+  ).join('');
+
+  // Log session card
+  const logHtml = `
+    <div class="card fade-in stagger-1">
+      <span class="label">Log Session</span>
+      <div class="cardio-types mt-12">${typeBtns}</div>
+      <div class="cardio-log-row">
+        <input type="number" id="cardio-dur-input" inputmode="numeric" placeholder="min">
+        <input type="number" id="cardio-dist-input" inputmode="decimal" step="0.1" placeholder="${distLabel} (optional)">
+        <button onclick="logCardio()">LOG</button>
+      </div>
+      <div class="intensity-row">
+        <span>${CARDIO_TYPES.find(t => t.key === selectedCardioType).label} intensity</span>
+        <button class="cardio-type-btn ${currentIntensity === 'vigorous' ? '' : 'active'}" style="padding:4px 10px;font-size:11px;" onclick="toggleCardioIntensity('${selectedCardioType}')">
+          ${currentIntensity === 'vigorous' ? 'Vigorous (2×)' : 'Moderate (1×)'}
+        </button>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+        <div class="unit-toggle">
+          <button class="unit-opt ${data.distanceUnit === 'km' ? 'active' : ''}" onclick="setDistanceUnit('km')">km</button>
+          <button class="unit-opt ${data.distanceUnit === 'mi' ? 'active' : ''}" onclick="setDistanceUnit('mi')">miles</button>
+        </div>
+      </div>
+    </div>`;
+
+  // Progression nudge
+  let progressionHtml = '';
+  if (progression) {
+    progressionHtml = `
+      <div class="card fade-in stagger-2" style="padding:0;">
+        <div class="progression-card ${progression.type}">
+          ${progression.type === 'suggest' ? '🟢 ' : ''}${progression.message}
+        </div>
+      </div>`;
+  }
+
+  // This week's sessions
+  let weekHtml = '';
+  if (thisWeek.length > 0) {
+    const sorted = [...thisWeek].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+    weekHtml = `
+      <div class="card fade-in stagger-3">
+        <span class="label">This Week</span>
+        <div class="mt-12">
+          ${sorted.map(e => {
+            const typeInfo = CARDIO_TYPES.find(t => t.key === e.type) || { label: e.type };
+            const intensity = e.intensity || data.cardioIntensity[e.type] || 'moderate';
+            const distStr = e.distance ? ` · ${e.distance} ${data.distanceUnit}` : '';
+            return `
+              <div class="cardio-entry">
+                <span class="entry-type">${typeInfo.label}</span>
+                <span class="entry-detail">
+                  <span class="entry-duration">${e.duration} min</span>
+                  <span class="entry-distance">${distStr}</span>
+                  <span class="intensity-badge ${intensity}">${intensity === 'vigorous' ? 'V' : 'M'}</span>
+                </span>
+                <span class="entry-date">${formatDate(e.date)}</span>
+                <button class="entry-delete" onclick="deleteCardio(${e.id})">×</button>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }
+
+  // History — group by week
+  let historyHtml = '';
+  const allSorted = [...data.cardioLog].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+  if (allSorted.length > 0) {
+    // Group by week (Mon–Sun)
+    const weeks = {};
+    allSorted.forEach(e => {
+      const d = new Date(e.date + 'T12:00:00');
+      const day = d.getDay();
+      const mondayOffset = day === 0 ? -6 : 1 - day;
+      const monday = new Date(d);
+      monday.setDate(d.getDate() + mondayOffset);
+      const weekKey = monday.toISOString().split('T')[0];
+      if (!weeks[weekKey]) weeks[weekKey] = [];
+      weeks[weekKey].push(e);
+    });
+
+    const { from: thisWeekFrom } = getWeekBounds();
+    const weekKeys = Object.keys(weeks).sort().reverse();
+    // Skip current week (already shown above)
+    const pastWeeks = weekKeys.filter(k => k < thisWeekFrom);
+
+    if (pastWeeks.length > 0) {
+      const weekRows = pastWeeks.slice(0, 8).map(wk => {
+        const entries = weeks[wk];
+        const totalMin = getRawMinutes(entries);
+        const adjMin = getAdjustedMinutes(entries);
+        const sessions = entries.length;
+
+        // Check for pace data
+        const withDist = entries.filter(e => e.distance && e.duration);
+        let paceStr = '';
+        if (withDist.length > 0) {
+          const totalDist = withDist.reduce((s, e) => s + e.distance, 0);
+          const totalTime = withDist.reduce((s, e) => s + e.duration, 0);
+          const pace = totalTime / totalDist;
+          paceStr = ` · ${pace.toFixed(1)} min/${data.distanceUnit}`;
+        }
+
+        const entryRows = entries.map(e => {
+          const typeInfo = CARDIO_TYPES.find(t => t.key === e.type) || { label: e.type };
+          const intensity = e.intensity || data.cardioIntensity[e.type] || 'moderate';
+          const distStr = e.distance ? ` · ${e.distance} ${data.distanceUnit}` : '';
+          return `
+            <div class="cardio-entry">
+              <span class="entry-type">${typeInfo.label}</span>
+              <span class="entry-detail">
+                <span class="entry-duration">${e.duration} min</span>
+                <span class="entry-distance">${distStr}</span>
+                <span class="intensity-badge ${intensity}">${intensity === 'vigorous' ? 'V' : 'M'}</span>
+              </span>
+              <span class="entry-date">${formatDate(e.date)}</span>
+              <button class="entry-delete" onclick="deleteCardio(${e.id})">×</button>
+            </div>`;
+        }).join('');
+
+        return `
+          <div style="border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px;">
+            <div class="week-summary-header">
+              <span class="week-label">Week of ${formatDate(wk)}</span>
+              <span class="week-stats">${sessions} sessions · ${totalMin} min (${adjMin} adj)${paceStr}</span>
+            </div>
+            ${entryRows}
+          </div>`;
+      }).join('');
+
+      historyHtml = `
+        <div class="card fade-in stagger-4">
+          <span class="label">History</span>
+          <div class="mt-12">${weekRows}</div>
+        </div>`;
+    }
+  }
+
+  // Intensity settings
+  const intensitySettingsHtml = `
+    <div class="card fade-in stagger-5">
+      <span class="label">Intensity Defaults</span>
+      <p class="text-xs text-dim mt-8">Vigorous counts as 2× toward your weekly cap. Tap to toggle.</p>
+      <div class="mt-12">
+        ${CARDIO_TYPES.map(t => {
+          const int = data.cardioIntensity[t.key] || 'moderate';
+          return `
+            <div class="toggle-row" style="padding:10px 0;">
+              <span class="toggle-label" style="font-size:13px;">${t.label}</span>
+              <button class="cardio-type-btn ${int === 'vigorous' ? '' : 'active'}" style="padding:4px 10px;font-size:11px;" onclick="toggleCardioIntensity('${t.key}')">
+                ${int === 'vigorous' ? 'Vigorous (2×)' : 'Moderate (1×)'}
+              </button>
+            </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+  el.innerHTML = volumeHtml + logHtml + progressionHtml + weekHtml + historyHtml + intensitySettingsHtml;
+}
 
 /* ═══════════════════════════════════════════════════════════
    INIT
