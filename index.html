@@ -1046,6 +1046,135 @@
     .weight-log-entry .date { color: var(--text-2); }
     .weight-log-entry .weight { font-weight: 600; font-variant-numeric: tabular-nums; }
 
+    /* Food tracking */
+    .food-totals { display: flex; gap: 12px; margin-bottom: 12px; }
+    .food-total-bar {
+      flex: 1;
+      text-align: center;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+    }
+    .food-total-bar .bar-header {
+      display: flex;
+      justify-content: center;
+      align-items: baseline;
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+    .food-total-bar .bar-value {
+      font-family: 'Teko', sans-serif;
+      font-weight: 600;
+      font-size: 28px;
+      line-height: 1;
+    }
+    .food-total-bar .bar-target {
+      font-size: 13px;
+      color: var(--text-3);
+      font-variant-numeric: tabular-nums;
+    }
+    .food-total-bar .bar-track {
+      height: 6px;
+      background: var(--surface-3);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .food-total-bar .bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
+    .food-total-bar .bar-fill.over { background: var(--warning); }
+    .food-total-bar .bar-fill.way-over { background: var(--danger); }
+    .food-total-bar .bar-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-2);
+      margin-top: 8px;
+    }
+    .food-add-row {
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
+    }
+    .food-add-row input {
+      flex: 1;
+      min-width: 0;
+      padding: 14px 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-variant-numeric: tabular-nums;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .food-add-row input:focus { border-color: var(--accent); }
+    .food-add-row input::placeholder { color: var(--text-3); }
+    .food-add-row button {
+      padding: 14px 20px;
+      border: none;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #0a0a0a;
+      font-family: 'Teko', sans-serif;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .food-add-row button:active { background: #a8e000; }
+    .food-log-entry {
+      display: flex;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    .food-log-entry:last-child { border-bottom: none; }
+    .food-log-entry .entry-time {
+      color: var(--text-3);
+      font-size: 12px;
+      width: 48px;
+      flex-shrink: 0;
+    }
+    .food-log-entry .entry-macros {
+      flex: 1;
+      display: flex;
+      gap: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+    .food-log-entry .entry-cal { font-weight: 600; }
+    .food-log-entry .entry-pro { color: var(--text-2); }
+    .food-log-entry .entry-delete {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-3);
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      flex-shrink: 0;
+      margin-left: 8px;
+      transition: all 0.15s;
+    }
+    .food-log-entry .entry-delete:active {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
     /* ═══════════════════════════════════════════════
        HISTORY TAB
        ═══════════════════════════════════════════════ */
@@ -1715,7 +1844,8 @@ let data = {
     lastDeloadDate: null,
     dismissedUntilSession: null
   },
-  calorieRecommendation: null
+  calorieRecommendation: null,
+  foodLog: []
 };
 
 let workout = null;   // active workout state
@@ -1774,6 +1904,8 @@ function load() {
   if (!data.dietGoal) data.dietGoal = 'lean-bulk';
   // Migration: calorieRecommendation
   if (data.calorieRecommendation === undefined) data.calorieRecommendation = null;
+  // Migration: foodLog
+  if (!data.foodLog) data.foodLog = [];
   // Keep nextType in sync
   data.nextType = data.schedule.pattern[data.schedule.patternIndex % data.schedule.pattern.length];
 
@@ -2857,6 +2989,12 @@ function saveWorkout() {
 function renderDiet() {
   const el = document.getElementById('diet-content');
   const proteinGrams = Math.round((data.targetCalories * 0.30) / 4);
+  const todayTotals = getTodayTotals();
+  const todayFood = getTodayFood();
+  const calPct = data.targetCalories > 0 ? (todayTotals.calories / data.targetCalories) * 100 : 0;
+  const proPct = proteinGrams > 0 ? (todayTotals.protein / proteinGrams) * 100 : 0;
+  const calBarClass = calPct > 120 ? 'way-over' : calPct > 100 ? 'over' : '';
+  const proBarClass = proPct > 120 ? 'way-over' : proPct > 100 ? 'over' : '';
   const todayWeight = data.weights.find(w => w.date === today());
   const lastWeight = data.weights.length > 0 ? data.weights[data.weights.length - 1] : null;
   const trend = calculateTrend();
@@ -2935,7 +3073,52 @@ function renderDiet() {
   }
 
   el.innerHTML = `
-    <div class="target-display fade-in">
+    <div class="food-totals fade-in">
+      <div class="food-total-bar">
+        <div class="bar-header">
+          <span class="bar-value">${todayTotals.calories.toLocaleString()}</span>
+          <span class="bar-target">/ ${data.targetCalories.toLocaleString()}</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill ${calBarClass}" style="width:${Math.min(calPct, 100)}%"></div></div>
+        <div class="bar-label">Calories</div>
+      </div>
+      <div class="food-total-bar">
+        <div class="bar-header">
+          <span class="bar-value">${todayTotals.protein}</span>
+          <span class="bar-target">/ ${proteinGrams}g</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill ${proBarClass}" style="width:${Math.min(proPct, 100)}%"></div></div>
+        <div class="bar-label">Protein</div>
+      </div>
+    </div>
+
+    <div class="card fade-in stagger-1">
+      <span class="label">Quick Add</span>
+      <div class="food-add-row mt-12">
+        <input type="number" id="food-cal-input" inputmode="numeric" placeholder="kcal">
+        <input type="number" id="food-pro-input" inputmode="numeric" placeholder="protein g">
+        <button onclick="addFood()">ADD</button>
+      </div>
+    </div>
+
+    ${todayFood.length > 0 ? `
+    <div class="card fade-in stagger-2">
+      <span class="label">Today's Food</span>
+      <div class="mt-12">
+        ${todayFood.map(f => `
+          <div class="food-log-entry">
+            <span class="entry-time">${f.time}</span>
+            <span class="entry-macros">
+              <span class="entry-cal">${f.calories} kcal</span>
+              <span class="entry-pro">${f.protein}g pro</span>
+            </span>
+            <button class="entry-delete" onclick="deleteFood(${f.id})">×</button>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : ''}
+
+    <div class="target-display fade-in stagger-3">
       <div class="target-box cal">
         <div class="value">${data.targetCalories.toLocaleString()}</div>
         <div class="unit">Calories</div>
@@ -2946,7 +3129,7 @@ function renderDiet() {
       </div>
     </div>
 
-    <div class="card fade-in stagger-1">
+    <div class="card fade-in stagger-4">
       <span class="label">Log Today's Weight</span>
       <div class="weight-input-row mt-12">
         <input type="number" id="weight-input" inputmode="decimal" step="0.1" placeholder="${todayWeight ? todayWeight.weight : (lastWeight ? lastWeight.weight : '80.0')}" value="${todayWeight ? todayWeight.weight : ''}">
@@ -2956,7 +3139,7 @@ function renderDiet() {
       ${todayWeight ? `<p class="text-xs text-dim mt-8">Logged today: ${todayWeight.weight} kg</p>` : ''}
     </div>
 
-    <div class="card fade-in stagger-2">
+    <div class="card fade-in stagger-5">
       <span class="label">Goal</span>
       <div class="diet-goal-selector">
         ${Object.entries(DIET_GOALS).map(([key, g]) => `<button class="diet-goal-btn ${key} ${data.dietGoal === key ? 'active' : ''}" onclick="setDietGoal('${key}')">${g.label}</button>`).join('')}
@@ -3098,6 +3281,40 @@ function setCustomDateRange() {
   if (dietCustomFrom > dietCustomTo) {
     [dietCustomFrom, dietCustomTo] = [dietCustomTo, dietCustomFrom];
   }
+  renderDiet();
+}
+
+function getTodayFood() {
+  return data.foodLog
+    .filter(f => f.date === today())
+    .sort((a, b) => b.time.localeCompare(a.time));
+}
+
+function getTodayTotals() {
+  const entries = data.foodLog.filter(f => f.date === today());
+  return {
+    calories: entries.reduce((sum, f) => sum + f.calories, 0),
+    protein: entries.reduce((sum, f) => sum + f.protein, 0)
+  };
+}
+
+function addFood() {
+  const calInput = document.getElementById('food-cal-input');
+  const proInput = document.getElementById('food-pro-input');
+  const cal = parseInt(calInput.value);
+  const pro = parseInt(proInput.value);
+  if (!cal || cal < 1 || cal > 9999) return;
+  const protein = (pro && pro >= 0 && pro <= 999) ? pro : 0;
+  const now = new Date();
+  const time = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+  data.foodLog.push({ id: Date.now(), date: today(), calories: cal, protein: protein, time: time });
+  save();
+  renderDiet();
+}
+
+function deleteFood(id) {
+  data.foodLog = data.foodLog.filter(f => f.id !== id);
+  save();
   renderDiet();
 }
 
