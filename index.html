@@ -349,6 +349,15 @@
       letter-spacing: 0.02em;
       margin-bottom: 32px;
     }
+    .prep-info {
+      font-family: 'Teko', sans-serif;
+      font-weight: 500;
+      font-size: 22px;
+      letter-spacing: 0.05em;
+      color: var(--text-2);
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
     .set-indicator {
       font-family: 'Teko', sans-serif;
       font-weight: 500;
@@ -2082,6 +2091,13 @@ function exitWorkout() {
   renderTrainHome();
 }
 
+function exerciseReady() {
+  if (!workout) return;
+  workout.exerciseReady = true;
+  saveWorkoutState();
+  renderExercise();
+}
+
 function renderExercise() {
   if (!workout) return;
   const ex = workout.exercises[workout.currentExerciseIndex];
@@ -2113,11 +2129,6 @@ function renderExercise() {
     }
   }
 
-  // Notes (editable)
-  const notesHtml = ex.notes
-    ? `<textarea class="exercise-note-edit" rows="2" onblur="updateWorkoutNote(this.value)" onfocus="this.style.borderColor='var(--accent)'">${ex.notes}</textarea>`
-    : `<div class="exercise-note-add" onclick="showWorkoutNoteInput()">+ add note</div>`;
-
   // Weight display (always show for non-bodyweight exercises)
   let weightHtml = '';
   if (!ex.isBodyweight) {
@@ -2135,8 +2146,36 @@ function renderExercise() {
       </div>`;
   }
 
-  // Main body
   const bodyEl = document.getElementById('workout-body');
+  const upnextEl = document.getElementById('workout-upnext');
+
+  // ── PREP SCREEN: show before first set of a new exercise ──
+  if (!workout.exerciseReady && currentSet === 1) {
+    // Notes (editable on prep screen)
+    const prepNotesHtml = ex.notes
+      ? `<textarea class="exercise-note-edit" rows="3" onblur="updateWorkoutNote(this.value)" onfocus="this.style.borderColor='var(--accent)'" style="max-width:320px;min-height:80px;">${ex.notes}</textarea>`
+      : `<div class="exercise-note-add" onclick="showWorkoutNoteInput()">+ add note</div>`;
+
+    bodyEl.innerHTML = `
+      ${typeBadge}
+      <div class="exercise-label">Exercise ${workout.currentExerciseIndex + 1} of ${totalExercises}</div>
+      <div class="exercise-name">${ex.name}</div>
+      ${prepNotesHtml}
+      ${weightHtml}
+      <div class="prep-info">${ex.targetSets} sets × ${ex.targetReps} reps</div>
+      <button class="done-btn" onclick="exerciseReady()" style="margin-top:24px;">Ready</button>
+      <button class="skip-btn mt-8" onclick="workout.exerciseReady=true;skipExercise()" style="margin-top:12px;">Skip Exercise</button>
+    `;
+    upnextEl.style.display = 'none';
+    return;
+  }
+
+  // ── TRACKING SCREEN: log sets ──
+  // Notes (editable)
+  const notesHtml = ex.notes
+    ? `<textarea class="exercise-note-edit" rows="2" onblur="updateWorkoutNote(this.value)" onfocus="this.style.borderColor='var(--accent)'">${ex.notes}</textarea>`
+    : `<div class="exercise-note-add" onclick="showWorkoutNoteInput()">+ add note</div>`;
+
   bodyEl.innerHTML = `
     ${typeBadge}
     <div class="exercise-label">Exercise ${workout.currentExerciseIndex + 1} of ${totalExercises}</div>
@@ -2160,7 +2199,6 @@ function renderExercise() {
   `;
 
   // Up next
-  const upnextEl = document.getElementById('workout-upnext');
   const remaining = workout.exercises.slice(workout.currentExerciseIndex + 1, workout.currentExerciseIndex + 3);
   if (remaining.length > 0) {
     upnextEl.innerHTML = `
@@ -2237,6 +2275,22 @@ function addSetDuringWorkout() {
   if (setEl) setEl.textContent = `Set ${ex.completedSets.length + 1} of ${ex.targetSets}`;
 }
 
+function skipExercise() {
+  if (!workout) return;
+  const ex = workout.exercises[workout.currentExerciseIndex];
+  // Skip all remaining sets
+  while (ex.completedSets.length < ex.targetSets) {
+    ex.completedSets.push({ reps: 0, weight: ex.currentWeight, skipped: true });
+  }
+  if (workout.currentExerciseIndex + 1 >= workout.exercises.length) {
+    saveWorkoutState(); showDoneScreen();
+  } else {
+    workout.currentExerciseIndex++;
+    workout.exerciseReady = false;
+    saveWorkoutState(); renderExercise();
+  }
+}
+
 function skipSet() {
   if (!workout) return;
   // Dismiss any active rest timer
@@ -2278,6 +2332,7 @@ function skipSet() {
     saveWorkoutState(); showDoneScreen();
   } else if (isLastSet) {
     workout.currentExerciseIndex++;
+    workout.exerciseReady = false;
     saveWorkoutState(); renderExercise();
   } else {
     saveWorkoutState(); renderExercise();
@@ -2342,6 +2397,7 @@ function completeSet(btnEl) {
     workout.supersetPartnerPending = true;
     workout.supersetStarterIndex = workout.currentExerciseIndex;
     workout.currentExerciseIndex++;
+    workout.exerciseReady = false;
     saveWorkoutState();
     setTimeout(() => renderExercise(), 300);
     return;
@@ -2380,6 +2436,7 @@ function completeSet(btnEl) {
     setTimeout(() => showDoneScreen(), 300);
   } else if (isLastSet) {
     workout.currentExerciseIndex++;
+    workout.exerciseReady = false;
     saveWorkoutState();
     setTimeout(() => startRestTimer(() => renderExercise()), 300);
   } else {
