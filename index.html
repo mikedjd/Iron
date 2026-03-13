@@ -240,6 +240,40 @@
       padding: 16px 0;
       text-align: center;
     }
+    .session-preview {
+      margin-top: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+    }
+    .session-preview-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .session-preview-row:last-child { border-bottom: none; }
+    .session-preview-row .name { font-size: 14px; color: var(--text); }
+    .session-preview-row .info { font-size: 13px; color: var(--text-2); white-space: nowrap; }
+    .workout-exit {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-3);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
 
     /* ═══════════════════════════════════════════════
        PREVIEW
@@ -1403,6 +1437,7 @@
 
   <!-- ═══════════ WORKOUT OVERLAY ═══════════ -->
   <div id="workout-screen">
+    <button class="workout-exit" onclick="exitWorkout()">✕</button>
     <div class="progress-bar" id="workout-progress"></div>
     <div class="workout-body" id="workout-body"></div>
     <div class="up-next" id="workout-upnext"></div>
@@ -1788,12 +1823,28 @@ function getTrainState() {
   return 'ready';
 }
 
+function buildSessionPreview(type) {
+  const programs = getPrograms();
+  const exercises = programs[type];
+  if (!exercises || exercises.length === 0) return '';
+  return `<div class="session-preview fade-in stagger-1">
+    ${exercises.map(ex => {
+      const wStr = ex.weight ? ` @ ${displayWeight(ex.weight)}` : '';
+      return `<div class="session-preview-row">
+        <span class="name">${ex.name}</span>
+        <span class="info">${ex.sets} × ${ex.reps}${wStr}</span>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
 function renderTrainHome() {
   const el = document.getElementById('train-content');
   const state = getTrainState();
   const nextLabel = getTypeLabel(data.nextType);
   const nextDay = getNextTrainingDay();
   const nextDayInfo = nextDay ? `${nextDay.name} — ${nextLabel}` : nextLabel;
+  const previewHtml = buildSessionPreview(data.nextType);
 
   // Check for interrupted workout
   if (workout) {
@@ -1851,6 +1902,7 @@ function renderTrainHome() {
         <span class="label">Next session</span>
         <div class="display display-sm mt-8">${nextDayInfo}</div>
       </div>
+      ${previewHtml}
       <button class="btn btn-ghost mt-16 fade-in stagger-2" onclick="showPreview()">Ready to train anyway</button>`;
   } else if (state === 'rest-recovery') {
     content = `
@@ -1866,6 +1918,7 @@ function renderTrainHome() {
         <span class="label">Next session</span>
         <div class="display display-sm mt-8">${nextDayInfo}</div>
       </div>
+      ${previewHtml}
       <button class="btn btn-secondary mt-20 fade-in stagger-2" onclick="showPreview()">Ready to Train</button>`;
   } else if (state === 'rest-scheduled') {
     content = `
@@ -1881,6 +1934,7 @@ function renderTrainHome() {
         <span class="label">Next session</span>
         <div class="display display-sm mt-8">${nextDayInfo}</div>
       </div>
+      ${previewHtml}
       <button class="btn btn-ghost mt-16 fade-in stagger-2" onclick="showPreview()">Ready to train anyway</button>`;
   } else {
     content = `
@@ -2018,6 +2072,14 @@ function showWorkoutScreen() {
 function hideWorkoutScreen() {
   document.getElementById('workout-screen').classList.remove('active');
   document.getElementById('nav').classList.remove('hidden');
+}
+
+function exitWorkout() {
+  if (!workout) { hideWorkoutScreen(); return; }
+  if (!confirm('Exit workout? Your progress so far will be saved and you can resume later.')) return;
+  saveWorkoutState();
+  hideWorkoutScreen();
+  renderTrainHome();
 }
 
 function renderExercise() {
