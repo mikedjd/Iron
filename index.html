@@ -3025,16 +3025,16 @@ function autoAdjustCalories() {
     // Above range — reduce
     const overshoot = trend.weeklyRate - hi;
     adj = -Math.min(Math.round(overshoot / 0.1) * 50, step * 2);
-    adj = Math.round(adj / 25) * 25;
-    if (adj === 0) adj = -25;
+    adj = Math.round(adj / 50) * 50; // round to nearest 50
+    if (Math.abs(adj) < 100) adj = -100; // minimum 100 kcal
     status = 'warning';
     text = `Your ${periodLabel} trend shows ${rateStr} kg/week. For ${goal.label.toLowerCase()} (${rangeStr} kg/week), reducing by ${Math.abs(adj)} kcal.`;
   } else {
     // Below range — increase
     const undershoot = lo - trend.weeklyRate;
     adj = Math.min(Math.round(undershoot / 0.1) * 50, step * 2);
-    adj = Math.round(adj / 25) * 25;
-    if (adj === 0) adj = 25;
+    adj = Math.round(adj / 50) * 50; // round to nearest 50
+    if (adj < 100) adj = 100; // minimum 100 kcal
     status = 'warning';
     text = `Your ${periodLabel} trend shows ${rateStr} kg/week. For ${goal.label.toLowerCase()} (${rangeStr} kg/week), increasing by ${adj} kcal.`;
   }
