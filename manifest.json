@@ -1,7 +1,7 @@
 {
   "name": "IRON",
   "short_name": "IRON",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#111111",
   "theme_color": "#bfff00",

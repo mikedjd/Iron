@@ -1241,6 +1241,8 @@
     }
     .split-chip.current { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
     .split-add { border-style: dashed; color: var(--text-3); }
+    .data-actions { display: flex; gap: 10px; }
+    .data-actions .btn { font-size: 13px; padding: 10px 12px; }
 
     /* ═══════════════════════════════════════════════
        DELOAD
@@ -3071,6 +3073,15 @@ function renderBuild() {
     ${data.programs ? `
       <button class="btn btn-ghost mt-8 fade-in" onclick="resetPrograms()" style="color:var(--danger);">Reset to Defaults</button>
     ` : ''}
+    <div class="card fade-in" style="margin-top:16px;">
+      <span class="label">Data</span>
+      <div class="data-actions mt-12">
+        <button class="btn btn-ghost" onclick="exportData()" style="flex:1;">Export Backup</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('import-file').click()" style="flex:1;">Import Backup</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+      </div>
+      <p class="text-xs text-dim mt-8">Export saves all your programs, history, diet and settings as a JSON file. Import restores from a backup.</p>
+    </div>
   `;
 }
 
@@ -3320,6 +3331,43 @@ function resetPrograms() {
   renderBuild();
 }
 
+function exportData() {
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `iron-backup-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.sessions && !imported.programs && !imported.weights) {
+        alert('This doesn\'t look like an IRON backup file.');
+        return;
+      }
+      if (!confirm('This will replace ALL your current data. Are you sure?')) return;
+      Object.assign(data, imported);
+      save();
+      load();
+      switchTab('build');
+      renderBuild();
+    } catch (err) {
+      alert('Could not read backup file. Make sure it\'s a valid IRON export.');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
 /* ═══════════════════════════════════════════════════════════
    INIT
    ═══════════════════════════════════════════════════════════ */
@@ -3328,7 +3376,7 @@ renderTrainHome();
 
 // Service Worker registration
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 </script>
 </body>

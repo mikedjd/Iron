@@ -1,7 +1,8 @@
-const CACHE_NAME = 'iron-v1';
+const CACHE_NAME = 'iron-v2';
 const ASSETS = [
-  '/index.html',
-  '/manifest.json',
+  './',
+  './index.html',
+  './manifest.json',
   'https://fonts.googleapis.com/css2?family=Teko:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap'
 ];
 
