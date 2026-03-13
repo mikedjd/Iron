@@ -4546,7 +4546,7 @@ function getCardioProgression() {
 
 function setCardioType(type) {
   selectedCardioType = type;
-  renderCardio();
+  renderCardio(true);
 }
 
 function logCardio() {
@@ -4581,17 +4581,23 @@ function deleteCardio(id) {
 function toggleCardioIntensity(type) {
   data.cardioIntensity[type] = data.cardioIntensity[type] === 'vigorous' ? 'moderate' : 'vigorous';
   save();
-  renderCardio();
+  renderCardio(true);
 }
 
 function setDistanceUnit(u) {
   data.distanceUnit = u;
   save();
-  renderCardio();
+  renderCardio(true);
 }
 
-function renderCardio() {
+function renderCardio(quick) {
   const el = document.getElementById('cardio-content');
+  const f = quick ? '' : 'fade-in';
+  const s1 = quick ? '' : 'fade-in stagger-1';
+  const s2 = quick ? '' : 'fade-in stagger-2';
+  const s3 = quick ? '' : 'fade-in stagger-3';
+  const s4 = quick ? '' : 'fade-in stagger-4';
+  const s5 = quick ? '' : 'fade-in stagger-5';
   const thisWeek = getWeekCardio();
   const adjustedMin = getAdjustedMinutes(thisWeek);
   const rawMin = getRawMinutes(thisWeek);
@@ -4605,7 +4611,7 @@ function renderCardio() {
 
   // Weekly volume bar
   const volumeHtml = `
-    <div class="volume-bar-container fade-in">
+    <div class="volume-bar-container ${f}">
       <div class="volume-header">
         <span class="volume-value">${adjustedMin}</span>
         <span class="volume-target">/ ${cap} adj min</span>
@@ -4622,7 +4628,7 @@ function renderCardio() {
 
   // Log session card
   const logHtml = `
-    <div class="card fade-in stagger-1">
+    <div class="card ${s1}">
       <span class="label">Log Session</span>
       <div class="cardio-types mt-12">${typeBtns}</div>
       <div class="cardio-log-row">
@@ -4632,9 +4638,10 @@ function renderCardio() {
       </div>
       <div class="intensity-row">
         <span>${CARDIO_TYPES.find(t => t.key === selectedCardioType).label} intensity</span>
-        <button class="cardio-type-btn ${currentIntensity === 'vigorous' ? '' : 'active'}" style="padding:4px 10px;font-size:11px;" onclick="toggleCardioIntensity('${selectedCardioType}')">
-          ${currentIntensity === 'vigorous' ? 'Vigorous (2×)' : 'Moderate (1×)'}
-        </button>
+        <div class="unit-toggle">
+          <button class="unit-opt ${currentIntensity === 'moderate' ? 'active' : ''}" onclick="if(data.cardioIntensity['${selectedCardioType}']!=='moderate'){toggleCardioIntensity('${selectedCardioType}')}">Moderate</button>
+          <button class="unit-opt ${currentIntensity === 'vigorous' ? 'active' : ''}" onclick="if(data.cardioIntensity['${selectedCardioType}']!=='vigorous'){toggleCardioIntensity('${selectedCardioType}')}">Vigorous</button>
+        </div>
       </div>
       <div style="display:flex;justify-content:flex-end;margin-top:8px;">
         <div class="unit-toggle">
@@ -4648,7 +4655,7 @@ function renderCardio() {
   let progressionHtml = '';
   if (progression) {
     progressionHtml = `
-      <div class="card fade-in stagger-2" style="padding:0;">
+      <div class="card ${s2}" style="padding:0;">
         <div class="progression-card ${progression.type}">
           ${progression.type === 'suggest' ? '🟢 ' : ''}${progression.message}
         </div>
@@ -4660,7 +4667,7 @@ function renderCardio() {
   if (thisWeek.length > 0) {
     const sorted = [...thisWeek].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
     weekHtml = `
-      <div class="card fade-in stagger-3">
+      <div class="card ${s3}">
         <span class="label">This Week</span>
         <div class="mt-12">
           ${sorted.map(e => {
@@ -4750,7 +4757,7 @@ function renderCardio() {
       }).join('');
 
       historyHtml = `
-        <div class="card fade-in stagger-4">
+        <div class="card ${s4}">
           <span class="label">History</span>
           <div class="mt-12">${weekRows}</div>
         </div>`;
@@ -4759,7 +4766,7 @@ function renderCardio() {
 
   // Intensity settings
   const intensitySettingsHtml = `
-    <div class="card fade-in stagger-5">
+    <div class="card ${s5}">
       <span class="label">Intensity Defaults</span>
       <p class="text-xs text-dim mt-8">Vigorous counts as 2× toward your weekly cap. Tap to toggle.</p>
       <div class="mt-12">
@@ -4768,9 +4775,10 @@ function renderCardio() {
           return `
             <div class="toggle-row" style="padding:10px 0;">
               <span class="toggle-label" style="font-size:13px;">${t.label}</span>
-              <button class="cardio-type-btn ${int === 'vigorous' ? '' : 'active'}" style="padding:4px 10px;font-size:11px;" onclick="toggleCardioIntensity('${t.key}')">
-                ${int === 'vigorous' ? 'Vigorous (2×)' : 'Moderate (1×)'}
-              </button>
+              <div class="unit-toggle">
+                <button class="unit-opt ${int === 'moderate' ? 'active' : ''}" onclick="if(data.cardioIntensity['${t.key}']!=='moderate'){toggleCardioIntensity('${t.key}')}">Moderate</button>
+                <button class="unit-opt ${int === 'vigorous' ? 'active' : ''}" onclick="if(data.cardioIntensity['${t.key}']!=='vigorous'){toggleCardioIntensity('${t.key}')}">Vigorous</button>
+              </div>
             </div>`;
         }).join('')}
       </div>
