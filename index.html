@@ -270,12 +270,151 @@
     }
     #workout-screen.active { display: flex; }
 
+    /* Workout top bar */
+    .workout-top-bar {
+      display: flex;
+      align-items: center;
+      padding: 12px 12px 4px;
+      gap: 8px;
+    }
+    .workout-exit-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid var(--border-light);
+      background: var(--surface);
+      color: var(--text-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      flex-shrink: 0;
+    }
+    .workout-exit-btn:active { border-color: var(--danger); color: var(--danger); background: rgba(255,59,48,0.1); }
+    .workout-exit-confirm {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .workout-exit-dialog {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 24px 20px;
+      max-width: 320px;
+      width: 100%;
+      text-align: center;
+    }
+    .workout-exit-dialog h3 {
+      font-family: 'Teko', sans-serif;
+      font-size: 24px;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .workout-exit-dialog p {
+      color: var(--text-2);
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+    .workout-exit-dialog .btn-row {
+      display: flex;
+      gap: 10px;
+    }
+    .workout-exit-dialog .btn-row button {
+      flex: 1;
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+    }
+    .workout-exit-dialog .btn-cancel {
+      background: var(--surface-3);
+      color: var(--text);
+    }
+    .workout-exit-dialog .btn-discard {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    /* Weight edit overlay */
+    .weight-edit-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .weight-edit-dialog {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 300px;
+      width: 100%;
+      text-align: center;
+    }
+    .weight-edit-dialog label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-2);
+      display: block;
+      margin-bottom: 12px;
+    }
+    .weight-edit-dialog input {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'Teko', sans-serif;
+      font-size: 36px;
+      font-weight: 600;
+      text-align: center;
+      padding: 10px;
+      outline: none;
+      -moz-appearance: textfield;
+    }
+    .weight-edit-dialog input::-webkit-outer-spin-button,
+    .weight-edit-dialog input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .weight-edit-dialog input:focus { border-color: var(--accent); }
+    .weight-edit-dialog .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .weight-edit-dialog .btn-row button {
+      flex: 1;
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+    }
+    .weight-edit-dialog .btn-cancel { background: var(--surface-3); color: var(--text); }
+    .weight-edit-dialog .btn-save { background: var(--accent); color: #000; }
+
     /* Progress pills */
     .progress-bar {
       display: flex;
       gap: 4px;
-      padding: 16px 20px 8px;
+      padding: 8px 0;
       justify-content: center;
+      flex: 1;
     }
     .progress-pill {
       height: 4px;
@@ -1108,7 +1247,9 @@
       line-height: 1;
       min-width: 80px;
       text-align: center;
-      color: var(--text-2);
+      color: var(--text);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
     }
     .weight-display-label {
       font-size: 10px;
@@ -1393,7 +1534,13 @@
 
   <!-- ═══════════ WORKOUT OVERLAY ═══════════ -->
   <div id="workout-screen">
-    <div class="progress-bar" id="workout-progress"></div>
+    <div class="workout-top-bar">
+      <button class="workout-exit-btn" onclick="confirmExitWorkout()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div class="progress-bar" id="workout-progress"></div>
+      <div style="width:44px"></div>
+    </div>
     <div class="workout-body" id="workout-body"></div>
     <div class="up-next" id="workout-upnext"></div>
   </div>
@@ -2010,6 +2157,74 @@ function hideWorkoutScreen() {
   document.getElementById('nav').classList.remove('hidden');
 }
 
+function confirmExitWorkout() {
+  const overlay = document.createElement('div');
+  overlay.className = 'workout-exit-confirm';
+  overlay.innerHTML = `
+    <div class="workout-exit-dialog">
+      <h3>End Workout?</h3>
+      <p>Your progress for this session will be lost.</p>
+      <div class="btn-row">
+        <button class="btn-cancel" onclick="this.closest('.workout-exit-confirm').remove()">Cancel</button>
+        <button class="btn-discard" onclick="exitWorkout()">End Workout</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
+
+function exitWorkout() {
+  document.querySelectorAll('.workout-exit-confirm').forEach(el => el.remove());
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  const timerEl = document.getElementById('timer-screen');
+  if (timerEl) timerEl.classList.remove('active');
+  workout = null;
+  saveWorkoutState();
+  hideWorkoutScreen();
+  renderTrainHome();
+}
+
+function openWeightEdit() {
+  if (!workout) return;
+  const ex = workout.exercises[workout.currentExerciseIndex];
+  const currentVal = displayWeight(ex.currentWeight || 0);
+  const overlay = document.createElement('div');
+  overlay.className = 'weight-edit-overlay';
+  overlay.innerHTML = `
+    <div class="weight-edit-dialog">
+      <label>Set weight (${weightLabel()})</label>
+      <input type="number" id="weight-edit-input" value="${currentVal}" min="0" step="any" inputmode="decimal">
+      <div class="btn-row">
+        <button class="btn-cancel" onclick="this.closest('.weight-edit-overlay').remove()">Cancel</button>
+        <button class="btn-save" onclick="saveWeightEdit()">Save</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  const input = document.getElementById('weight-edit-input');
+  input.focus();
+  input.select();
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveWeightEdit();
+    if (e.key === 'Escape') overlay.remove();
+  });
+}
+
+function saveWeightEdit() {
+  if (!workout) return;
+  const input = document.getElementById('weight-edit-input');
+  if (!input) return;
+  const val = parseWeightInput(input.value);
+  const ex = workout.exercises[workout.currentExerciseIndex];
+  ex.currentWeight = val;
+  ex.progressionBadge = null;
+  saveWorkoutState();
+  document.querySelectorAll('.weight-edit-overlay').forEach(el => el.remove());
+  renderExercise();
+}
+
 function renderExercise() {
   if (!workout) return;
   const ex = workout.exercises[workout.currentExerciseIndex];
@@ -2046,17 +2261,18 @@ function renderExercise() {
     ? `<textarea class="exercise-note-edit" rows="1" onblur="updateWorkoutNote(this.value)" onfocus="this.style.borderColor='var(--accent)'">${ex.notes}</textarea>`
     : `<div class="exercise-note-add" onclick="showWorkoutNoteInput()">+ add note</div>`;
 
-  // Weight display
+  // Weight display — always show for non-bodyweight exercises
   let weightHtml = '';
-  if (ex.currentWeight && !ex.isBodyweight) {
+  if (!ex.isBodyweight) {
     const progBadge = ex.progressionBadge && currentSet === 1 && ex.completedSets.length === 0
       ? `<div class="progression-badge">▲ ${ex.progressionBadge}</div>` : '';
+    const weightVal = ex.currentWeight || 0;
     weightHtml = `
       <div class="weight-adjuster">
         <button class="weight-adj-btn" onclick="adjustWeight(-1)">−</button>
         <div style="text-align:center">
-          <div class="weight-display">${displayWeight(ex.currentWeight)}</div>
-          <div class="weight-display-label">${weightLabel()}</div>
+          <div class="weight-display" onclick="openWeightEdit()">${displayWeight(weightVal)}</div>
+          <div class="weight-display-label">${weightLabel()} · tap to edit</div>
           ${progBadge}
         </div>
         <button class="weight-adj-btn" onclick="adjustWeight(1)">+</button>
