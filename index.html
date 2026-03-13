@@ -1229,7 +1229,7 @@
       resize: none;
       font-family: 'Outfit', sans-serif;
       outline: none;
-      min-height: 36px;
+      min-height: 72px;
     }
     .exercise-note-edit:focus { border-color: var(--accent); }
     .exercise-note-add {
@@ -2115,7 +2115,7 @@ function renderExercise() {
 
   // Notes (editable)
   const notesHtml = ex.notes
-    ? `<textarea class="exercise-note-edit" rows="1" onblur="updateWorkoutNote(this.value)" onfocus="this.style.borderColor='var(--accent)'">${ex.notes}</textarea>`
+    ? `<textarea class="exercise-note-edit" rows="2" onblur="updateWorkoutNote(this.value)" onfocus="this.style.borderColor='var(--accent)'">${ex.notes}</textarea>`
     : `<div class="exercise-note-add" onclick="showWorkoutNoteInput()">+ add note</div>`;
 
   // Weight display (always show for non-bodyweight exercises)
@@ -2321,7 +2321,7 @@ function completeSet(btnEl) {
       ex.currentReps = Math.max(1, Math.ceil(ex.targetReps * 0.3));
     }
     saveWorkoutState();
-    setTimeout(() => startRestTimer(() => renderExercise(), 15), 300);
+    setTimeout(() => startRestTimer(() => renderExercise(), 5), 300);
     return;
   }
 
@@ -3321,7 +3321,7 @@ function renderBuildEditForm(type, index, ex) {
           <button class="type-opt ${curType === 'rest-pause' ? 'active' : ''}" onclick="setBuildType('rest-pause')">Rest-Pause</button>
         </div>
         ${curType === 'superset' ? `<p class="text-xs text-dim mt-8">Pairs with the next exercise — no rest between them.${isLast ? ' <span style="color:var(--warning)">Add the partner exercise below.</span>' : ''}</p>` : ''}
-        ${curType === 'rest-pause' ? `<p class="text-xs text-dim mt-8">Main set → 15s → mini set → 15s → mini set. Three efforts per set.</p>` : ''}
+        ${curType === 'rest-pause' ? `<p class="text-xs text-dim mt-8">Main set → 5s → mini set → 5s → mini set. Three efforts per set.</p>` : ''}
       </div>
       <div style="margin-bottom:8px;">
         <div class="label" style="margin-bottom:4px;">Notes</div>
@@ -3335,8 +3335,22 @@ function renderBuildEditForm(type, index, ex) {
 }
 
 function setBuildType(t) {
+  // Preserve current form values before re-render
+  const name = document.getElementById('edit-name')?.value;
+  const sets = document.getElementById('edit-sets')?.value;
+  const reps = document.getElementById('edit-reps')?.value;
+  const weight = document.getElementById('edit-weight')?.value;
+  const notes = document.getElementById('edit-notes')?.value;
   buildEditType = t;
   renderBuild();
+  // Restore form values after re-render
+  if (name !== undefined) {
+    const n = document.getElementById('edit-name'); if (n) n.value = name;
+    const s = document.getElementById('edit-sets'); if (s) s.value = sets;
+    const r = document.getElementById('edit-reps'); if (r) r.value = reps;
+    const w = document.getElementById('edit-weight'); if (w) w.value = weight;
+    const nt = document.getElementById('edit-notes'); if (nt) nt.value = notes;
+  }
 }
 
 function editExercise(type, index) {
