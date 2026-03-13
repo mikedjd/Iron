@@ -1073,11 +1073,14 @@
       color: var(--text-3);
       font-variant-numeric: tabular-nums;
     }
-    .food-total-bar .bar-track {
+    .bar-track {
       height: 6px;
-      background: var(--surface-3);
+      background: var(--border-light);
       border-radius: 3px;
       overflow: hidden;
+    }
+    .food-total-bar .bar-track {
+      background: var(--border-light);
     }
     .food-total-bar .bar-fill {
       height: 100%;
@@ -3323,18 +3326,18 @@ function renderDiet() {
         </div>
       </div>
       <div style="margin-bottom:14px;">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
           <span style="font-size:13px;font-weight:600;">${todayTotals.calories.toLocaleString()} <span style="color:var(--text-3);font-weight:400;">eaten</span></span>
           <span style="font-size:13px;color:${calRemaining === 0 ? 'var(--good)' : 'var(--text-2)'};">${calRemaining.toLocaleString()} under</span>
         </div>
-        <div class="bar-track"><div class="bar-fill ${calBarClass}" style="width:${Math.min(calPct, 100)}%"></div></div>
+        <div class="bar-track" style="height:10px;border-radius:5px;"><div class="bar-fill ${calBarClass}" style="width:${Math.min(calPct, 100)}%;border-radius:5px;"></div></div>
       </div>
       <div>
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
           <span style="font-size:13px;font-weight:600;">${todayTotals.protein}g <span style="color:var(--text-3);font-weight:400;">eaten</span></span>
           <span style="font-size:13px;color:${proRemaining === 0 ? 'var(--good)' : 'var(--text-2)'};">${proRemaining}g under</span>
         </div>
-        <div class="bar-track"><div class="bar-fill ${proBarClass}" style="width:${Math.min(proPct, 100)}%"></div></div>
+        <div class="bar-track" style="height:10px;border-radius:5px;"><div class="bar-fill ${proBarClass}" style="width:${Math.min(proPct, 100)}%;border-radius:5px;"></div></div>
       </div>
     </div>
 
