@@ -361,7 +361,7 @@
       margin: 24px auto 0;
       max-width: 320px;
       font-family: 'Outfit', sans-serif;
-      font-style: italic;
+      font-weight: 500;
     }
     .prep-note.empty {
       color: var(--text-3);
@@ -1188,7 +1188,6 @@
     .exercise-note {
       font-size: 13px;
       color: var(--text-3);
-      font-style: italic;
       padding: 8px 16px;
       background: var(--surface-2);
       border-radius: 8px;
@@ -2148,7 +2147,7 @@ function renderExercise() {
   let weightHtml = '';
   if (!ex.isBodyweight) {
     const progBadge = ex.progressionBadge && currentSet === 1 && ex.completedSets.length === 0
-      ? `<div class="progression-badge">▲ ${ex.progressionBadge} <span style="opacity:0.5;font-weight:400;">was ${displayWeight(ex.previousWeight)}</span></div>` : '';
+      ? `<div class="progression-badge">▲ ${ex.progressionBadge} <span style="opacity:0.5;">was ${displayWeight(ex.previousWeight)}</span></div>` : '';
     weightHtml = `
       <div class="weight-adjuster">
         <button class="weight-adj-btn" onclick="adjustWeight(-1)">−</button>
