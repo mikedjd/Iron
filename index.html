@@ -349,14 +349,26 @@
       letter-spacing: 0.02em;
       margin-bottom: 32px;
     }
-    .prep-info {
-      font-family: 'Teko', sans-serif;
-      font-weight: 500;
-      font-size: 22px;
-      letter-spacing: 0.05em;
-      color: var(--text-2);
-      text-transform: uppercase;
-      margin-top: 8px;
+    .prep-note {
+      font-size: 17px;
+      line-height: 1.5;
+      color: var(--text);
+      text-align: center;
+      padding: 20px 24px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin: 24px auto 0;
+      max-width: 320px;
+      font-family: 'Outfit', sans-serif;
+      font-style: italic;
+    }
+    .prep-note.empty {
+      color: var(--text-3);
+      font-size: 14px;
+      cursor: pointer;
+      padding: 14px 24px;
+      font-style: normal;
     }
     .set-indicator {
       font-family: 'Teko', sans-serif;
@@ -2151,19 +2163,17 @@ function renderExercise() {
 
   // ── PREP SCREEN: show before first set of a new exercise ──
   if (!workout.exerciseReady && currentSet === 1) {
-    // Notes (editable on prep screen)
-    const prepNotesHtml = ex.notes
-      ? `<textarea class="exercise-note-edit" rows="3" onblur="updateWorkoutNote(this.value)" onfocus="this.style.borderColor='var(--accent)'" style="max-width:320px;min-height:80px;">${ex.notes}</textarea>`
-      : `<div class="exercise-note-add" onclick="showWorkoutNoteInput()">+ add note</div>`;
+    const prepNoteDisplay = ex.notes
+      ? `<div class="prep-note">${ex.notes}</div>`
+      : `<div class="prep-note empty" onclick="showWorkoutNoteInput()">+ add note</div>`;
 
     bodyEl.innerHTML = `
       ${typeBadge}
       <div class="exercise-label">Exercise ${workout.currentExerciseIndex + 1} of ${totalExercises}</div>
       <div class="exercise-name">${ex.name}</div>
-      ${prepNotesHtml}
       ${weightHtml}
-      <div class="prep-info">${ex.targetSets} sets × ${ex.targetReps} reps</div>
-      <button class="done-btn" onclick="exerciseReady()" style="margin-top:24px;">Ready</button>
+      ${prepNoteDisplay}
+      <button class="done-btn" onclick="exerciseReady()" style="margin-top:32px;">Let's Go</button>
       <button class="skip-btn mt-8" onclick="workout.exerciseReady=true;skipExercise()" style="margin-top:12px;">Skip Exercise</button>
     `;
     upnextEl.style.display = 'none';
