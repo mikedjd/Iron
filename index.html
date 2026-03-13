@@ -3307,23 +3307,34 @@ function renderDiet() {
       </div>`;
   }
 
+  const calRemaining = Math.max(0, data.targetCalories - todayTotals.calories);
+  const proRemaining = Math.max(0, proteinGrams - todayTotals.protein);
+
   el.innerHTML = `
-    <div class="food-totals fade-in">
-      <div class="food-total-bar">
-        <div class="bar-header">
-          <span class="bar-value">${todayTotals.calories.toLocaleString()}</span>
-          <span class="bar-target">/ ${data.targetCalories.toLocaleString()}</span>
+    <div class="card fade-in" style="padding-bottom:16px;">
+      <div class="target-display" style="margin-bottom:16px;">
+        <div class="target-box cal">
+          <div class="value">${data.targetCalories.toLocaleString()}</div>
+          <div class="unit">Cal Goal</div>
+        </div>
+        <div class="target-box">
+          <div class="value">${proteinGrams}g</div>
+          <div class="unit">Protein Goal</div>
+        </div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+          <span style="font-size:13px;font-weight:600;">${todayTotals.calories.toLocaleString()} <span style="color:var(--text-3);font-weight:400;">eaten</span></span>
+          <span style="font-size:13px;color:${calRemaining === 0 ? 'var(--good)' : 'var(--text-2)'};">${calRemaining.toLocaleString()} under</span>
         </div>
         <div class="bar-track"><div class="bar-fill ${calBarClass}" style="width:${Math.min(calPct, 100)}%"></div></div>
-        <div class="bar-label">Calories</div>
       </div>
-      <div class="food-total-bar">
-        <div class="bar-header">
-          <span class="bar-value">${todayTotals.protein}</span>
-          <span class="bar-target">/ ${proteinGrams}g</span>
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+          <span style="font-size:13px;font-weight:600;">${todayTotals.protein}g <span style="color:var(--text-3);font-weight:400;">eaten</span></span>
+          <span style="font-size:13px;color:${proRemaining === 0 ? 'var(--good)' : 'var(--text-2)'};">${proRemaining}g under</span>
         </div>
         <div class="bar-track"><div class="bar-fill ${proBarClass}" style="width:${Math.min(proPct, 100)}%"></div></div>
-        <div class="bar-label">Protein</div>
       </div>
     </div>
 
@@ -3336,35 +3347,7 @@ function renderDiet() {
       </div>
     </div>
 
-    ${todayFood.length > 0 ? `
     <div class="card fade-in stagger-2">
-      <span class="label">Today's Food</span>
-      <div class="mt-12">
-        ${todayFood.map(f => `
-          <div class="food-log-entry">
-            <span class="entry-time">${f.time}</span>
-            <span class="entry-macros">
-              <span class="entry-cal">${f.calories} kcal</span>
-              <span class="entry-pro">${f.protein}g pro</span>
-            </span>
-            <button class="entry-delete" onclick="deleteFood(${f.id})">×</button>
-          </div>
-        `).join('')}
-      </div>
-    </div>` : ''}
-
-    <div class="target-display fade-in stagger-3">
-      <div class="target-box cal">
-        <div class="value">${data.targetCalories.toLocaleString()}</div>
-        <div class="unit">Calories</div>
-      </div>
-      <div class="target-box">
-        <div class="value">${proteinGrams}</div>
-        <div class="unit">Protein (g)</div>
-      </div>
-    </div>
-
-    <div class="card fade-in stagger-4">
       <span class="label">Log Today's Weight</span>
       <div class="weight-input-row mt-12">
         <input type="number" id="weight-input" inputmode="decimal" step="0.1" placeholder="${todayWeight ? todayWeight.weight : (lastWeight ? lastWeight.weight : '80.0')}" value="${todayWeight ? todayWeight.weight : ''}">
@@ -3374,7 +3357,7 @@ function renderDiet() {
       ${todayWeight ? `<p class="text-xs text-dim mt-8">Logged today: ${todayWeight.weight} kg</p>` : ''}
     </div>
 
-    <div class="card fade-in stagger-5">
+    <div class="card fade-in stagger-3">
       <span class="label">Goal</span>
       <div class="diet-goal-selector">
         ${Object.entries(DIET_GOALS).map(([key, g]) => `<button class="diet-goal-btn ${key} ${data.dietGoal === key ? 'active' : ''}" onclick="setDietGoal('${key}')">${g.label}</button>`).join('')}
