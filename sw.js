@@ -1,9 +1,9 @@
-const CACHE_NAME = 'iron-v22';
+const CACHE_NAME = 'iron-v23';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  'https://fonts.googleapis.com/css2?family=Teko:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap'
+  'https://fonts.googleapis.com/css2?family=Teko:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap'
 ];
 
 self.addEventListener('install', e => {
