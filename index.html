@@ -2040,10 +2040,12 @@ function startWorkout() {
     exercises: program.map(ex => {
       let w = ex.weight || getLastWeight(ex.name) || 0;
       let progressionBadge = null;
+      let previousWeight = w;
       // Auto-progression: suggest weight increase if not deload
       if (w && !isDeload && !ex.isBodyweight && bw) {
         const rec = getProgressionRec(ex.name, w, bw);
         if (rec.suggestedWeight > w) {
+          previousWeight = w;
           w = rec.suggestedWeight;
           progressionBadge = rec.badge;
         }
@@ -2056,6 +2058,7 @@ function startWorkout() {
         completedSets: [],
         currentReps: ex.reps,
         currentWeight: w,
+        previousWeight,
         supersetNext: !!ex.supersetNext,
         restPause: !!ex.restPause,
         notes: ex.notes || '',
@@ -2145,7 +2148,7 @@ function renderExercise() {
   let weightHtml = '';
   if (!ex.isBodyweight) {
     const progBadge = ex.progressionBadge && currentSet === 1 && ex.completedSets.length === 0
-      ? `<div class="progression-badge">▲ ${ex.progressionBadge}</div>` : '';
+      ? `<div class="progression-badge">▲ ${ex.progressionBadge} <span style="opacity:0.5;font-weight:400;">was ${displayWeight(ex.previousWeight)}</span></div>` : '';
     weightHtml = `
       <div class="weight-adjuster">
         <button class="weight-adj-btn" onclick="adjustWeight(-1)">−</button>
