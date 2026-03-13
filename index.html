@@ -780,6 +780,58 @@
       font-weight: 600;
     }
 
+    /* Custom date range picker */
+    .custom-date-range {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .date-input {
+      flex: 1;
+      padding: 8px 10px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      outline: none;
+      color-scheme: dark;
+    }
+    .date-input:focus { border-color: var(--accent); }
+    .date-range-sep {
+      color: var(--text-3);
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    .date-range-apply {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #0a0a0a;
+      font-family: 'Teko', sans-serif;
+      font-weight: 600;
+      font-size: 15px;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .date-range-apply:active { background: #a8e000; }
+
+    /* Calorie recommendation card */
+    .rec-text { font-size: 13px; color: var(--text); line-height: 1.5; }
+    .rec-adjustment {
+      font-family: 'Teko', sans-serif;
+      font-weight: 600;
+      font-size: 24px;
+      color: var(--accent);
+      margin-top: 8px;
+    }
+    .rec-meta { font-size: 11px; color: var(--text-3); margin-top: 8px; }
+
     /* Weight graph */
     .weight-graph {
       margin-top: 16px;
@@ -1570,7 +1622,8 @@ let data = {
     programmedInterval: 4,
     lastDeloadDate: null,
     dismissedUntilSession: null
-  }
+  },
+  calorieRecommendation: null
 };
 
 let workout = null;   // active workout state
@@ -1580,7 +1633,9 @@ let buildEditing = null; // { type, index } for exercise being edited
 let buildAdding = null;  // 'upper'|'lower' when adding new exercise
 let buildEditType = 'standard'; // current type selection in edit form
 let historyPeriod = 'all'; // '1w', '1m', '3m', 'all'
-let dietTrendPeriod = 7; // days: 7, 14, 30, or 0 for all
+let dietTrendPeriod = 7; // days: 7, 14, 30, 0 for all, or 'custom'
+let dietCustomFrom = '';
+let dietCustomTo = '';
 
 function getPrograms() {
   const base = data.programs || { ...PROGRAMS };
@@ -1624,6 +1679,8 @@ function load() {
   if (!data.weightUnit) data.weightUnit = 'kg';
   // Migration: dietGoal
   if (!data.dietGoal) data.dietGoal = 'lean-bulk';
+  // Migration: calorieRecommendation
+  if (data.calorieRecommendation === undefined) data.calorieRecommendation = null;
   // Keep nextType in sync
   data.nextType = data.schedule.pattern[data.schedule.patternIndex % data.schedule.pattern.length];
 
@@ -2634,7 +2691,22 @@ function renderDiet() {
   const lastWeight = data.weights.length > 0 ? data.weights[data.weights.length - 1] : null;
   const trend = calculateTrend();
 
-  const periodLabel = dietTrendPeriod === 0 ? 'All Time' : `${dietTrendPeriod}-Day`;
+  const periodLabel = dietTrendPeriod === 'custom'
+    ? (dietCustomFrom && dietCustomTo ? `${formatDate(dietCustomFrom)} – ${formatDate(dietCustomTo)}` : 'Custom Range')
+    : dietTrendPeriod === 0 ? 'All Time' : `${dietTrendPeriod}-Day`;
+  const periodBtns = `
+    <div class="trend-period mt-8">
+      ${[7, 14, 30, 0].map(d => `<button class="trend-period-btn ${dietTrendPeriod === d ? 'active' : ''}" onclick="setDietTrendPeriod(${d})">${d === 0 ? 'All' : d + 'D'}</button>`).join('')}
+      <button class="trend-period-btn ${dietTrendPeriod === 'custom' ? 'active' : ''}" onclick="setDietTrendPeriod('custom')">Custom</button>
+    </div>
+    ${dietTrendPeriod === 'custom' ? `
+      <div class="custom-date-range">
+        <input type="date" id="trend-from" class="date-input" value="${dietCustomFrom}" max="${today()}">
+        <span class="date-range-sep">to</span>
+        <input type="date" id="trend-to" class="date-input" value="${dietCustomTo}" max="${today()}">
+        <button class="date-range-apply" onclick="setCustomDateRange()">APPLY</button>
+      </div>` : ''}`;
+
   let trendHtml = '';
   if (trend) {
     const rateStr = (trend.weeklyRate >= 0 ? '+' : '') + trend.weeklyRate.toFixed(2);
@@ -2642,9 +2714,7 @@ function renderDiet() {
     trendHtml = `
       <div class="card fade-in stagger-3">
         <span class="label">Weight Trend</span>
-        <div class="trend-period mt-8">
-          ${[7, 14, 30, 0].map(d => `<button class="trend-period-btn ${dietTrendPeriod === d ? 'active' : ''}" onclick="setDietTrendPeriod(${d})">${d === 0 ? 'All' : d + 'D'}</button>`).join('')}
-        </div>
+        ${periodBtns}
         <div class="trend-card ${trend.status}">
           <div class="trend-rate">${rateStr} kg/week</div>
           <div class="trend-label-text ${trend.status}">${trend.label}</div>
@@ -2653,14 +2723,12 @@ function renderDiet() {
         ${graphHtml}
         ${trend.adjustment ? `<p class="text-xs text-dim mt-8">Auto-adjusted: ${trend.adjustment}</p>` : ''}
       </div>`;
-  } else if (data.weights.length > 0 && data.weights.length < 3) {
+  } else if (data.weights.length > 0) {
     trendHtml = `
       <div class="card fade-in stagger-3">
         <span class="label">Weight Trend</span>
-        <div class="trend-period mt-8">
-          ${[7, 14, 30, 0].map(d => `<button class="trend-period-btn ${dietTrendPeriod === d ? 'active' : ''}" onclick="setDietTrendPeriod(${d})">${d === 0 ? 'All' : d + 'D'}</button>`).join('')}
-        </div>
-        <p class="text-sm text-dim mt-12">Keep logging daily — need more data for trend analysis.</p>
+        ${periodBtns}
+        <p class="text-sm text-dim mt-12">${dietTrendPeriod === 'custom' && (!dietCustomFrom || !dietCustomTo) ? 'Select a date range above.' : 'Keep logging daily — need more data for trend analysis.'}</p>
       </div>`;
   }
 
@@ -2677,6 +2745,21 @@ function renderDiet() {
               <span class="weight">${displayWeight(w.weight)} ${weightLabel()}</span>
             </div>
           `).join('')}
+        </div>
+      </div>`;
+  }
+
+  // Recommendation card
+  let recHtml = '';
+  if (data.calorieRecommendation && data.autoAdjust) {
+    const rec = data.calorieRecommendation;
+    recHtml = `
+      <div class="card fade-in stagger-2" style="margin-top:-4px;">
+        <span class="label">Calorie Recommendation</span>
+        <div class="trend-card ${rec.status} mt-8">
+          <div class="rec-text">${rec.text}</div>
+          ${rec.adjustment ? `<div class="rec-adjustment">${rec.adjustment}</div>` : ''}
+          <div class="rec-meta">${rec.usedLongTrend ? '14-day analysis' : '7-day analysis'} · ${formatDate(rec.date)}</div>
         </div>
       </div>`;
   }
@@ -2714,7 +2797,7 @@ function renderDiet() {
         <span class="toggle-label">Auto-adjust calories</span>
         <button class="toggle ${data.autoAdjust ? 'on' : ''}" onclick="toggleAutoAdjust()"></button>
       </div>
-      <p class="text-xs text-dim">Adjusts ±${(DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk']).step} kcal based on your weight trend to stay in the ${(DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk']).label.toLowerCase()} range.</p>
+      <p class="text-xs text-dim">Analyses your weight trend and proportionally adjusts calories to keep you in the ${(DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk']).label.toLowerCase()} range. Uses 14-day trend when available.</p>
       ${!data.autoAdjust ? `
         <div class="divider"></div>
         <span class="label">Manual Calorie Target</span>
@@ -2725,6 +2808,7 @@ function renderDiet() {
       ` : ''}
     </div>
 
+    ${recHtml}
     ${trendHtml}
     ${weightLogHtml}
   `;
@@ -2768,10 +2852,28 @@ function setManualCalories() {
 }
 
 function calculateTrend(periodDays) {
-  const days = periodDays || dietTrendPeriod || 7;
   if (data.weights.length < 2) return null;
-
   const sorted = [...data.weights].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  // Custom date range mode
+  const isCustom = !periodDays && dietTrendPeriod === 'custom' && dietCustomFrom && dietCustomTo;
+  if (isCustom) {
+    const pts = sorted.filter(w => w.date >= dietCustomFrom && w.date <= dietCustomTo);
+    if (pts.length < 2) return null;
+    const first = pts[0], last = pts[pts.length - 1];
+    const daysBetween = (new Date(last.date + 'T12:00:00') - new Date(first.date + 'T12:00:00')) / 86400000;
+    if (daysBetween < 2) return null;
+    const weeklyRate = ((last.weight - first.weight) / daysBetween) * 7;
+    const goal = DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk'];
+    const [lo, hi] = goal.target;
+    let label, status;
+    if (weeklyRate >= lo && weeklyRate <= hi) { label = 'On target'; status = 'good'; }
+    else if (weeklyRate > hi) { label = weeklyRate > 0 ? 'Gaining too fast' : 'Not cutting enough'; status = 'warning'; }
+    else { label = weeklyRate < 0 ? 'Losing too fast' : 'Below target'; status = lo < 0 ? 'warning' : 'danger'; }
+    return { weeklyRate, label, status, from: first.weight, to: last.weight, days: daysBetween, points: pts };
+  }
+
+  const days = periodDays || dietTrendPeriod || 7;
   const latest = sorted[sorted.length - 1];
   const latestDate = new Date(latest.date + 'T12:00:00');
 
@@ -2813,6 +2915,19 @@ function calculateTrend(periodDays) {
 
 function setDietTrendPeriod(d) {
   dietTrendPeriod = d;
+  if (d !== 'custom') { dietCustomFrom = ''; dietCustomTo = ''; }
+  renderDiet();
+}
+
+function setCustomDateRange() {
+  const fromEl = document.getElementById('trend-from');
+  const toEl = document.getElementById('trend-to');
+  if (!fromEl || !toEl || !fromEl.value || !toEl.value) return;
+  dietCustomFrom = fromEl.value;
+  dietCustomTo = toEl.value;
+  if (dietCustomFrom > dietCustomTo) {
+    [dietCustomFrom, dietCustomTo] = [dietCustomTo, dietCustomFrom];
+  }
   renderDiet();
 }
 
@@ -2880,31 +2995,70 @@ function buildWeightGraph(points) {
 }
 
 function autoAdjustCalories() {
-  const trend = calculateTrend(7); // always use 7-day for auto-adjust decisions
-  if (!trend) return;
-
   const goal = DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk'];
   const [lo, hi] = goal.target;
   const step = goal.step;
-  let adjustment = null;
 
-  if (trend.weeklyRate > hi) {
-    // Gaining/losing faster than target — reduce calories
-    data.targetCalories -= step;
-    adjustment = `−${step} kcal (above target range)`;
-  } else if (trend.weeklyRate < lo) {
-    // Below target range — increase calories
-    data.targetCalories += step;
-    adjustment = `+${step} kcal (below target range)`;
+  // Use 14-day trend when enough data exists (more reliable), else 7-day
+  const sorted = [...data.weights].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const now = new Date();
+  const twoWeeksAgo = new Date(now); twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+  const entriesIn14 = sorted.filter(w => new Date(w.date + 'T12:00:00') >= twoWeeksAgo);
+  const useLong = entriesIn14.length >= 10;
+  const periodDays = useLong ? 14 : 7;
+  const periodLabel = useLong ? '2-week' : '7-day';
+
+  const trend = calculateTrend(periodDays);
+  if (!trend) { data.calorieRecommendation = null; save(); return; }
+
+  let adj = 0;
+  let status = 'good';
+  let text = '';
+  const rateStr = (trend.weeklyRate >= 0 ? '+' : '') + trend.weeklyRate.toFixed(2);
+  const rangeStr = `${lo >= 0 ? '+' : ''}${lo} to ${hi >= 0 ? '+' : ''}${hi}`;
+
+  if (trend.weeklyRate >= lo && trend.weeklyRate <= hi) {
+    // On target
+    status = 'good';
+    text = `Your ${periodLabel} trend shows ${rateStr} kg/week. On track for ${goal.label.toLowerCase()} (${rangeStr} kg/week). No adjustment needed.`;
+  } else if (trend.weeklyRate > hi) {
+    // Above range — reduce
+    const overshoot = trend.weeklyRate - hi;
+    adj = -Math.min(Math.round(overshoot / 0.1) * 50, step * 2);
+    adj = Math.round(adj / 25) * 25;
+    if (adj === 0) adj = -25;
+    status = 'warning';
+    text = `Your ${periodLabel} trend shows ${rateStr} kg/week. For ${goal.label.toLowerCase()} (${rangeStr} kg/week), reducing by ${Math.abs(adj)} kcal.`;
+  } else {
+    // Below range — increase
+    const undershoot = lo - trend.weeklyRate;
+    adj = Math.min(Math.round(undershoot / 0.1) * 50, step * 2);
+    adj = Math.round(adj / 25) * 25;
+    if (adj === 0) adj = 25;
+    status = 'warning';
+    text = `Your ${periodLabel} trend shows ${rateStr} kg/week. For ${goal.label.toLowerCase()} (${rangeStr} kg/week), increasing by ${adj} kcal.`;
   }
 
-  data.targetCalories = Math.max(1200, Math.min(6000, data.targetCalories));
-  trend.adjustment = adjustment;
+  if (adj !== 0) {
+    data.targetCalories += adj;
+    data.targetCalories = Math.max(1200, Math.min(6000, data.targetCalories));
+  }
+
+  data.calorieRecommendation = {
+    text,
+    date: today(),
+    status,
+    adjustment: adj !== 0 ? (adj > 0 ? `+${adj}` : `${adj}`) + ' kcal' : null,
+    weeklyRate: trend.weeklyRate,
+    periodLabel,
+    usedLongTrend: useLong
+  };
   save();
 }
 
 function setDietGoal(goal) {
   data.dietGoal = goal;
+  data.calorieRecommendation = null;
   save();
   renderDiet();
 }
