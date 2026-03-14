@@ -3606,6 +3606,15 @@ function saveWorkout() {
 /* ═══════════════════════════════════════════════════════════
    DIET
    ═══════════════════════════════════════════════════════════ */
+/* Preserve input values across a Diet re-render */
+function renderDietSafe() {
+  const ids = ['food-cal-input', 'food-pro-input', 'weight-input', 'cal-override'];
+  const saved = {};
+  ids.forEach(id => { const el = document.getElementById(id); if (el) saved[id] = el.value; });
+  renderDiet();
+  ids.forEach(id => { const el = document.getElementById(id); if (el && saved[id]) el.value = saved[id]; });
+}
+
 function renderDiet() {
   const el = document.getElementById('diet-content');
   const proteinGrams = Math.round((data.targetCalories * 0.30) / 4);
@@ -3818,7 +3827,7 @@ function logWeight() {
 function toggleAutoAdjust() {
   data.autoAdjust = !data.autoAdjust;
   save();
-  renderDiet();
+  renderDietSafe();
 }
 
 function setManualCalories() {
@@ -3896,7 +3905,7 @@ function calculateTrend(periodDays) {
 function setDietTrendPeriod(d) {
   dietTrendPeriod = d;
   if (d !== 'custom') { dietCustomFrom = ''; dietCustomTo = ''; }
-  renderDiet();
+  renderDietSafe();
 }
 
 function setCustomDateRange() {
@@ -3908,7 +3917,7 @@ function setCustomDateRange() {
   if (dietCustomFrom > dietCustomTo) {
     [dietCustomFrom, dietCustomTo] = [dietCustomTo, dietCustomFrom];
   }
-  renderDiet();
+  renderDietSafe();
 }
 
 function getTodayFood() {
@@ -3942,7 +3951,7 @@ function addFood() {
 function deleteFood(id) {
   data.foodLog = data.foodLog.filter(f => f.id !== id);
   save();
-  renderDiet();
+  renderDietSafe();
 }
 
 function buildWeightGraph(points) {
@@ -4074,7 +4083,7 @@ function setDietGoal(goal) {
   data.dietGoal = goal;
   data.calorieRecommendation = null;
   save();
-  renderDiet();
+  renderDietSafe();
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -4314,6 +4323,15 @@ function ensureCustomPrograms() {
   }
 }
 
+/* Preserve input values across a Build re-render */
+function renderBuildSafe() {
+  const ids = ['sync-api-key', 'sync-bin-id', 'deload-interval', 'edit-name', 'edit-sets', 'edit-reps', 'edit-weight', 'edit-notes'];
+  const saved = {};
+  ids.forEach(id => { const el = document.getElementById(id); if (el) saved[id] = el.value; });
+  renderBuild();
+  ids.forEach(id => { const el = document.getElementById(id); if (el && saved[id]) el.value = saved[id]; });
+}
+
 function renderBuild() {
   const el = document.getElementById('build-content');
   const programs = getPrograms();
@@ -4431,7 +4449,7 @@ function toggleTrainingDay(day) {
     data.schedule.trainingDays.sort();
   }
   save();
-  renderBuild();
+  renderBuildSafe();
 }
 
 function addSplitDay() {
@@ -4461,7 +4479,7 @@ function removeSplitDay(index) {
 function setDeloadMode(mode) {
   data.deload.mode = mode;
   save();
-  renderBuild();
+  renderBuildSafe();
 }
 
 function setDeloadInterval(val) {
@@ -4671,7 +4689,7 @@ function moveExercise(type, index, direction) {
     buildEditing.index = newIndex;
   }
   save();
-  renderBuild();
+  renderBuildSafe();
 }
 
 function resetPrograms() {
@@ -4977,14 +4995,7 @@ function getTodayCardioCalories() {
 function toggleActivityCalories() {
   data.addActivityCalories = !data.addActivityCalories;
   save();
-  // Preserve food input values across re-render
-  const calV = document.getElementById('food-cal-input')?.value || '';
-  const proV = document.getElementById('food-pro-input')?.value || '';
-  renderDiet();
-  const calEl = document.getElementById('food-cal-input');
-  const proEl = document.getElementById('food-pro-input');
-  if (calEl) calEl.value = calV;
-  if (proEl) proEl.value = proV;
+  renderDietSafe();
 }
 
 function setCardioType(type) {
@@ -5033,7 +5044,14 @@ function logCardio() {
 function deleteCardio(id) {
   data.cardioLog = data.cardioLog.filter(c => c.id !== id);
   save();
+  // Preserve input values across re-render
+  const durV = document.getElementById('cardio-dur-input')?.value || '';
+  const distV = document.getElementById('cardio-dist-input')?.value || '';
   renderCardio();
+  const durEl = document.getElementById('cardio-dur-input');
+  const distEl = document.getElementById('cardio-dist-input');
+  if (durEl && durV) durEl.value = durV;
+  if (distEl && distV) distEl.value = distV;
 }
 
 function toggleCardioIntensity(type) {
