@@ -2443,7 +2443,12 @@ function calcPlates(totalWeight) {
   return { bar: barWeight, perSide: result, remainder: Math.round(perSide * 100) / 100 };
 }
 
-/* Toggle plate calc display below a preview exercise row */
+/* Check if exercise is a barbell compound lift (for plate calculator) */
+function isBarbell(name) {
+  const n = name.toLowerCase();
+  const barbell = ['squat', 'bench press', 'deadlift', 'overhead press', 'barbell row', 'rdl', 'hip thrust', 'barbell'];
+  return barbell.some(b => n.includes(b));
+}
 
 /* Toggle progressive overload detail below a preview exercise row */
 function togglePreviewDetail(name, element) {
@@ -2855,7 +2860,7 @@ function showPreview() {
     const hasHistory = getExerciseLastSession(ex.name);
     const chevron = hasHistory ? `<span class="preview-chevron" onclick="togglePreviewDetail('${ex.name}', this)">&#9662;</span>` : '';
     let plateHtml = '';
-    if (w) {
+    if (w && isBarbell(ex.name)) {
       const result = calcPlates(w);
       const unit = weightLabel();
       if (result.perSide.length > 0) {
@@ -3050,12 +3055,29 @@ function renderExercise() {
       prepWeightHtml = `<div class="prep-target">${ex.targetSets} × ${ex.targetReps} reps</div>`;
     }
 
+    // Plate calculator for barbell compound lifts
+    let prepPlateHtml = '';
+    if (!ex.isBodyweight && ex.currentWeight && isBarbell(ex.name)) {
+      const plateResult = calcPlates(ex.currentWeight);
+      if (plateResult.perSide.length > 0) {
+        const grouped = {};
+        plateResult.perSide.forEach(p => { grouped[p] = (grouped[p] || 0) + 1; });
+        const chips = Object.entries(grouped)
+          .map(([size, count]) => {
+            const cls = 'plate-' + String(size).replace('.', '-');
+            return `<span class="plate ${cls}">${count > 1 ? count + '×' : ''}${size}</span>`;
+          }).join('');
+        prepPlateHtml = `<div class="plate-calc" style="justify-content:center;padding:12px 0 0;border:none;">${chips}<span class="plate-label">per side</span></div>`;
+      }
+    }
+
     bodyEl.innerHTML = `
       ${typeBadge}
       <div class="exercise-label">Exercise ${workout.currentExerciseIndex + 1} of ${totalExercises}</div>
       <div class="exercise-name">${ex.name}</div>
       ${prepNoteDisplay}
       ${prepWeightHtml}
+      ${prepPlateHtml}
       <button class="done-btn" onclick="exerciseReady()" style="margin-top:32px;">Let's Go</button>
       <button class="skip-btn mt-8" onclick="workout.exerciseReady=true;skipExercise()" style="margin-top:12px;">Skip Exercise</button>
     `;
