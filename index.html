@@ -271,6 +271,37 @@
     .session-preview-row:last-child { border-bottom: none; }
     .session-preview-row .name { font-size: 14px; color: var(--text); }
     .session-preview-row .info { font-size: 13px; color: var(--text-2); white-space: nowrap; }
+
+    /* Weekly Digest Card */
+    .digest-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .digest-item {
+      text-align: center;
+      padding: 14px 8px;
+      background: var(--surface-2);
+      border-radius: 12px;
+    }
+    .digest-value {
+      font-family: 'Teko', sans-serif;
+      font-weight: 600;
+      font-size: 28px;
+      line-height: 1;
+      color: var(--text);
+    }
+    .digest-target { font-size: 16px; color: var(--text-3); font-weight: 400; margin-left: 2px; }
+    .digest-unit { font-size: 14px; color: var(--text-2); font-weight: 400; margin-left: 2px; }
+    .digest-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-2);
+      margin-top: 4px;
+    }
+
     .workout-exit {
       position: absolute;
       top: 16px;
@@ -301,7 +332,60 @@
     }
     .preview-exercise:last-child { border-bottom: none; }
     .preview-exercise .name { font-weight: 500; font-size: 15px; }
-    .preview-exercise .detail { color: var(--text-2); font-size: 14px; font-variant-numeric: tabular-nums; }
+    .preview-exercise .detail { color: var(--text-2); font-size: 14px; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 6px; }
+    .preview-chevron {
+      display: inline-flex;
+      font-size: 10px;
+      color: var(--text-3);
+      cursor: pointer;
+      padding: 6px;
+      transition: transform 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .preview-chevron.open { transform: rotate(180deg); }
+    .preview-detail {
+      padding: 8px 0 8px 16px;
+      border-bottom: 1px solid var(--divider);
+    }
+    .preview-detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+      font-size: 13px;
+      color: var(--text-2);
+    }
+    .preview-detail-row .label { font-size: 10px; }
+    /* Plate Calculator */
+    .plate-calc {
+      padding: 4px 0 8px 16px;
+      border-bottom: 1px solid var(--divider);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .plate {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      min-width: 32px;
+    }
+    .plate-25   { background: rgba(255, 59, 48, 0.20); color: #ff6b6b; }
+    .plate-20   { background: rgba(48, 120, 209, 0.20); color: #6ba3ff; }
+    .plate-15   { background: rgba(255, 214, 0, 0.20); color: #ffd700; }
+    .plate-10   { background: rgba(48, 209, 88, 0.20); color: var(--good); }
+    .plate-5    { background: var(--surface-3); color: var(--text); }
+    .plate-2-5  { background: var(--surface-2); color: var(--text-2); }
+    .plate-1-25 { background: var(--surface); color: var(--text-3); }
+    .plate-45   { background: rgba(255, 59, 48, 0.20); color: #ff6b6b; }
+    .plate-35   { background: rgba(255, 214, 0, 0.20); color: #ffd700; }
+    .plate-label { font-size: 10px; color: var(--text-3); font-weight: 500; margin-left: 2px; }
 
     /* ═══════════════════════════════════════════════
        WORKOUT MODE (full-screen overlay)
@@ -727,6 +811,63 @@
     .done-footer {
       padding: 16px 20px;
       padding-bottom: calc(16px + var(--safe-bottom));
+    }
+
+    /* PR Celebrations */
+    .pr-card {
+      background: rgba(163, 184, 108, 0.08);
+      border: 1px solid rgba(163, 184, 108, 0.25);
+      border-radius: 18px;
+      padding: 16px 20px;
+      margin-bottom: 12px;
+      animation: pr-glow 2s ease-in-out;
+    }
+    .pr-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+    }
+    .pr-row + .pr-row { border-top: 1px solid var(--divider); }
+    .pr-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: var(--accent);
+      color: #1c1c1c;
+      white-space: nowrap;
+    }
+    .pr-exercise { flex: 1; font-weight: 500; font-size: 14px; }
+    .pr-weight {
+      font-family: 'Teko', sans-serif;
+      font-weight: 600;
+      font-size: 24px;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .pr-inline-badge {
+      display: inline-flex;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      vertical-align: middle;
+      margin-left: 4px;
+    }
+    @keyframes pr-glow {
+      0% { box-shadow: 0 0 0 0 rgba(163, 184, 108, 0.4); }
+      50% { box-shadow: 0 0 20px 4px rgba(163, 184, 108, 0.15); }
+      100% { box-shadow: 0 0 0 0 rgba(163, 184, 108, 0); }
     }
 
     /* ═══════════════════════════════════════════════
@@ -2261,6 +2402,107 @@ function getLastWeight(exerciseName) {
   return null;
 }
 
+/* Get last non-deload session data for an exercise */
+function getExerciseLastSession(exerciseName) {
+  for (let i = data.sessions.length - 1; i >= 0; i--) {
+    const session = data.sessions[i];
+    if (session.isDeload) continue;
+    const ex = session.exercises.find(e => e.name === exerciseName);
+    if (ex && ex.sets.length > 0) {
+      let maxWeight = 0, repsAtMax = 0;
+      for (const set of ex.sets) {
+        const ns = normalizeSet(set);
+        if (!ns.skipped && ns.weight != null && ns.weight >= maxWeight) {
+          maxWeight = ns.weight;
+          repsAtMax = Array.isArray(ns.reps) ? ns.reps.reduce((a, b) => a + b, 0) : ns.reps;
+        }
+      }
+      if (maxWeight > 0) {
+        return { weight: maxWeight, reps: repsAtMax, date: session.date, totalSets: ex.sets.filter(s => !normalizeSet(s).skipped).length };
+      }
+    }
+  }
+  return null;
+}
+
+/* Plate calculator — returns plates per side for a total weight */
+function calcPlates(totalWeight) {
+  const barWeight = data.weightUnit === 'lbs' ? 45 : 20;
+  const plates = data.weightUnit === 'lbs'
+    ? [45, 35, 25, 10, 5, 2.5]
+    : [25, 20, 15, 10, 5, 2.5, 1.25];
+  if (totalWeight <= barWeight) return { bar: barWeight, perSide: [], remainder: 0 };
+  let perSide = (totalWeight - barWeight) / 2;
+  const result = [];
+  for (const plate of plates) {
+    while (perSide >= plate - 0.001) {
+      result.push(plate);
+      perSide -= plate;
+    }
+  }
+  return { bar: barWeight, perSide: result, remainder: Math.round(perSide * 100) / 100 };
+}
+
+/* Toggle plate calc display below a preview exercise row */
+
+/* Toggle progressive overload detail below a preview exercise row */
+function togglePreviewDetail(name, element) {
+  const row = element.closest('.preview-exercise');
+  const existing = row.nextElementSibling;
+  if (existing && existing.classList.contains('preview-detail')) {
+    existing.remove();
+    element.classList.remove('open');
+    return;
+  }
+  document.querySelectorAll('.preview-detail').forEach(el => el.remove());
+  document.querySelectorAll('.preview-chevron.open').forEach(el => el.classList.remove('open'));
+  const last = getExerciseLastSession(name);
+  if (!last) return;
+  const bw = getCurrentBodyweight();
+  let suggestionHtml = '';
+  if (bw && last.weight) {
+    const rec = getProgressionRec(name, last.weight, bw);
+    if (rec.badge) {
+      suggestionHtml = `<div class="preview-detail-row"><span class="label">Suggested</span><span>${displayWeight(rec.suggestedWeight)}${weightLabel()} (${rec.badge})</span></div>`;
+    }
+  }
+  const detail = document.createElement('div');
+  detail.className = 'preview-detail fade-in';
+  detail.innerHTML = `
+    <div class="preview-detail-row"><span class="label">Last session</span><span>${displayWeight(last.weight)}${weightLabel()} × ${last.reps} reps</span></div>
+    <div class="preview-detail-row"><span class="label">Sets completed</span><span>${last.totalSets}</span></div>
+    ${suggestionHtml}`;
+  element.classList.add('open');
+  row.after(detail);
+}
+
+/* Detect personal records in the current workout */
+function detectPRs() {
+  if (!workout || workout.isDeload) return [];
+  const prs = [];
+  for (const ex of workout.exercises) {
+    if (ex.isBodyweight) continue;
+    const sessionMax = Math.max(
+      ...ex.completedSets.map(s => normalizeSet(s)).filter(ns => !ns.skipped && ns.weight != null && ns.weight > 0).map(ns => ns.weight),
+      0
+    );
+    if (sessionMax <= 0) continue;
+    let previousMax = 0;
+    for (const session of data.sessions) {
+      const pastEx = session.exercises.find(e => e.name === ex.name);
+      if (!pastEx) continue;
+      for (const set of pastEx.sets) {
+        const ns = normalizeSet(set);
+        if (!ns.skipped && ns.weight != null && ns.weight > previousMax) previousMax = ns.weight;
+      }
+    }
+    if (sessionMax > previousMax && previousMax > 0) {
+      prs.push({ name: ex.name, weight: sessionMax, previous: previousMax });
+    }
+  }
+  return prs;
+}
+
 /* Determine if exercise is upper body (for progression increments) */
 function isUpperExercise(name) {
   const lower = ['squat', 'deadlift', 'rdl', 'leg press', 'lunge', 'leg curl', 'leg extension', 'calf', 'hip thrust', 'glute'];
@@ -2385,6 +2627,79 @@ function buildSessionPreview(type) {
   </div>`;
 }
 
+/* Weekly digest — aggregate stats for the current Mon–Sun week */
+function buildWeeklyDigest() {
+  const { from, to } = getWeekBounds();
+  const weekSessions = data.sessions.filter(s => s.date >= from && s.date <= to);
+  const targetPerWeek = data.schedule.trainingDays ? data.schedule.trainingDays.length : 0;
+  let totalVolume = 0;
+  for (const session of weekSessions) {
+    for (const ex of session.exercises) {
+      for (const set of ex.sets) {
+        const ns = normalizeSet(set);
+        if (!ns.skipped && ns.weight != null && ns.weight > 0) {
+          const reps = Array.isArray(ns.reps) ? ns.reps.reduce((a, b) => a + b, 0) : ns.reps;
+          totalVolume += reps * ns.weight;
+        }
+      }
+    }
+  }
+  let dietDays = 0, dietAdhereDays = 0;
+  if (data.targetCalories > 0) {
+    const todayStr = today();
+    let checkDate = new Date(from + 'T12:00:00');
+    const endDate = new Date(todayStr + 'T12:00:00');
+    while (checkDate <= endDate) {
+      const dateStr = checkDate.toISOString().split('T')[0];
+      const dayCals = data.foodLog.filter(f => f.date === dateStr).reduce((s, f) => s + f.calories, 0);
+      if (dayCals > 0) { dietDays++; const pct = dayCals / data.targetCalories; if (pct >= 0.9 && pct <= 1.1) dietAdhereDays++; }
+      checkDate.setDate(checkDate.getDate() + 1);
+    }
+  }
+  const weekWeights = data.weights.filter(w => w.date >= from && w.date <= to);
+  let weightDelta = null;
+  if (weekWeights.length >= 2) {
+    const sorted = [...weekWeights].sort((a, b) => a.date.localeCompare(b.date));
+    weightDelta = { from: sorted[0].weight, to: sorted[sorted.length - 1].weight, delta: sorted[sorted.length - 1].weight - sorted[0].weight };
+  }
+  const weekCardio = getWeekCardio();
+  const adjustedMins = getAdjustedMinutes(weekCardio);
+  return { sessionCount: weekSessions.length, targetPerWeek, totalVolume, dietDays, dietAdhereDays, weightDelta, adjustedMins };
+}
+
+function renderDigestCard() {
+  const d = buildWeeklyDigest();
+  if (d.sessionCount === 0 && d.adjustedMins === 0 && d.dietDays === 0) return '';
+  const volStr = d.totalVolume >= 1000 ? (d.totalVolume / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : Math.round(d.totalVolume);
+  const volUnit = d.totalVolume > 0 ? weightLabel() : '';
+  let weightStr = '--';
+  if (d.weightDelta) { const sign = d.weightDelta.delta >= 0 ? '+' : ''; weightStr = sign + displayWeight(d.weightDelta.delta) + weightLabel(); }
+  const dietStr = d.dietDays > 0 ? `${d.dietAdhereDays}/${d.dietDays}` : '--';
+  return `
+    <div class="card fade-in stagger-1">
+      <span class="label">This Week</span>
+      <div class="digest-grid mt-12">
+        <div class="digest-item">
+          <div class="digest-value">${d.sessionCount}<span class="digest-target">/ ${d.targetPerWeek}</span></div>
+          <div class="digest-label">Sessions</div>
+        </div>
+        <div class="digest-item">
+          <div class="digest-value">${volStr}<span class="digest-unit">${volUnit}</span></div>
+          <div class="digest-label">Volume</div>
+        </div>
+        <div class="digest-item">
+          <div class="digest-value">${dietStr}</div>
+          <div class="digest-label">Diet on track</div>
+        </div>
+        <div class="digest-item">
+          <div class="digest-value">${weightStr}</div>
+          <div class="digest-label">Weight</div>
+        </div>
+        ${d.adjustedMins > 0 ? `<div class="digest-item"><div class="digest-value">${d.adjustedMins}<span class="digest-unit">min</span></div><div class="digest-label">Cardio</div></div>` : ''}
+      </div>
+    </div>`;
+}
+
 function renderTrainHome() {
   const el = document.getElementById('train-content');
   const state = getTrainState();
@@ -2445,14 +2760,15 @@ function renderTrainHome() {
           <p class="text-sm text-dim mt-8">${getTypeLabel(last.type)} session complete. Let your muscles recover.</p>
         </div>
       </div>
-      <div class="card fade-in stagger-1">
+      ${renderDigestCard()}
+      <div class="card fade-in stagger-2">
         <div class="next-session-type">
           <span class="label">Next session</span>
           <div class="display display-sm mt-8">${nextDayInfo}</div>
         </div>
         ${previewHtml}
       </div>
-      <button class="btn btn-ghost mt-16 fade-in stagger-2" onclick="showPreview()">Ready to train anyway</button>`;
+      <button class="btn btn-ghost mt-16 fade-in stagger-3" onclick="showPreview()">Ready to train anyway</button>`;
   } else if (state === 'rest-recovery') {
     content = `
       ${deloadHtml}
@@ -2463,14 +2779,15 @@ function renderTrainHome() {
           <p class="text-sm text-dim mt-8">Yesterday's session is doing its work. Rest up.</p>
         </div>
       </div>
-      <div class="card fade-in stagger-1">
+      ${renderDigestCard()}
+      <div class="card fade-in stagger-2">
         <div class="next-session-type">
           <span class="label">Next session</span>
           <div class="display display-sm mt-8">${nextDayInfo}</div>
         </div>
         ${previewHtml}
       </div>
-      <button class="btn btn-secondary mt-20 fade-in stagger-2" onclick="showPreview()">Ready to Train</button>`;
+      <button class="btn btn-secondary mt-20 fade-in stagger-3" onclick="showPreview()">Ready to Train</button>`;
   } else if (state === 'rest-scheduled') {
     content = `
       ${deloadHtml}
@@ -2481,14 +2798,15 @@ function renderTrainHome() {
           <p class="text-sm text-dim mt-8">No training scheduled today.</p>
         </div>
       </div>
-      <div class="card fade-in stagger-1">
+      ${renderDigestCard()}
+      <div class="card fade-in stagger-2">
         <div class="next-session-type">
           <span class="label">Next session</span>
           <div class="display display-sm mt-8">${nextDayInfo}</div>
         </div>
         ${previewHtml}
       </div>
-      <button class="btn btn-ghost mt-16 fade-in stagger-2" onclick="showPreview()">Ready to train anyway</button>`;
+      <button class="btn btn-ghost mt-16 fade-in stagger-3" onclick="showPreview()">Ready to train anyway</button>`;
   } else {
     content = `
       ${deloadHtml}
@@ -2501,7 +2819,8 @@ function renderTrainHome() {
         <div class="mt-24">
           <button class="btn btn-primary" onclick="showPreview()">Ready to Train</button>
         </div>
-      </div>`;
+      </div>
+      ${renderDigestCard()}`;
   }
 
   el.innerHTML = content;
@@ -2533,11 +2852,28 @@ function showPreview() {
     let w = ex.weight || getLastWeight(ex.name);
     if (isDeload && w) w = Math.round(w * 0.6 * 2) / 2;
     const weightStr = w ? ` @ ${displayWeight(w)}${weightLabel()}` : '';
+    const hasHistory = getExerciseLastSession(ex.name);
+    const chevron = hasHistory ? `<span class="preview-chevron" onclick="togglePreviewDetail('${ex.name}', this)">&#9662;</span>` : '';
+    let plateHtml = '';
+    if (w) {
+      const result = calcPlates(w);
+      const unit = weightLabel();
+      if (result.perSide.length > 0) {
+        const grouped = {};
+        result.perSide.forEach(p => { grouped[p] = (grouped[p] || 0) + 1; });
+        const chips = Object.entries(grouped)
+          .map(([size, count]) => {
+            const cls = 'plate-' + String(size).replace('.', '-');
+            return `<span class="plate ${cls}">${count > 1 ? count + '×' : ''}${size}</span>`;
+          }).join('');
+        plateHtml = `<div class="plate-calc">${chips}<span class="plate-label">per side</span></div>`;
+      }
+    }
     return `
     <div class="preview-exercise fade-in stagger-${Math.min(i + 1, 5)}">
       <span class="name">${ex.name}</span>
-      <span class="detail">${ex.sets} × ${ex.reps}${weightStr}</span>
-    </div>`;
+      <span class="detail">${ex.sets} × ${ex.reps}${weightStr}${chevron}</span>
+    </div>${plateHtml}`;
   }).join('');
 
   el.innerHTML = `
@@ -3147,6 +3483,7 @@ function showDoneScreen() {
   const duration = Date.now() - workout.startTime;
   const totalSets = workout.exercises.reduce((s, e) => s + e.completedSets.filter(set => !normalizeSet(set).skipped).length, 0);
   const typeLabel = getTypeLabel(workout.type);
+  const prs = detectPRs();
 
   let exerciseSummary = workout.exercises.map((ex, i) => {
     let setsDisplay = ex.completedSets.map(s => {
@@ -3155,16 +3492,29 @@ function showDoneScreen() {
       if (Array.isArray(ns.reps)) return ns.reps.join('+');
       return ns.reps;
     }).join(', ');
-    // Show weight
     const w = ex.currentWeight;
     const weightStr = w ? ` @ ${displayWeight(w)}${weightLabel()}` : '';
     const badge = ex.restPause ? ' <span class="type-badge rp">RP</span>' : (ex.supersetNext ? ' <span class="type-badge ss">SS</span>' : '');
+    const isPR = prs.some(pr => pr.name === ex.name);
+    const prTag = isPR ? ' <span class="pr-inline-badge">PR</span>' : '';
     return `
       <div class="done-exercise-row fade-in" style="animation-delay:${0.3 + i * 0.05}s">
-        <span class="done-exercise-name">${ex.name}${badge}</span>
+        <span class="done-exercise-name">${ex.name}${badge}${prTag}</span>
         <span class="done-exercise-sets">${setsDisplay}${weightStr}</span>
       </div>`;
   }).join('');
+
+  const prSection = prs.length > 0 ? `
+    <div class="pr-card fade-in stagger-2">
+      ${prs.map(pr => `
+        <div class="pr-row">
+          <span class="pr-badge">NEW PR</span>
+          <span class="pr-exercise">${pr.name}</span>
+          <span class="pr-weight">${displayWeight(pr.weight)}${weightLabel()}</span>
+        </div>`).join('')}
+    </div>` : '';
+
+  const stagger = prs.length > 0 ? 3 : 2;
 
   bodyEl.innerHTML = `
     <div class="stat-row mb-16 fade-in stagger-1">
@@ -3181,7 +3531,8 @@ function showDoneScreen() {
         <div class="stat-label">Sets</div>
       </div>
     </div>
-    <div class="card fade-in stagger-2">
+    ${prSection}
+    <div class="card fade-in stagger-${stagger}">
       <span class="label">Exercises</span>
       <div class="mt-12">
         ${exerciseSummary}
