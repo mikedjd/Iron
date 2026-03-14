@@ -4977,12 +4977,33 @@ function getTodayCardioCalories() {
 function toggleActivityCalories() {
   data.addActivityCalories = !data.addActivityCalories;
   save();
+  // Preserve food input values across re-render
+  const calV = document.getElementById('food-cal-input')?.value || '';
+  const proV = document.getElementById('food-pro-input')?.value || '';
   renderDiet();
+  const calEl = document.getElementById('food-cal-input');
+  const proEl = document.getElementById('food-pro-input');
+  if (calEl) calEl.value = calV;
+  if (proEl) proEl.value = proV;
 }
 
 function setCardioType(type) {
   selectedCardioType = type;
-  renderCardio(true);
+  // Update type buttons active state
+  document.querySelectorAll('.cardio-type-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent === CARDIO_TYPES.find(t => t.key === type).label);
+  });
+  // Update intensity label and buttons
+  const currentIntensity = data.cardioIntensity[type] || 'moderate';
+  const intRow = document.querySelector('.intensity-row');
+  if (intRow) {
+    intRow.querySelector('span').textContent = CARDIO_TYPES.find(t => t.key === type).label + ' intensity';
+    const btns = intRow.querySelectorAll('.unit-opt');
+    btns[0].classList.toggle('active', currentIntensity === 'moderate');
+    btns[0].setAttribute('onclick', `if(data.cardioIntensity['${type}']!=='moderate'){toggleCardioIntensity('${type}')}`);
+    btns[1].classList.toggle('active', currentIntensity === 'vigorous');
+    btns[1].setAttribute('onclick', `if(data.cardioIntensity['${type}']!=='vigorous'){toggleCardioIntensity('${type}')}`);
+  }
 }
 
 function logCardio() {
@@ -5018,13 +5039,30 @@ function deleteCardio(id) {
 function toggleCardioIntensity(type) {
   data.cardioIntensity[type] = data.cardioIntensity[type] === 'vigorous' ? 'moderate' : 'vigorous';
   save();
-  renderCardio(true);
+  // Update intensity buttons active state only
+  const intRow = document.querySelector('.intensity-row');
+  if (intRow) {
+    const btns = intRow.querySelectorAll('.unit-opt');
+    const newInt = data.cardioIntensity[type];
+    btns[0].classList.toggle('active', newInt === 'moderate');
+    btns[1].classList.toggle('active', newInt === 'vigorous');
+  }
 }
 
 function setDistanceUnit(u) {
+  if (data.distanceUnit === u) return;
   data.distanceUnit = u;
   save();
-  renderCardio(true);
+  // Update unit buttons active state and placeholder only
+  const distInput = document.getElementById('cardio-dist-input');
+  if (distInput) distInput.placeholder = (u === 'mi' ? 'miles' : 'km') + ' (optional)';
+  const unitToggles = document.querySelectorAll('.unit-toggle');
+  const lastToggle = unitToggles[unitToggles.length - 1];
+  if (lastToggle) {
+    const btns = lastToggle.querySelectorAll('.unit-opt');
+    btns[0].classList.toggle('active', u === 'km');
+    btns[1].classList.toggle('active', u === 'mi');
+  }
 }
 
 function renderCardio(quick) {
