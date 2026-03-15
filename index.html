@@ -871,6 +871,57 @@
     }
 
     /* ═══════════════════════════════════════════════
+       STREAK
+       ═══════════════════════════════════════════════ */
+    .streak-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      margin-bottom: 12px;
+      background: rgba(255, 149, 0, 0.08);
+      border: 1px solid rgba(255, 149, 0, 0.20);
+      border-radius: 14px;
+    }
+    .streak-flame { font-size: 20px; line-height: 1; }
+    .streak-count {
+      font-family: 'Teko', sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      line-height: 1;
+      color: var(--warning);
+    }
+    .streak-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-2);
+    }
+    .milestone-card {
+      background: rgba(255, 149, 0, 0.08);
+      border: 1px solid rgba(255, 149, 0, 0.25);
+      border-radius: 18px;
+      padding: 24px 20px;
+      margin-bottom: 12px;
+      text-align: center;
+      animation: milestone-glow 2s ease-in-out;
+    }
+    .milestone-flame { font-size: 40px; line-height: 1; margin-bottom: 4px; }
+    .milestone-count { color: var(--warning); }
+    .milestone-text {
+      font-family: 'Teko', sans-serif;
+      font-weight: 600;
+      font-size: 22px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--warning);
+    }
+    @keyframes milestone-glow {
+      0% { box-shadow: 0 0 0 0 rgba(255, 149, 0, 0.4); }
+      50% { box-shadow: 0 0 20px 4px rgba(255, 149, 0, 0.15); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 149, 0, 0); }
+    }
+
+    /* ═══════════════════════════════════════════════
        DIET TAB
        ═══════════════════════════════════════════════ */
     .target-display {
@@ -2221,7 +2272,9 @@ let data = {
   cardioWeeklyCap: 150,
   distanceUnit: 'km',
   cardioIntensity: { run: 'moderate', cycle: 'moderate', swim: 'moderate', hiit: 'vigorous', class: 'vigorous' },
-  addActivityCalories: false
+  addActivityCalories: false,
+  streak: { current: 0, longest: 0, lastTrainingDate: null },
+  notifications: { enabled: false, reminderTime: '08:00' }
 };
 
 let workout = null;   // active workout state
@@ -2289,6 +2342,9 @@ function load() {
   if (!data.distanceUnit) data.distanceUnit = 'km';
   if (!data.cardioIntensity) data.cardioIntensity = { run: 'moderate', cycle: 'moderate', swim: 'moderate', hiit: 'vigorous', class: 'vigorous' };
   if (data.addActivityCalories === undefined) data.addActivityCalories = false;
+  // Migration: streak & notifications
+  if (!data.streak) data.streak = { current: 0, longest: 0, lastTrainingDate: null };
+  if (!data.notifications) data.notifications = { enabled: false, reminderTime: '08:00' };
   // Keep nextType in sync
   data.nextType = data.schedule.pattern[data.schedule.patternIndex % data.schedule.pattern.length];
 
@@ -2561,6 +2617,68 @@ function getNextTrainingDay() {
   return null;
 }
 
+/* ═══ STREAK CALCULATION ═══ */
+const STREAK_MILESTONES = [7, 14, 30, 60, 90, 180, 365];
+
+function calculateStreak() {
+  const sessions = data.sessions;
+  const trainingDays = data.schedule.trainingDays;
+  if (sessions.length === 0 || trainingDays.length === 0) {
+    data.streak.current = 0;
+    return data.streak;
+  }
+  const sessionDates = new Set(sessions.map(s => s.date));
+  let streak = 0;
+  const todayStr = today();
+  const todayDate = new Date(todayStr + 'T12:00:00');
+  const todayDow = todayDate.getDay();
+  const isTodayTrainingDay = trainingDays.includes(todayDow);
+  let checkDate = new Date(todayDate);
+
+  if (isTodayTrainingDay && sessionDates.has(todayStr)) {
+    streak = 1;
+    checkDate.setDate(checkDate.getDate() - 1);
+  } else {
+    // Today is training day with no session yet (don't break), or rest day — walk backwards
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+
+  for (let i = 0; i < 400; i++) {
+    const dateStr = checkDate.toISOString().split('T')[0];
+    const dow = checkDate.getDay();
+    if (trainingDays.includes(dow)) {
+      if (sessionDates.has(dateStr)) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+
+  data.streak.current = streak;
+  if (streak > data.streak.longest) data.streak.longest = streak;
+  if (sessions.length > 0) data.streak.lastTrainingDate = sessions[sessions.length - 1].date;
+  return data.streak;
+}
+
+function getStreakMilestone(count) {
+  return STREAK_MILESTONES.includes(count) ? count : null;
+}
+
+function getMilestoneMessage(days) {
+  const msgs = {
+    7: 'One full week of consistency.',
+    14: 'Two weeks strong. Habit forming.',
+    30: 'A full month. This is who you are now.',
+    60: 'Two months. Unshakeable.',
+    90: 'Quarter of a year. Machine-like.',
+    180: 'Half a year. Extraordinary discipline.',
+    365: 'One full year. Legendary.'
+  };
+  return msgs[days] || '';
+}
+
 /* Get label for a workout type from schedule pattern */
 function getTypeLabel(type) {
   return type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ');
@@ -2600,6 +2718,99 @@ function shouldRecommendDeload() {
     }
   }
   return null;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   NOTIFICATIONS
+   ═══════════════════════════════════════════════════════════ */
+async function toggleNotifications() {
+  if (!data.notifications.enabled) {
+    if (!('Notification' in window)) return;
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      data.notifications.enabled = true;
+      save();
+      scheduleNotificationChecks();
+    }
+  } else {
+    data.notifications.enabled = false;
+    save();
+  }
+  renderBuildSafe();
+}
+
+function setReminderTime(time) {
+  data.notifications.reminderTime = time;
+  save();
+}
+
+function checkAndFireNotifications() {
+  if (!data.notifications.enabled) return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  const now = new Date();
+  const todayStr = today();
+  const todayDow = now.getDay();
+  const isTrainingDay = data.schedule.trainingDays.includes(todayDow);
+  if (!isTrainingDay) return;
+
+  const lastNotifKey = 'iron_last_notif_' + todayStr;
+  const firedToday = JSON.parse(localStorage.getItem(lastNotifKey) || '{}');
+
+  const [reminderH, reminderM] = data.notifications.reminderTime.split(':').map(Number);
+  const currentMins = now.getHours() * 60 + now.getMinutes();
+  const reminderMins = reminderH * 60 + reminderM;
+  const hasSessionToday = data.sessions.some(s => s.date === todayStr);
+
+  // Morning reminder: within 30 min window after reminder time
+  if (!firedToday.reminder && !hasSessionToday && currentMins >= reminderMins && currentMins <= reminderMins + 30) {
+    const streak = calculateStreak();
+    const typeLabel = getTypeLabel(data.nextType);
+    const body = streak.current > 0
+      ? `${typeLabel} day. ${streak.current}-day streak — keep it going.`
+      : `${typeLabel} session scheduled today. Time to work.`;
+    fireNotification('Training Day', body, 'reminder');
+    firedToday.reminder = true;
+    localStorage.setItem(lastNotifKey, JSON.stringify(firedToday));
+  }
+
+  // Streak-at-risk: after 2pm, if no session and streak > 0
+  if (!firedToday.streakRisk && !hasSessionToday && now.getHours() >= 14) {
+    const streak = calculateStreak();
+    if (streak.current > 0) {
+      fireNotification('Streak at Risk!',
+        `Your ${streak.current}-day streak ends today if you don't train. Don't break the chain.`,
+        'streak-risk');
+      firedToday.streakRisk = true;
+      localStorage.setItem(lastNotifKey, JSON.stringify(firedToday));
+    }
+  }
+}
+
+function fireNotification(title, body, tag) {
+  try {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.showNotification('IRON — ' + title, { body, tag, renotify: false });
+      });
+    } else {
+      new Notification('IRON — ' + title, { body, tag });
+    }
+  } catch (e) { /* notification failed silently */ }
+}
+
+function fireMilestoneNotification(milestone) {
+  if (!data.notifications.enabled) return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  fireNotification('Streak Milestone!', `🔥 ${milestone} days! ${getMilestoneMessage(milestone)}`, 'milestone');
+}
+
+function scheduleNotificationChecks() {
+  if (window._notifInterval) clearInterval(window._notifInterval);
+  if (data.notifications.enabled) {
+    window._notifInterval = setInterval(checkAndFireNotifications, 15 * 60 * 1000);
+    checkAndFireNotifications();
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -2669,7 +2880,8 @@ function buildWeeklyDigest() {
   }
   const weekCardio = getWeekCardio();
   const adjustedMins = getAdjustedMinutes(weekCardio);
-  return { sessionCount: weekSessions.length, targetPerWeek, totalVolume, dietDays, dietAdhereDays, weightDelta, adjustedMins };
+  const streakVal = calculateStreak().current;
+  return { sessionCount: weekSessions.length, targetPerWeek, totalVolume, dietDays, dietAdhereDays, weightDelta, adjustedMins, streak: streakVal };
 }
 
 function renderDigestCard() {
@@ -2701,7 +2913,19 @@ function renderDigestCard() {
           <div class="digest-label">Weight</div>
         </div>
         ${d.adjustedMins > 0 ? `<div class="digest-item"><div class="digest-value">${d.adjustedMins}<span class="digest-unit">min</span></div><div class="digest-label">Cardio</div></div>` : ''}
+        ${d.streak > 0 ? `<div class="digest-item"><div class="digest-value">🔥 ${d.streak}</div><div class="digest-label">Streak</div></div>` : ''}
       </div>
+    </div>`;
+}
+
+function renderStreakBadge() {
+  const s = calculateStreak();
+  if (s.current === 0) return '';
+  return `
+    <div class="streak-badge fade-in">
+      <span class="streak-flame">🔥</span>
+      <span class="streak-count">${s.current}</span>
+      <span class="streak-label">day streak</span>
     </div>`;
 }
 
@@ -2712,6 +2936,7 @@ function renderTrainHome() {
   const nextDay = getNextTrainingDay();
   const nextDayInfo = nextDay ? `${nextDay.name} — ${nextLabel}` : nextLabel;
   const previewHtml = buildSessionPreview(data.nextType);
+  const streakHtml = state !== 'first-time' ? renderStreakBadge() : '';
 
   // Check for interrupted workout
   if (workout) {
@@ -2757,6 +2982,7 @@ function renderTrainHome() {
   } else if (state === 'rest-today') {
     const last = data.sessions[data.sessions.length - 1];
     content = `
+      ${streakHtml}
       ${deloadHtml}
       <div class="card fade-in">
         <div class="rest-badge rest">Rest Day</div>
@@ -2776,6 +3002,7 @@ function renderTrainHome() {
       <button class="btn btn-ghost mt-16 fade-in stagger-3" onclick="showPreview()">Ready to train anyway</button>`;
   } else if (state === 'rest-recovery') {
     content = `
+      ${streakHtml}
       ${deloadHtml}
       <div class="card fade-in">
         <div class="rest-badge rest">Recovery Day</div>
@@ -2795,6 +3022,7 @@ function renderTrainHome() {
       <button class="btn btn-secondary mt-20 fade-in stagger-3" onclick="showPreview()">Ready to Train</button>`;
   } else if (state === 'rest-scheduled') {
     content = `
+      ${streakHtml}
       ${deloadHtml}
       <div class="card fade-in">
         <div class="rest-badge rest">Scheduled Rest</div>
@@ -2814,6 +3042,7 @@ function renderTrainHome() {
       <button class="btn btn-ghost mt-16 fade-in stagger-3" onclick="showPreview()">Ready to train anyway</button>`;
   } else {
     content = `
+      ${streakHtml}
       ${deloadHtml}
       <div class="card fade-in" style="text-align:center;padding:32px 20px;">
         <div class="rest-badge ready" style="margin:0 auto;">Ready</div>
@@ -3536,7 +3765,24 @@ function showDoneScreen() {
         </div>`).join('')}
     </div>` : '';
 
-  const stagger = prs.length > 0 ? 3 : 2;
+  // Project streak: session hasn't been saved yet, so simulate
+  const currentStreak = calculateStreak();
+  const todayStr = today();
+  const todayDow = new Date().getDay();
+  const isTodayTrainingDay = data.schedule.trainingDays.includes(todayDow);
+  const alreadyHasSession = data.sessions.some(s => s.date === todayStr);
+  const projectedStreak = currentStreak.current + (isTodayTrainingDay && !alreadyHasSession ? 1 : 0);
+  const milestone = getStreakMilestone(projectedStreak);
+  const milestoneHtml = milestone ? `
+    <div class="milestone-card fade-in stagger-${prs.length > 0 ? 3 : 2}">
+      <div class="milestone-flame">🔥</div>
+      <div class="display display-lg milestone-count">${milestone}</div>
+      <div class="milestone-text">Day Streak!</div>
+      <p class="text-xs text-dim" style="margin-top:8px;">${getMilestoneMessage(milestone)}</p>
+    </div>` : '';
+
+  let stagger = prs.length > 0 ? 3 : 2;
+  if (milestone) stagger++;
 
   bodyEl.innerHTML = `
     <div class="stat-row mb-16 fade-in stagger-1">
@@ -3554,6 +3800,7 @@ function showDoneScreen() {
       </div>
     </div>
     ${prSection}
+    ${milestoneHtml}
     <div class="card fade-in stagger-${stagger}">
       <span class="label">Exercises</span>
       <div class="mt-12">
@@ -3593,6 +3840,11 @@ function saveWorkout() {
     data.deload.lastDeloadDate = today();
     data.deload.dismissedUntilSession = null;
   }
+
+  // Streak + milestone notification
+  calculateStreak();
+  const streakMilestone = getStreakMilestone(data.streak.current);
+  if (streakMilestone) fireMilestoneNotification(streakMilestone);
 
   save();
 
@@ -4378,6 +4630,27 @@ function renderBuild() {
       ${data.deload.mode === 'auto' ? `<p class="text-xs text-dim mt-8">Recommends a deload when performance declines or after 6+ weeks.</p>` : ''}
     </div>`;
 
+  // Notifications card
+  const notifSupported = 'Notification' in window;
+  const notifHtml = notifSupported ? `
+    <div class="card fade-in" style="margin-bottom:16px;">
+      <span class="label">Notifications</span>
+      <div class="toggle-row" style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+        <span class="text-sm">Training reminders</span>
+        <button class="toggle ${data.notifications.enabled ? 'on' : ''}" onclick="toggleNotifications()"></button>
+      </div>
+      <p class="text-xs text-dim mt-8">Get reminded on training days and when your streak is at risk.</p>
+      ${data.notifications.enabled ? `
+        <div class="divider"></div>
+        <span class="label">Reminder Time</span>
+        <div style="margin-top:8px;">
+          <input type="time" id="notif-time" value="${data.notifications.reminderTime}"
+            onchange="setReminderTime(this.value)"
+            style="padding:8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;">
+        </div>
+      ` : ''}
+    </div>` : '';
+
   // Program cards
   let programCards = '';
   for (const type of pat) {
@@ -4396,6 +4669,7 @@ function renderBuild() {
   el.innerHTML = `
     ${scheduleHtml}
     ${deloadHtml}
+    ${notifHtml}
     ${programCards}
     ${data.programs ? `
       <button class="btn btn-ghost mt-8 fade-in" onclick="resetPrograms()" style="color:var(--danger);">Reset to Defaults</button>
@@ -5288,6 +5562,15 @@ function renderCardio(quick) {
    ═══════════════════════════════════════════════════════════ */
 load();
 renderTrainHome();
+scheduleNotificationChecks();
+
+// Re-check on tab focus
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    checkAndFireNotifications();
+    renderTrainHome();
+  }
+});
 
 // Service Worker registration
 if ('serviceWorker' in navigator) {
