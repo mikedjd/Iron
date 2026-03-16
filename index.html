@@ -103,7 +103,7 @@
       padding: 16px 0 12px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 8px;
     }
     .brand {
       font-family: 'Teko', sans-serif;
@@ -2225,6 +2225,50 @@
     }
     .custom-type-input:focus { border-color: var(--accent); }
     .custom-type-input::placeholder { color: var(--text-3); }
+
+    /* Settings overlay */
+    .settings-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: var(--bg);
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .settings-overlay.active { transform: translateX(0); }
+    .settings-header {
+      position: sticky; top: 0; z-index: 10;
+      background: var(--bg);
+      padding: 16px 20px 12px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .settings-back {
+      background: none; border: none; color: var(--text-3);
+      font-size: 20px; cursor: pointer; padding: 4px 8px;
+      line-height: 1;
+    }
+    .settings-back:hover { color: var(--text); }
+    .settings-title {
+      font-family: 'Teko', sans-serif;
+      font-size: 22px; font-weight: 600;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--text);
+    }
+    .settings-body { padding: 0 20px 100px; }
+    .gear-btn {
+      background: none; border: none; color: var(--text-3);
+      font-size: 18px; cursor: pointer; padding: 4px;
+      margin-left: auto; line-height: 1;
+      transition: color 0.15s;
+    }
+    .gear-btn:hover { color: var(--text); }
+    .settings-section-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--text-3);
+      margin: 24px 0 8px; padding: 0;
+    }
+    .settings-section-label:first-child { margin-top: 0; }
+
     .data-actions { display: flex; gap: 10px; flex-wrap: wrap; }
     .data-actions .btn { font-size: 13px; padding: 10px 12px; }
     .sync-status { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: var(--text-3); }
@@ -2320,6 +2364,7 @@
     <section id="tab-train" class="tab active">
       <div class="tab-header">
         <div class="brand">IRON</div>
+        <button class="gear-btn" onclick="openSettings()" title="Settings">⚙</button>
       </div>
       <div id="train-content"></div>
     </section>
@@ -2329,6 +2374,7 @@
       <div class="tab-header">
         <div class="brand">IRON</div>
         <span class="label">Diet</span>
+        <button class="gear-btn" onclick="openSettings()" title="Settings">⚙</button>
       </div>
       <div id="diet-content"></div>
     </section>
@@ -2338,6 +2384,7 @@
       <div class="tab-header">
         <div class="brand">IRON</div>
         <span class="label">Performance</span>
+        <button class="gear-btn" onclick="openSettings()" title="Settings">⚙</button>
       </div>
       <div id="history-content"></div>
     </section>
@@ -2347,6 +2394,7 @@
       <div class="tab-header">
         <div class="brand">IRON</div>
         <span class="label">Build</span>
+        <button class="gear-btn" onclick="openSettings()" title="Settings">⚙</button>
       </div>
       <div id="build-content"></div>
     </section>
@@ -2356,9 +2404,19 @@
       <div class="tab-header">
         <div class="brand">IRON</div>
         <span class="label">Cardio</span>
+        <button class="gear-btn" onclick="openSettings()" title="Settings">⚙</button>
       </div>
       <div id="cardio-content"></div>
     </section>
+
+    <!-- ═══════════ SETTINGS OVERLAY ═══════════ -->
+    <div id="settings-overlay" class="settings-overlay">
+      <div class="settings-header">
+        <button class="settings-back" onclick="closeSettings()">←</button>
+        <span class="settings-title">Settings</span>
+      </div>
+      <div class="settings-body" id="settings-content"></div>
+    </div>
 
     <!-- ═══════════ BOTTOM NAV ═══════════ -->
     <nav id="nav">
@@ -3285,7 +3343,7 @@ async function toggleNotifications() {
     data.notifications.enabled = false;
     save();
   }
-  renderBuildSafe();
+  renderSettings();
 }
 
 function setReminderTime(time) {
@@ -5265,7 +5323,7 @@ function ensureCustomPrograms() {
 
 /* Preserve input values across a Build re-render */
 function renderBuildSafe() {
-  const ids = ['sync-api-key', 'sync-bin-id', 'deload-interval', 'edit-name', 'edit-sets', 'edit-reps', 'edit-weight', 'edit-notes'];
+  const ids = ['edit-name', 'edit-sets', 'edit-reps', 'edit-weight', 'edit-notes'];
   const saved = {};
   ids.forEach(id => { const el = document.getElementById(id); if (el) saved[id] = el.value; });
   renderBuild();
@@ -5329,67 +5387,6 @@ function renderBuild() {
       </div>
     </div>`;
 
-  // Deload card
-  const deloadHtml = `
-    <div class="card fade-in" style="margin-bottom:16px;">
-      <span class="label">Deload</span>
-      <div class="type-selector mt-8">
-        <button class="type-opt ${data.deload.mode === 'auto' ? 'active' : ''}" onclick="setDeloadMode('auto')">Auto</button>
-        <button class="type-opt ${data.deload.mode === 'programmed' ? 'active' : ''}" onclick="setDeloadMode('programmed')">Every N wks</button>
-        <button class="type-opt ${data.deload.mode === 'off' ? 'active' : ''}" onclick="setDeloadMode('off')">Off</button>
-      </div>
-      ${data.deload.mode === 'programmed' ? `
-        <div class="mt-8" style="display:flex;align-items:center;gap:8px;">
-          <span class="text-sm">Every</span>
-          <input type="number" id="deload-interval" value="${data.deload.programmedInterval}" min="2" max="12" inputmode="numeric"
-            style="width:50px;padding:6px 8px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;text-align:center;outline:none;"
-            onchange="setDeloadInterval(this.value)">
-          <span class="text-sm">weeks</span>
-        </div>` : ''}
-      ${data.deload.mode === 'auto' ? `<p class="text-xs text-dim mt-8">Recommends a deload when performance declines or after 6+ weeks.</p>` : ''}
-    </div>`;
-
-  // Notifications card
-  const notifSupported = 'Notification' in window;
-  const notifHtml = notifSupported ? `
-    <div class="card fade-in" style="margin-bottom:16px;">
-      <span class="label">Notifications</span>
-      <div class="toggle-row" style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
-        <span class="text-sm">Training reminders</span>
-        <button class="toggle ${data.notifications.enabled ? 'on' : ''}" onclick="toggleNotifications()"></button>
-      </div>
-      <p class="text-xs text-dim mt-8">Get reminded on training days and when your streak is at risk.</p>
-      ${data.notifications.enabled ? `
-        <div class="divider"></div>
-        <span class="label">Reminder Time</span>
-        <div style="margin-top:8px;">
-          <input type="time" id="notif-time" value="${data.notifications.reminderTime}"
-            onchange="setReminderTime(this.value)"
-            style="padding:8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;">
-        </div>
-      ` : ''}
-    </div>` : '';
-
-  // Set targets card
-  const st = getSetTargets();
-  const setTargetsHtml = `
-    <div class="card fade-in" style="margin-bottom:16px;">
-      <span class="label">Weekly Set Targets</span>
-      <p class="text-xs text-dim mt-8">Recommended sets per muscle group per week (Schoenfeld et al.).</p>
-      <div class="divider"></div>
-      ${Object.entries(st).map(([group, t]) => `
-        <div class="target-row">
-          <span class="text-sm" style="color:var(--text-2);">${group}</span>
-          <input type="number" class="target-input" value="${t.min}" min="0" max="30" inputmode="numeric"
-            onchange="updateSetTarget('${group}','min',this.value)">
-          <span class="target-to">to</span>
-          <input type="number" class="target-input" value="${t.max}" min="0" max="40" inputmode="numeric"
-            onchange="updateSetTarget('${group}','max',this.value)">
-        </div>
-      `).join('')}
-      ${data.setTargets ? `<button class="btn btn-ghost mt-8" onclick="resetSetTargets()" style="width:100%;font-size:12px;">Reset to Defaults</button>` : ''}
-    </div>`;
-
   // Program cards
   let programCards = '';
   for (const type of pat) {
@@ -5408,50 +5405,10 @@ function renderBuild() {
   el.innerHTML = `
     ${splitTemplateHtml}
     ${scheduleHtml}
-    ${deloadHtml}
-    ${notifHtml}
-    ${setTargetsHtml}
     ${programCards}
     ${data.programs ? `
       <button class="btn btn-ghost mt-8 fade-in" onclick="resetPrograms()" style="color:var(--danger);">Reset to Defaults</button>
     ` : ''}
-    <div class="card fade-in" style="margin-top:16px;">
-      <span class="label">Data</span>
-      <div class="data-actions mt-12">
-        <button class="btn btn-ghost" onclick="exportData()" style="flex:1;">Export</button>
-        <button class="btn btn-ghost" onclick="document.getElementById('import-file').click()" style="flex:1;">Import</button>
-        <button class="btn btn-ghost" onclick="shareData()" style="flex:1;">${navigator.share ? 'Share' : 'Copy'}</button>
-        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
-      </div>
-      <div class="divider"></div>
-      <span class="label">Cloud Sync</span>
-      ${data.syncBinId ? `
-        <div class="sync-status">
-          <span class="sync-dot connected"></span>
-          <span>Auto-syncing to JSONBin</span>
-          <span style="margin-left:auto;opacity:0.5;">${data.lastSyncTime ? new Date(data.lastSyncTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : ''}</span>
-        </div>
-        <div class="data-actions mt-8">
-          <button class="btn btn-ghost" onclick="cloudPull()" style="flex:1;font-size:12px;">Pull from Cloud</button>
-          <button class="btn btn-ghost" onclick="cloudPush()" style="flex:1;font-size:12px;">Push to Cloud</button>
-        </div>
-        <p class="text-xs text-dim mt-8">Bin ID: ${data.syncBinId.slice(0,8)}… · <a href="#" onclick="disconnectSync();return false;" style="color:var(--danger);">Disconnect</a></p>
-      ` : `
-        <div class="sync-status">
-          <span class="sync-dot disconnected"></span>
-          <span>Not connected</span>
-        </div>
-        <div class="sync-setup">
-          <p class="text-xs text-dim mb-8">Free cloud backup. Get an API key from <a href="https://jsonbin.io" target="_blank" style="color:var(--accent);">jsonbin.io</a> (Access Keys → Create).</p>
-          <input type="text" id="sync-api-key" placeholder="Paste your JSONBin Master Key" autocomplete="off">
-          <button class="btn btn-ghost mt-8" onclick="setupSync()" style="width:100%;">New Backup</button>
-          <div class="divider" style="margin:12px 0;"></div>
-          <p class="text-xs text-dim mb-8">Restore from an existing backup:</p>
-          <input type="text" id="sync-bin-id" placeholder="Paste your Bin ID" autocomplete="off">
-          <button class="btn btn-ghost mt-8" onclick="restoreFromCloud()" style="width:100%;">Restore from Cloud</button>
-        </div>
-      `}
-    </div>
   `;
 }
 
@@ -5567,10 +5524,142 @@ function buildWeeklyPreview() {
   }).join('');
 }
 
+/* ═══════════════════════════════════════════════════════════
+   SETTINGS OVERLAY
+   ═══════════════════════════════════════════════════════════ */
+function openSettings() {
+  renderSettings();
+  document.getElementById('settings-overlay').classList.add('active');
+}
+
+function closeSettings() {
+  document.getElementById('settings-overlay').classList.remove('active');
+}
+
+function renderSettings() {
+  const el = document.getElementById('settings-content');
+  const notifSupported = 'Notification' in window;
+  const st = getSetTargets();
+
+  el.innerHTML = `
+    <p class="settings-section-label">Training</p>
+    <div class="card" style="margin-bottom:16px;">
+      <span class="label">Deload</span>
+      <div class="type-selector mt-8">
+        <button class="type-opt ${data.deload.mode === 'auto' ? 'active' : ''}" onclick="setDeloadMode('auto')">Auto</button>
+        <button class="type-opt ${data.deload.mode === 'programmed' ? 'active' : ''}" onclick="setDeloadMode('programmed')">Every N wks</button>
+        <button class="type-opt ${data.deload.mode === 'off' ? 'active' : ''}" onclick="setDeloadMode('off')">Off</button>
+      </div>
+      ${data.deload.mode === 'programmed' ? `
+        <div class="mt-8" style="display:flex;align-items:center;gap:8px;">
+          <span class="text-sm">Every</span>
+          <input type="number" id="deload-interval" value="${data.deload.programmedInterval}" min="2" max="12" inputmode="numeric"
+            style="width:50px;padding:6px 8px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;text-align:center;outline:none;"
+            onchange="setDeloadInterval(this.value)">
+          <span class="text-sm">weeks</span>
+        </div>` : ''}
+      ${data.deload.mode === 'auto' ? `<p class="text-xs text-dim mt-8">Recommends a deload when performance declines or after 6+ weeks.</p>` : ''}
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <span class="label">Weekly Set Targets</span>
+      <p class="text-xs text-dim mt-8">Recommended sets per muscle group per week (Schoenfeld et al.).</p>
+      <div class="divider"></div>
+      ${Object.entries(st).map(([group, t]) => `
+        <div class="target-row">
+          <span class="text-sm" style="color:var(--text-2);">${group}</span>
+          <input type="number" class="target-input" value="${t.min}" min="0" max="30" inputmode="numeric"
+            onchange="updateSetTarget('${group}','min',this.value)">
+          <span class="target-to">to</span>
+          <input type="number" class="target-input" value="${t.max}" min="0" max="40" inputmode="numeric"
+            onchange="updateSetTarget('${group}','max',this.value)">
+        </div>
+      `).join('')}
+      ${data.setTargets ? `<button class="btn btn-ghost mt-8" onclick="resetSetTargets()" style="width:100%;font-size:12px;">Reset to Defaults</button>` : ''}
+    </div>
+
+    ${notifSupported ? `
+    <p class="settings-section-label">Notifications</p>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="toggle-row" style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="text-sm">Training reminders</span>
+        <button class="toggle ${data.notifications.enabled ? 'on' : ''}" onclick="toggleNotifications()"></button>
+      </div>
+      <p class="text-xs text-dim mt-8">Get reminded on training days and when your streak is at risk.</p>
+      ${data.notifications.enabled ? `
+        <div class="divider"></div>
+        <span class="label">Reminder Time</span>
+        <div style="margin-top:8px;">
+          <input type="time" id="notif-time" value="${data.notifications.reminderTime}"
+            onchange="setReminderTime(this.value)"
+            style="padding:8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;">
+        </div>
+      ` : ''}
+    </div>
+    ` : ''}
+
+    <p class="settings-section-label">Units</p>
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="text-sm">Weight</span>
+        <div class="type-selector" style="width:auto;">
+          <button class="type-opt ${data.weightUnit === 'kg' ? 'active' : ''}" onclick="setWeightUnit('kg');renderSettings()">kg</button>
+          <button class="type-opt ${data.weightUnit === 'lbs' ? 'active' : ''}" onclick="setWeightUnit('lbs');renderSettings()">lbs</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;">
+        <span class="text-sm">Distance</span>
+        <div class="type-selector" style="width:auto;">
+          <button class="type-opt ${data.distanceUnit === 'km' ? 'active' : ''}" onclick="data.distanceUnit='km';save();renderSettings()">km</button>
+          <button class="type-opt ${data.distanceUnit === 'mi' ? 'active' : ''}" onclick="data.distanceUnit='mi';save();renderSettings()">mi</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="settings-section-label">Data</p>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="data-actions">
+        <button class="btn btn-ghost" onclick="exportData()" style="flex:1;">Export</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('import-file-settings').click()" style="flex:1;">Import</button>
+        <button class="btn btn-ghost" onclick="shareData()" style="flex:1;">${navigator.share ? 'Share' : 'Copy'}</button>
+        <input type="file" id="import-file-settings" accept=".json" style="display:none" onchange="importData(event)">
+      </div>
+      <div class="divider"></div>
+      <span class="label">Cloud Sync</span>
+      ${data.syncBinId ? `
+        <div class="sync-status">
+          <span class="sync-dot connected"></span>
+          <span>Auto-syncing to JSONBin</span>
+          <span style="margin-left:auto;opacity:0.5;">${data.lastSyncTime ? new Date(data.lastSyncTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : ''}</span>
+        </div>
+        <div class="data-actions mt-8">
+          <button class="btn btn-ghost" onclick="cloudPull()" style="flex:1;font-size:12px;">Pull from Cloud</button>
+          <button class="btn btn-ghost" onclick="cloudPush()" style="flex:1;font-size:12px;">Push to Cloud</button>
+        </div>
+        <p class="text-xs text-dim mt-8">Bin ID: ${data.syncBinId.slice(0,8)}… · <a href="#" onclick="disconnectSync();return false;" style="color:var(--danger);">Disconnect</a></p>
+      ` : `
+        <div class="sync-status">
+          <span class="sync-dot disconnected"></span>
+          <span>Not connected</span>
+        </div>
+        <div class="sync-setup">
+          <p class="text-xs text-dim mb-8">Free cloud backup. Get an API key from <a href="https://jsonbin.io" target="_blank" style="color:var(--accent);">jsonbin.io</a> (Access Keys → Create).</p>
+          <input type="text" id="sync-api-key" placeholder="Paste your JSONBin Master Key" autocomplete="off">
+          <button class="btn btn-ghost mt-8" onclick="setupSync()" style="width:100%;">New Backup</button>
+          <div class="divider" style="margin:12px 0;"></div>
+          <p class="text-xs text-dim mb-8">Restore from an existing backup:</p>
+          <input type="text" id="sync-bin-id" placeholder="Paste your Bin ID" autocomplete="off">
+          <button class="btn btn-ghost mt-8" onclick="restoreFromCloud()" style="width:100%;">Restore from Cloud</button>
+        </div>
+      `}
+    </div>
+  `;
+}
+
 function setDeloadMode(mode) {
   data.deload.mode = mode;
   save();
-  renderBuildSafe();
+  renderSettings();
 }
 
 function setDeloadInterval(val) {
@@ -5843,7 +5932,7 @@ function updateSetTarget(group, field, value) {
 function resetSetTargets() {
   data.setTargets = null;
   save();
-  renderBuild();
+  renderSettings();
 }
 
 function deleteExercise(type, index) {
@@ -5972,7 +6061,7 @@ async function setupSync() {
     data.syncBinId = result.metadata.id;
     data.lastSyncTime = Date.now();
     save();
-    renderBuild();
+    renderSettings();
   } catch (e) {
     alert('Connection failed. Check your API key and try again.');
   }
@@ -6042,8 +6131,8 @@ async function cloudPull() {
     Object.assign(data, cloud, { syncApiKey, syncBinId, lastSyncTime: Date.now() });
     save();
     load();
+    closeSettings();
     switchTab('build');
-    renderBuild();
   } catch (e) {
     alert('Pull failed. Check your connection.');
   }
@@ -6076,8 +6165,8 @@ async function restoreFromCloud() {
     Object.assign(data, cloud, { syncApiKey: apiKey, syncBinId: binId, lastSyncTime: Date.now() });
     save();
     load();
+    closeSettings();
     switchTab('build');
-    renderBuild();
   } catch (e) {
     alert('Restore failed. Check your key and Bin ID.');
   }
@@ -6089,7 +6178,7 @@ function disconnectSync() {
   delete data.syncBinId;
   delete data.lastSyncTime;
   save();
-  renderBuild();
+  renderSettings();
 }
 
 // Auto-sync: debounced push after every save
