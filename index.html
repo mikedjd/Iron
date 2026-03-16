@@ -1555,6 +1555,150 @@
       min-width: 50px;
       text-align: right;
     }
+    .bv-bar-fill.under { background: var(--warning); }
+    .bv-bar-fill.in-range { background: var(--accent); }
+    .bv-bar-fill.over { background: var(--danger); }
+    .bv-bar-target {
+      font-size: 10px;
+      color: var(--text-3);
+      margin-left: 4px;
+    }
+    .bv-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .bv-info-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text-3);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-left: 6px;
+      vertical-align: middle;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Exercise search dropdown */
+    .exercise-search-wrap { position: relative; }
+    .exercise-suggestions {
+      display: none;
+      position: absolute;
+      top: 100%; left: 0; right: 0;
+      z-index: 50;
+      max-height: 200px;
+      overflow-y: auto;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 10px 10px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .exercise-suggestions.visible { display: block; }
+    .exercise-suggestion {
+      padding: 10px 12px;
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .exercise-suggestion:active { background: var(--accent-dim); }
+    .sg-group {
+      font-size: 10px;
+      color: var(--text-3);
+      background: var(--surface-3);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .muscle-group-row { display: none; margin-top: 8px; }
+    .muscle-group-row.visible { display: block; }
+
+    /* Info popup */
+    #bpv-info-popup {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(0,0,0,0.7);
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    #bpv-info-popup.active { display: flex; }
+    .bpv-info-content {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 360px;
+      width: 100%;
+      position: relative;
+    }
+    .bpv-info-content ul {
+      margin: 12px 0;
+      padding-left: 20px;
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.6;
+    }
+    .bpv-info-close {
+      position: absolute;
+      top: 12px; right: 12px;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: var(--surface-2);
+      color: var(--text-3);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .bpv-legend {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 12px;
+      color: var(--text-2);
+    }
+    .bpv-legend-dot {
+      width: 12px; height: 12px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    /* Set targets in Build */
+    .target-row {
+      display: grid;
+      grid-template-columns: 1fr 50px 24px 50px;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 0;
+    }
+    .target-row .label { margin: 0; }
+    .target-input {
+      padding: 4px 6px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 13px;
+      text-align: center;
+      outline: none;
+      width: 100%;
+    }
+    .target-input:focus { border-color: var(--accent); }
+    .target-to { font-size: 11px; color: var(--text-3); text-align: center; }
 
     .intensity-row {
       display: flex;
@@ -2242,6 +2386,31 @@
     </div>
   </div>
 
+  <!-- ═══════════ INFO POPUP ═══════════ -->
+  <div id="bpv-info-popup">
+    <div class="bpv-info-content">
+      <button class="bpv-info-close" onclick="hideBPVInfo()">✕</button>
+      <div class="display display-sm" style="margin-bottom:12px;">Set Recommendations</div>
+      <p style="font-size:13px;color:var(--text-2);line-height:1.5;">
+        Guidelines based on hypertrophy research (Schoenfeld et al.):
+      </p>
+      <ul>
+        <li><strong>Large muscles</strong> (Chest, Lats, Quads, Hams/Glutes): 10-20 sets/week</li>
+        <li><strong>Medium muscles</strong> (Delts, Upper Back): 8-16 sets/week</li>
+        <li><strong>Small muscles</strong> (Biceps, Triceps, Calves, Forearms, Core): 6-14 sets/week</li>
+      </ul>
+      <p style="font-size:12px;color:var(--text-3);line-height:1.5;margin-bottom:14px;">
+        These vary by muscle group size and individual recovery capacity.
+      </p>
+      <div style="border-top:1px solid var(--border);padding-top:12px;margin-bottom:4px;">
+        <div class="bpv-legend"><span class="bpv-legend-dot" style="background:var(--warning);"></span> Below minimum — room to add volume</div>
+        <div class="bpv-legend"><span class="bpv-legend-dot" style="background:var(--accent);"></span> In range — optimal for growth</div>
+        <div class="bpv-legend"><span class="bpv-legend-dot" style="background:var(--danger);"></span> Above maximum — may hinder recovery</div>
+      </div>
+      <p style="font-size:11px;color:var(--text-3);margin-top:12px;">Customize your targets in Build tab settings.</p>
+    </div>
+  </div>
+
 <script>
 /* ═══════════════════════════════════════════════════════════
    PROGRAMS
@@ -2323,7 +2492,10 @@ let data = {
   cardioIntensity: { run: 'moderate', cycle: 'moderate', swim: 'moderate', hiit: 'vigorous', class: 'vigorous' },
   addActivityCalories: false,
   streak: { current: 0, longest: 0, lastTrainingDate: null },
-  notifications: { enabled: false, reminderTime: '08:00' }
+  notifications: { enabled: false, reminderTime: '08:00' },
+  customExerciseTags: {},
+  setTargets: null,
+  bodyPartViewMode: 'sets'
 };
 
 let workout = null;   // active workout state
@@ -2394,6 +2566,10 @@ function load() {
   // Migration: streak & notifications
   if (!data.streak) data.streak = { current: 0, longest: 0, lastTrainingDate: null };
   if (!data.notifications) data.notifications = { enabled: false, reminderTime: '08:00' };
+  // Migration: exercise DB + set targets
+  if (!data.customExerciseTags) data.customExerciseTags = {};
+  if (data.setTargets === undefined) data.setTargets = null;
+  if (!data.bodyPartViewMode) data.bodyPartViewMode = 'sets';
   // Keep nextType in sync
   data.nextType = data.schedule.pattern[data.schedule.patternIndex % data.schedule.pattern.length];
 
@@ -2634,13 +2810,126 @@ const MUSCLE_GROUPS = [
   ['Triceps', ['tricep', 'press down', 'pressdown', 'skull crush', 'dip']],
   ['Biceps', ['curl', 'bicep']]
 ];
+const ALL_GROUPS = MUSCLE_GROUPS.map(([g]) => g);
+
+/* Curated exercise database (~150 exercises) */
+const EXERCISE_DB = {
+  // Chest
+  "barbell bench press": "Chest", "dumbbell bench press": "Chest", "incline barbell bench press": "Chest",
+  "incline dumbbell press": "Chest", "decline bench press": "Chest", "dumbbell fly": "Chest",
+  "incline dumbbell fly": "Chest", "cable fly": "Chest", "cable crossover": "Chest",
+  "machine chest press": "Chest", "pec deck": "Chest", "push up": "Chest", "dip": "Chest",
+  "smith machine bench press": "Chest", "chest press machine": "Chest",
+  // Lats
+  "lat pulldown": "Lats", "wide grip lat pulldown": "Lats", "close grip lat pulldown": "Lats",
+  "pull up": "Lats", "chin up": "Lats", "assisted pull up": "Lats",
+  "straight arm pulldown": "Lats", "cable pullover": "Lats", "machine pulldown": "Lats",
+  "neutral grip pull up": "Lats", "single arm lat pulldown": "Lats",
+  "lat prayer": "Lats", "lat pullover": "Lats",
+  // Upper Back
+  "barbell row": "Upper Back", "bent over row": "Upper Back", "dumbbell row": "Upper Back",
+  "cable row": "Upper Back", "seated cable row": "Upper Back", "t-bar row": "Upper Back",
+  "chest supported row": "Upper Back", "pendlay row": "Upper Back", "machine row": "Upper Back",
+  "face pull": "Upper Back", "barbell shrug": "Upper Back", "dumbbell shrug": "Upper Back",
+  "rack pull": "Upper Back", "meadows row": "Upper Back", "helms row": "Upper Back",
+  "cross body cable row": "Upper Back", "incline row": "Upper Back",
+  // Front Delts
+  "overhead press": "Front Delts", "military press": "Front Delts", "dumbbell shoulder press": "Front Delts",
+  "seated dumbbell press": "Front Delts", "arnold press": "Front Delts", "barbell overhead press": "Front Delts",
+  "smith machine overhead press": "Front Delts", "machine shoulder press": "Front Delts",
+  "front raise": "Front Delts", "dumbbell front raise": "Front Delts",
+  // Side/Rear Delts
+  "lateral raise": "Side/Rear Delts", "dumbbell lateral raise": "Side/Rear Delts",
+  "cable lateral raise": "Side/Rear Delts", "machine lateral raise": "Side/Rear Delts",
+  "rear delt fly": "Side/Rear Delts", "reverse pec deck": "Side/Rear Delts",
+  "cable rear delt fly": "Side/Rear Delts", "bent over lateral raise": "Side/Rear Delts",
+  "side laying lateral raise": "Side/Rear Delts", "upright row": "Side/Rear Delts",
+  // Quads
+  "barbell squat": "Quads", "back squat": "Quads", "front squat": "Quads",
+  "goblet squat": "Quads", "leg press": "Quads", "hack squat": "Quads",
+  "leg extension": "Quads", "bulgarian split squat": "Quads", "walking lunge": "Quads",
+  "dumbbell lunge": "Quads", "barbell lunge": "Quads", "smith machine squat": "Quads",
+  "sissy squat": "Quads", "step up": "Quads", "v squat": "Quads",
+  // Hams/Glutes
+  "romanian deadlift": "Hams/Glutes", "stiff leg deadlift": "Hams/Glutes",
+  "conventional deadlift": "Hams/Glutes", "sumo deadlift": "Hams/Glutes",
+  "lying leg curl": "Hams/Glutes", "seated leg curl": "Hams/Glutes",
+  "nordic curl": "Hams/Glutes", "hip thrust": "Hams/Glutes", "barbell hip thrust": "Hams/Glutes",
+  "glute bridge": "Hams/Glutes", "cable pull through": "Hams/Glutes",
+  "good morning": "Hams/Glutes", "dumbbell rdl": "Hams/Glutes",
+  "single leg rdl": "Hams/Glutes", "trap bar deadlift": "Hams/Glutes",
+  // Biceps
+  "barbell curl": "Biceps", "dumbbell curl": "Biceps", "hammer curl": "Biceps",
+  "preacher curl": "Biceps", "incline dumbbell curl": "Biceps", "cable curl": "Biceps",
+  "ez bar curl": "Biceps", "concentration curl": "Biceps", "spider curl": "Biceps",
+  "reverse curl": "Biceps", "bayesian curl": "Biceps", "zottman curl": "Biceps",
+  // Triceps
+  "tricep pushdown": "Triceps", "rope pushdown": "Triceps", "overhead tricep extension": "Triceps",
+  "cable overhead extension": "Triceps", "skull crusher": "Triceps", "close grip bench press": "Triceps",
+  "tricep dip": "Triceps", "diamond push up": "Triceps", "single arm pushdown": "Triceps",
+  "jm press": "Triceps", "french press": "Triceps", "kickback": "Triceps",
+  // Core
+  "crunch": "Core", "cable crunch": "Core", "hanging leg raise": "Core",
+  "plank": "Core", "ab wheel rollout": "Core", "russian twist": "Core",
+  "leg raise": "Core", "sit up": "Core", "woodchop": "Core", "pallof press": "Core",
+  // Calves
+  "standing calf raise": "Calves", "seated calf raise": "Calves",
+  "leg press calf raise": "Calves", "donkey calf raise": "Calves",
+  "smith machine calf raise": "Calves", "single leg calf raise": "Calves",
+  // Forearms
+  "wrist curl": "Forearms", "reverse wrist curl": "Forearms",
+  "farmer walk": "Forearms", "farmer carry": "Forearms",
+  "plate pinch": "Forearms", "dead hang": "Forearms"
+};
+const EXERCISE_NAMES = Object.keys(EXERCISE_DB).sort();
+
+/* Default recommended sets per muscle per week (Schoenfeld et al.) */
+const DEFAULT_SET_TARGETS = {
+  "Chest": { min: 10, max: 20 }, "Lats": { min: 10, max: 20 },
+  "Quads": { min: 10, max: 20 }, "Hams/Glutes": { min: 10, max: 20 },
+  "Front Delts": { min: 8, max: 16 }, "Side/Rear Delts": { min: 8, max: 16 },
+  "Upper Back": { min: 8, max: 16 },
+  "Biceps": { min: 6, max: 14 }, "Triceps": { min: 6, max: 14 },
+  "Calves": { min: 6, max: 14 }, "Forearms": { min: 6, max: 14 }, "Core": { min: 6, max: 14 }
+};
 
 function classifyExercise(name) {
+  // 1. User-defined custom tags
+  if (data.customExerciseTags && data.customExerciseTags[name]) return data.customExerciseTags[name];
+  // 2. Curated exercise database
+  const dbResult = EXERCISE_DB[name.toLowerCase()];
+  if (dbResult) return dbResult;
+  // 3. Keyword fallback (backward compat)
   const n = name.toLowerCase();
   for (const [group, keywords] of MUSCLE_GROUPS) {
     if (keywords.some(k => n.includes(k))) return group;
   }
   return 'Other';
+}
+
+function searchExercises(query) {
+  if (!query || query.length < 2) return [];
+  const q = query.toLowerCase();
+  return EXERCISE_NAMES
+    .filter(name => name.includes(q))
+    .slice(0, 8)
+    .map(name => ({ name: titleCaseExercise(name), group: EXERCISE_DB[name] }));
+}
+
+function titleCaseExercise(str) {
+  return str.replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function getSetTargets() {
+  return data.setTargets || DEFAULT_SET_TARGETS;
+}
+
+function getBarColorClass(group, sets) {
+  const t = getSetTargets()[group];
+  if (!t) return '';
+  if (sets < t.min) return 'under';
+  if (sets > t.max) return 'over';
+  return 'in-range';
 }
 
 function calculateBodyPartVolume(sessions) {
@@ -4299,7 +4588,7 @@ function deleteFood(id) {
   renderDietSafe();
 }
 
-function buildBodyMapSVG(volumes, maxVol) {
+function buildBodyMapSVG(volumes, maxVal, mode) {
   // Muscle region definitions: [group, paths (array of d-strings)]
   const regions = [
     // Head (outline only, not a muscle group)
@@ -4364,10 +4653,21 @@ function buildBodyMapSVG(volumes, maxVol) {
         paths += `<path class="body-outline" d="${d}"/>`;
       }
     } else {
-      const vol = volumes[group]?.volume || 0;
-      const opacity = vol > 0 ? (0.15 + 0.85 * (vol / maxVol)).toFixed(2) : 0.03;
+      const val = mode === 'sets' ? (volumes[group]?.sets || 0) : (volumes[group]?.volume || 0);
+      const opacity = val > 0 ? (0.15 + 0.85 * (val / maxVal)).toFixed(2) : 0.03;
+      let fillColor;
+      if (val === 0) {
+        fillColor = `rgba(255,255,255,0.03)`;
+      } else if (mode === 'sets') {
+        const cc = getBarColorClass(group, volumes[group]?.sets || 0);
+        if (cc === 'under') fillColor = `rgba(255,149,0,${opacity})`;
+        else if (cc === 'over') fillColor = `rgba(255,59,48,${opacity})`;
+        else fillColor = `rgba(163,184,108,${opacity})`;
+      } else {
+        fillColor = `rgba(163,184,108,${opacity})`;
+      }
       for (const d of dPaths) {
-        paths += `<path class="body-region" d="${d}" fill="rgba(163,184,108,${opacity})"/>`;
+        paths += `<path class="body-region" d="${d}" fill="${fillColor}"/>`;
       }
     }
   }
@@ -4661,23 +4961,47 @@ function renderHistory() {
   // Body part volume
   const bodyPartVolumes = calculateBodyPartVolume(filtered);
   let bodyPartHtml = '';
-  const bpGroups = Object.entries(bodyPartVolumes).filter(([g, d]) => d.volume > 0 && g !== 'Other');
+  const bpGroups = Object.entries(bodyPartVolumes).filter(([g, d]) => (d.volume > 0 || d.sets > 0) && g !== 'Other');
+  const viewMode = data.bodyPartViewMode || 'sets';
   if (bpGroups.length > 0) {
-    bpGroups.sort((a, b) => b[1].volume - a[1].volume);
+    if (viewMode === 'sets') {
+      bpGroups.sort((a, b) => b[1].sets - a[1].sets);
+    } else {
+      bpGroups.sort((a, b) => b[1].volume - a[1].volume);
+    }
     const maxVol = bpGroups[0][1].volume;
-    const svgHtml = buildBodyMapSVG(bodyPartVolumes, maxVol);
+    const maxSets = bpGroups[0][1].sets;
+    const svgHtml = buildBodyMapSVG(bodyPartVolumes, viewMode === 'sets' ? maxSets : maxVol, viewMode);
     const barsHtml = bpGroups.map(([name, d]) => {
-      const pct = (d.volume / maxVol * 100).toFixed(0);
-      const volStr = d.volume >= 1000 ? (d.volume / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : Math.round(d.volume);
-      return `<div class="bv-bar-row">
-        <span class="bv-bar-label">${name}</span>
-        <div class="bv-bar-track"><div class="bv-bar-fill" style="width:${pct}%"></div></div>
-        <span class="bv-bar-value">${volStr} ${unit}</span>
-      </div>`;
+      if (viewMode === 'sets') {
+        const pct = (d.sets / maxSets * 100).toFixed(0);
+        const colorClass = getBarColorClass(name, d.sets);
+        const targets = getSetTargets()[name];
+        const targetStr = targets ? `<span class="bv-bar-target">(${targets.min}-${targets.max})</span>` : '';
+        return `<div class="bv-bar-row">
+          <span class="bv-bar-label">${name}</span>
+          <div class="bv-bar-track"><div class="bv-bar-fill ${colorClass}" style="width:${pct}%"></div></div>
+          <span class="bv-bar-value">${d.sets} sets ${targetStr}</span>
+        </div>`;
+      } else {
+        const pct = (d.volume / maxVol * 100).toFixed(0);
+        const volStr = d.volume >= 1000 ? (d.volume / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : Math.round(d.volume);
+        return `<div class="bv-bar-row">
+          <span class="bv-bar-label">${name}</span>
+          <div class="bv-bar-track"><div class="bv-bar-fill" style="width:${pct}%"></div></div>
+          <span class="bv-bar-value">${volStr} ${unit}</span>
+        </div>`;
+      }
     }).join('');
     bodyPartHtml = `
       <div class="card fade-in stagger-2">
-        <span class="label">Body Part Volume</span>
+        <div class="bv-header">
+          <span class="label">Body Part Volume <button class="bv-info-btn" onclick="showBPVInfo()">i</button></span>
+          <div class="unit-toggle">
+            <button class="unit-opt ${viewMode === 'sets' ? 'active' : ''}" onclick="setBodyPartView('sets')">Sets</button>
+            <button class="unit-opt ${viewMode === 'volume' ? 'active' : ''}" onclick="setBodyPartView('volume')">Volume</button>
+          </div>
+        </div>
         <div class="body-volume-layout mt-12">
           ${svgHtml}
           <div class="body-volume-bars">${barsHtml}</div>
@@ -4848,6 +5172,26 @@ function renderBuild() {
       ` : ''}
     </div>` : '';
 
+  // Set targets card
+  const st = getSetTargets();
+  const setTargetsHtml = `
+    <div class="card fade-in" style="margin-bottom:16px;">
+      <span class="label">Weekly Set Targets</span>
+      <p class="text-xs text-dim mt-8">Recommended sets per muscle group per week (Schoenfeld et al.).</p>
+      <div class="divider"></div>
+      ${Object.entries(st).map(([group, t]) => `
+        <div class="target-row">
+          <span class="text-sm" style="color:var(--text-2);">${group}</span>
+          <input type="number" class="target-input" value="${t.min}" min="0" max="30" inputmode="numeric"
+            onchange="updateSetTarget('${group}','min',this.value)">
+          <span class="target-to">to</span>
+          <input type="number" class="target-input" value="${t.max}" min="0" max="40" inputmode="numeric"
+            onchange="updateSetTarget('${group}','max',this.value)">
+        </div>
+      `).join('')}
+      ${data.setTargets ? `<button class="btn btn-ghost mt-8" onclick="resetSetTargets()" style="width:100%;font-size:12px;">Reset to Defaults</button>` : ''}
+    </div>`;
+
   // Program cards
   let programCards = '';
   for (const type of pat) {
@@ -4867,6 +5211,7 @@ function renderBuild() {
     ${scheduleHtml}
     ${deloadHtml}
     ${notifHtml}
+    ${setTargetsHtml}
     ${programCards}
     ${data.programs ? `
       <button class="btn btn-ghost mt-8 fade-in" onclick="resetPrograms()" style="color:var(--danger);">Reset to Defaults</button>
@@ -5025,7 +5370,19 @@ function renderBuildEditForm(type, index, ex) {
   return `
     <div class="build-edit-form">
       <div class="field-row">
-        <input type="text" id="edit-name" value="${isNew ? '' : ex.name}" placeholder="Exercise name">
+        <div class="exercise-search-wrap" style="width:100%">
+          <input type="text" id="edit-name" value="${isNew ? '' : ex.name}" placeholder="Search or type exercise name" autocomplete="off"
+            oninput="onExerciseSearch(this.value)" onfocus="onExerciseSearch(this.value)">
+          <div id="exercise-suggestions" class="exercise-suggestions"></div>
+        </div>
+      </div>
+      <div id="muscle-group-row" class="muscle-group-row">
+        <div class="label" style="margin-bottom:4px;">Muscle Group</div>
+        <select id="edit-muscle-group" style="width:100%;padding:8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none;">
+          <option value="">Auto-detect</option>
+          ${ALL_GROUPS.map(g => `<option value="${g}">${g}</option>`).join('')}
+        </select>
+        <p class="text-xs text-dim mt-8">Exercise not in our database — select its muscle group.</p>
       </div>
       <div class="field-row">
         <div style="flex:1">
@@ -5069,6 +5426,7 @@ function setBuildType(t) {
   const reps = document.getElementById('edit-reps')?.value;
   const weight = document.getElementById('edit-weight')?.value;
   const notes = document.getElementById('edit-notes')?.value;
+  const mg = document.getElementById('edit-muscle-group')?.value;
   buildEditType = t;
   renderBuild();
   // Restore form values after re-render
@@ -5078,6 +5436,11 @@ function setBuildType(t) {
     const r = document.getElementById('edit-reps'); if (r) r.value = reps;
     const w = document.getElementById('edit-weight'); if (w) w.value = weight;
     const nt = document.getElementById('edit-notes'); if (nt) nt.value = notes;
+    if (mg) { const m = document.getElementById('edit-muscle-group'); if (m) m.value = mg; }
+    // Re-show muscle group row if needed
+    if (name && name.trim() && !EXERCISE_DB[name.trim().toLowerCase()]) {
+      document.getElementById('muscle-group-row')?.classList.add('visible');
+    }
   }
 }
 
@@ -5125,6 +5488,12 @@ function saveBuildEdit(type, index) {
   if (buildEditType === 'superset') exercise.supersetNext = true;
   if (buildEditType === 'rest-pause') exercise.restPause = true;
 
+  // Save custom muscle group tag if not in DB
+  const muscleGroup = document.getElementById('edit-muscle-group')?.value;
+  if (muscleGroup && !EXERCISE_DB[name.toLowerCase()]) {
+    data.customExerciseTags[name] = muscleGroup;
+  }
+
   if (!data.programs[type]) {
     data.programs[type] = [];
   }
@@ -5137,6 +5506,67 @@ function saveBuildEdit(type, index) {
 
   buildEditing = null;
   buildAdding = null;
+  save();
+  renderBuild();
+}
+
+function onExerciseSearch(query) {
+  const sugEl = document.getElementById('exercise-suggestions');
+  const mgRow = document.getElementById('muscle-group-row');
+  if (!sugEl) return;
+  const results = searchExercises(query);
+  if (results.length === 0) {
+    sugEl.classList.remove('visible');
+    // Show muscle group picker if custom name entered
+    if (query.trim().length > 0 && !EXERCISE_DB[query.trim().toLowerCase()]) {
+      mgRow?.classList.add('visible');
+    } else {
+      mgRow?.classList.remove('visible');
+    }
+    return;
+  }
+  sugEl.innerHTML = results.map(r =>
+    `<div class="exercise-suggestion" onmousedown="selectExercise('${r.name.replace(/'/g, "\\'")}')">
+      <span>${r.name}</span><span class="sg-group">${r.group}</span>
+    </div>`
+  ).join('');
+  sugEl.classList.add('visible');
+  mgRow?.classList.remove('visible');
+}
+
+function selectExercise(name) {
+  const el = document.getElementById('edit-name');
+  if (el) el.value = name;
+  document.getElementById('exercise-suggestions')?.classList.remove('visible');
+  document.getElementById('muscle-group-row')?.classList.remove('visible');
+}
+
+// Dismiss exercise suggestions on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('.exercise-search-wrap')) {
+    document.getElementById('exercise-suggestions')?.classList.remove('visible');
+  }
+});
+
+function setBodyPartView(mode) {
+  data.bodyPartViewMode = mode;
+  save();
+  renderHistory();
+}
+
+function showBPVInfo() { document.getElementById('bpv-info-popup').classList.add('active'); }
+function hideBPVInfo() { document.getElementById('bpv-info-popup').classList.remove('active'); }
+
+function updateSetTarget(group, field, value) {
+  if (!data.setTargets) data.setTargets = JSON.parse(JSON.stringify(DEFAULT_SET_TARGETS));
+  const v = parseInt(value);
+  if (isNaN(v) || v < 0) return;
+  data.setTargets[group][field] = v;
+  save();
+}
+
+function resetSetTargets() {
+  data.setTargets = null;
   save();
   renderBuild();
 }
