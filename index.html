@@ -5096,6 +5096,35 @@ async function cloudPush() {
   syncInFlight = false;
 }
 
+async function autoSyncPull() {
+  if (!data.syncApiKey || !data.syncBinId || syncInFlight) return;
+  // Throttle: don't pull more than once per 30 seconds
+  if (window._lastAutoPull && Date.now() - window._lastAutoPull < 30000) return;
+  window._lastAutoPull = Date.now();
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${data.syncBinId}/latest`, {
+      headers: { 'X-Master-Key': data.syncApiKey }
+    });
+    if (!res.ok) return;
+    const result = await res.json();
+    const cloud = result.record;
+    if (!cloud || (!cloud.sessions && !cloud.programs)) return;
+    // Merge: take whichever has more sessions (simple conflict resolution)
+    const cloudSessions = cloud.sessions || [];
+    const localSessions = data.sessions || [];
+    if (cloudSessions.length > localSessions.length ||
+        (cloudSessions.length === localSessions.length && cloud.lastSyncTime > (data.lastSyncTime || 0))) {
+      const { syncApiKey, syncBinId } = data;
+      Object.assign(data, cloud, { syncApiKey, syncBinId, lastSyncTime: Date.now() });
+      save();
+      load();
+      if (currentTab === 'train') renderTrainHome();
+      else if (currentTab === 'build') renderBuild();
+      else if (currentTab === 'diet') renderDiet();
+    }
+  } catch (e) { /* silent fail on auto-pull */ }
+}
+
 async function cloudPull() {
   if (!data.syncApiKey || !data.syncBinId) return;
   try {
@@ -5563,10 +5592,12 @@ function renderCardio(quick) {
 load();
 renderTrainHome();
 scheduleNotificationChecks();
+autoSyncPull();
 
 // Re-check on tab focus
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {
+    autoSyncPull();
     checkAndFireNotifications();
     renderTrainHome();
   }
