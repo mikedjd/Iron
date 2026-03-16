@@ -1507,6 +1507,55 @@
       color: var(--warning);
       text-align: center;
     }
+    /* ═══════════════════════════════════════════════
+       BODY PART VOLUME
+       ═══════════════════════════════════════════════ */
+    .body-volume-layout {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    .body-map { width: 160px; height: auto; display: block; margin: 0 auto; }
+    .body-outline { fill: none; stroke: var(--text-3); stroke-width: 1; opacity: 0.3; }
+    .body-region { transition: fill-opacity 0.3s ease; stroke: none; }
+    .body-volume-bars { width: 100%; }
+    .bv-bar-row {
+      display: grid;
+      grid-template-columns: 90px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 0;
+    }
+    .bv-bar-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-2);
+      text-align: right;
+      white-space: nowrap;
+    }
+    .bv-bar-track {
+      height: 10px;
+      background: var(--surface-3);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .bv-bar-fill {
+      height: 100%;
+      border-radius: 5px;
+      background: var(--accent);
+      transition: width 0.4s ease;
+      min-width: 2px;
+    }
+    .bv-bar-value {
+      font-family: 'Teko', sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+      color: var(--text);
+      min-width: 50px;
+      text-align: right;
+    }
+
     .intensity-row {
       display: flex;
       align-items: center;
@@ -2101,7 +2150,7 @@
     <section id="tab-history" class="tab">
       <div class="tab-header">
         <div class="brand">IRON</div>
-        <span class="label">Progress</span>
+        <span class="label">Performance</span>
       </div>
       <div id="history-content"></div>
     </section>
@@ -2139,7 +2188,7 @@
           <line x1="5" y1="20" x2="5" y2="13"/><line x1="10" y1="20" x2="10" y2="7"/>
           <line x1="15" y1="20" x2="15" y2="4"/><line x1="20" y1="20" x2="20" y2="10"/>
         </svg>
-        <span>Progress</span>
+        <span>Performance</span>
       </button>
       <button class="nav-btn" data-tab="build" onclick="switchTab('build')">
         <span class="nav-icon">🏠</span>
@@ -2568,6 +2617,50 @@ function detectPRs() {
 function isUpperExercise(name) {
   const lower = ['squat', 'deadlift', 'rdl', 'leg press', 'lunge', 'leg curl', 'leg extension', 'calf', 'hip thrust', 'glute'];
   return !lower.some(l => name.toLowerCase().includes(l));
+}
+
+/* Exercise-to-muscle-group classification (priority order) */
+const MUSCLE_GROUPS = [
+  ['Forearms', ['wrist', 'forearm', 'grip']],
+  ['Calves', ['calf', 'calves']],
+  ['Core', ['ab ', 'abs', 'crunch', 'plank', 'leg raise', 'hanging leg', 'sit up', 'core']],
+  ['Hams/Glutes', ['deadlift', 'rdl', 'romanian', 'leg curl', 'hip thrust', 'glute', 'hamstring']],
+  ['Quads', ['squat', 'leg press', 'lunge', 'leg extension', 'front squat']],
+  ['Chest', ['bench press', 'chest press', 'cable fly', 'chest fly', 'push up', 'pushup', 'pec', 'smith bench']],
+  ['Lats', ['lat ', 'lat press', 'pull up', 'pullup', 'pulldown', 'pull down', 'chin up']],
+  ['Front Delts', ['overhead press', 'shoulder press', 'military press', 'ohp', 'front raise']],
+  ['Upper Back', ['row', 'shrug', 'face pull', 'reverse fly']],
+  ['Side/Rear Delts', ['lateral raise', 'side raise', 'side laying', 'rear delt']],
+  ['Triceps', ['tricep', 'press down', 'pressdown', 'skull crush', 'dip']],
+  ['Biceps', ['curl', 'bicep']]
+];
+
+function classifyExercise(name) {
+  const n = name.toLowerCase();
+  for (const [group, keywords] of MUSCLE_GROUPS) {
+    if (keywords.some(k => n.includes(k))) return group;
+  }
+  return 'Other';
+}
+
+function calculateBodyPartVolume(sessions) {
+  const volumes = {};
+  for (const session of sessions) {
+    for (const ex of session.exercises) {
+      const group = classifyExercise(ex.name);
+      if (!volumes[group]) volumes[group] = { volume: 0, sets: 0 };
+      for (const set of ex.sets) {
+        const ns = normalizeSet(set);
+        if (!ns.skipped) {
+          const reps = Array.isArray(ns.reps) ? ns.reps.reduce((a, b) => a + b, 0) : (ns.reps || 0);
+          const weight = ns.weight || 0;
+          volumes[group].volume += reps * weight;
+          volumes[group].sets += 1;
+        }
+      }
+    }
+  }
+  return volumes;
 }
 
 /* Strength level classification */
@@ -4206,6 +4299,82 @@ function deleteFood(id) {
   renderDietSafe();
 }
 
+function buildBodyMapSVG(volumes, maxVol) {
+  // Muscle region definitions: [group, paths (array of d-strings)]
+  const regions = [
+    // Head (outline only, not a muscle group)
+    ['_head', ['M100,12 C112,12 122,22 122,35 C122,48 112,55 100,55 C88,55 78,48 78,35 C78,22 88,12 100,12']],
+    // Neck
+    ['_neck', ['M90,55 L90,68 L110,68 L110,55']],
+    // Chest
+    ['Chest', ['M72,80 Q72,72 82,70 L100,74 L118,70 Q128,72 128,80 L128,108 Q128,112 118,112 L100,110 L82,112 Q72,112 72,108 Z']],
+    // Front Delts (shoulders)
+    ['Front Delts', [
+      'M72,70 Q56,68 52,78 Q50,90 56,96 L72,92 L72,80 Q72,72 72,70 Z',
+      'M128,70 Q144,68 148,78 Q150,90 144,96 L128,92 L128,80 Q128,72 128,70 Z'
+    ]],
+    // Upper Back (behind shoulders — show as side panels)
+    ['Upper Back', [
+      'M62,82 L72,80 L72,108 L62,106 Q58,100 58,92 Q58,84 62,82 Z',
+      'M138,82 L128,80 L128,108 L138,106 Q142,100 142,92 Q142,84 138,82 Z'
+    ]],
+    // Lats (side torso)
+    ['Lats', [
+      'M62,106 L72,108 L72,140 L66,148 Q58,140 58,125 Q58,112 62,106 Z',
+      'M138,106 L128,108 L128,140 L134,148 Q142,140 142,125 Q142,112 138,106 Z'
+    ]],
+    // Biceps (inner upper arm)
+    ['Biceps', [
+      'M56,96 L65,94 L68,140 L56,145 Q50,130 50,118 Q50,104 56,96 Z',
+      'M144,96 L135,94 L132,140 L144,145 Q150,130 150,118 Q150,104 144,96 Z'
+    ]],
+    // Triceps (outer upper arm)
+    ['Triceps', [
+      'M52,96 L56,96 Q50,104 50,118 Q50,130 56,145 L48,142 Q42,130 42,118 Q42,104 48,96 Z',
+      'M148,96 L144,96 Q150,104 150,118 Q150,130 144,145 L152,142 Q158,130 158,118 Q158,104 152,96 Z'
+    ]],
+    // Forearms
+    ['Forearms', [
+      'M48,142 L56,145 L52,190 L42,195 Q38,175 40,160 Q42,148 48,142 Z',
+      'M152,142 L144,145 L148,190 L158,195 Q162,175 160,160 Q158,148 152,142 Z'
+    ]],
+    // Core (abs)
+    ['Core', ['M82,112 L100,110 L118,112 L120,165 Q120,170 115,172 L100,174 L85,172 Q80,170 80,165 Z']],
+    // Quads (front thighs)
+    ['Quads', [
+      'M80,172 L98,174 L96,260 Q94,270 88,272 L78,268 Q72,260 72,245 Q72,210 76,190 Z',
+      'M120,172 L102,174 L104,260 Q106,270 112,272 L122,268 Q128,260 128,245 Q128,210 124,190 Z'
+    ]],
+    // Hams/Glutes (inner thigh area)
+    ['Hams/Glutes', [
+      'M98,174 L100,174 L102,174 L104,255 L100,258 L96,255 Z'
+    ]],
+    // Calves
+    ['Calves', [
+      'M78,272 L88,276 Q92,290 90,310 Q88,335 84,350 L76,350 Q72,335 74,310 Q74,290 78,272 Z',
+      'M122,272 L112,276 Q108,290 110,310 Q112,335 116,350 L124,350 Q128,335 126,310 Q126,290 122,272 Z'
+    ]]
+  ];
+
+  let paths = '';
+  for (const [group, dPaths] of regions) {
+    if (group.startsWith('_')) {
+      // Outline-only elements (head, neck)
+      for (const d of dPaths) {
+        paths += `<path class="body-outline" d="${d}"/>`;
+      }
+    } else {
+      const vol = volumes[group]?.volume || 0;
+      const opacity = vol > 0 ? (0.15 + 0.85 * (vol / maxVol)).toFixed(2) : 0.03;
+      for (const d of dPaths) {
+        paths += `<path class="body-region" d="${d}" fill="rgba(163,184,108,${opacity})"/>`;
+      }
+    }
+  }
+
+  return `<svg viewBox="0 0 200 380" class="body-map">${paths}</svg>`;
+}
+
 function buildWeightGraph(points) {
   if (!points || points.length < 2) return '';
   const pad = { top: 12, right: 8, bottom: 4, left: 8 };
@@ -4396,7 +4565,7 @@ function renderHistory() {
     const change = current - start;
     const changeStr = (change >= 0 ? '+' : '') + displayWeight(change);
     weightHtml = `
-      <div class="card fade-in stagger-2">
+      <div class="card fade-in stagger-3">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span class="label">Body Weight</span>
           <div class="unit-toggle">
@@ -4426,7 +4595,7 @@ function renderHistory() {
   let progressHtml = '';
   if (progress.length > 0) {
     progressHtml = `
-      <div class="card fade-in stagger-3">
+      <div class="card fade-in stagger-4">
         <span class="label">Exercise Progress</span>
         <p class="text-xs text-dim mt-4">${historyPeriod === 'all' ? 'First session' : 'Period start'} vs most recent</p>
         <div class="mt-12">
@@ -4463,7 +4632,7 @@ function renderHistory() {
   if (filtered.length > 0) {
     const recent = [...filtered].reverse().slice(0, 20);
     sessionLogHtml = `
-      <div class="card fade-in stagger-4">
+      <div class="card fade-in stagger-5">
         <span class="label">Session Log</span>
         <div class="mt-12">
           ${recent.map(s => {
@@ -4489,6 +4658,33 @@ function renderHistory() {
       </div>`;
   }
 
+  // Body part volume
+  const bodyPartVolumes = calculateBodyPartVolume(filtered);
+  let bodyPartHtml = '';
+  const bpGroups = Object.entries(bodyPartVolumes).filter(([g, d]) => d.volume > 0 && g !== 'Other');
+  if (bpGroups.length > 0) {
+    bpGroups.sort((a, b) => b[1].volume - a[1].volume);
+    const maxVol = bpGroups[0][1].volume;
+    const svgHtml = buildBodyMapSVG(bodyPartVolumes, maxVol);
+    const barsHtml = bpGroups.map(([name, d]) => {
+      const pct = (d.volume / maxVol * 100).toFixed(0);
+      const volStr = d.volume >= 1000 ? (d.volume / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : Math.round(d.volume);
+      return `<div class="bv-bar-row">
+        <span class="bv-bar-label">${name}</span>
+        <div class="bv-bar-track"><div class="bv-bar-fill" style="width:${pct}%"></div></div>
+        <span class="bv-bar-value">${volStr} ${unit}</span>
+      </div>`;
+    }).join('');
+    bodyPartHtml = `
+      <div class="card fade-in stagger-2">
+        <span class="label">Body Part Volume</span>
+        <div class="body-volume-layout mt-12">
+          ${svgHtml}
+          <div class="body-volume-bars">${barsHtml}</div>
+        </div>
+      </div>`;
+  }
+
   el.innerHTML = `
     ${periodHtml}
     <div class="stat-row fade-in">
@@ -4501,6 +4697,7 @@ function renderHistory() {
         <div class="stat-label">This Week</div>
       </div>
     </div>
+    ${bodyPartHtml}
     ${weightHtml}
     ${progressHtml}
     ${sessionLogHtml}
