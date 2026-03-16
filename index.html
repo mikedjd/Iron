@@ -2169,7 +2169,7 @@
       background: var(--accent-dim);
       color: var(--accent);
     }
-    .split-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .split-chips { display: flex; gap: 6px; flex-wrap: wrap; }
     .split-chip {
       padding: 6px 14px;
       border-radius: 100px;
@@ -2179,9 +2179,52 @@
       font-size: 12px; font-weight: 600;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
+      display: flex; align-items: center; gap: 6px;
     }
     .split-chip.current { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
     .split-add { border-style: dashed; color: var(--text-3); }
+    .split-chip-remove {
+      width: 14px; height: 14px; border-radius: 50%;
+      border: none; background: rgba(255,59,48,0.2); color: var(--danger);
+      font-size: 10px; cursor: pointer; display: flex;
+      align-items: center; justify-content: center; padding: 0;
+    }
+
+    /* Split template buttons */
+    .split-templates { display: flex; flex-direction: column; gap: 8px; }
+    .split-template-btn {
+      display: flex; flex-direction: column; align-items: flex-start;
+      padding: 12px 16px;
+      background: var(--surface-2); border: 2px solid var(--border);
+      border-radius: 12px; cursor: pointer; text-align: left;
+      transition: all 0.15s; width: 100%;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .split-template-btn.active { border-color: var(--accent); background: var(--accent-dim); }
+    .split-tmpl-name { font-size: 14px; font-weight: 600; color: var(--text); }
+    .split-tmpl-desc { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+    /* Weekly preview */
+    .week-row { display: flex; gap: 4px; }
+    .week-day {
+      flex: 1; text-align: center; padding: 8px 2px;
+      background: var(--surface-2); border-radius: 8px;
+    }
+    .week-day.training { background: var(--accent-dim); }
+    .week-day-name { display: block; font-size: 10px; font-weight: 600; color: var(--text-3); text-transform: uppercase; }
+    .week-day-type { display: block; font-size: 9px; color: var(--text-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .week-day.training .week-day-name { color: var(--text-2); }
+    .week-day.training .week-day-type { color: var(--accent); font-weight: 600; }
+
+    /* Custom split editor */
+    .custom-type-input {
+      flex: 1; padding: 8px 12px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--text); font-size: 13px; outline: none;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .custom-type-input:focus { border-color: var(--accent); }
+    .custom-type-input::placeholder { color: var(--text-3); }
     .data-actions { display: flex; gap: 10px; flex-wrap: wrap; }
     .data-actions .btn { font-size: 13px; padding: 10px 12px; }
     .sync-status { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: var(--text-3); }
@@ -2495,7 +2538,9 @@ let data = {
   notifications: { enabled: false, reminderTime: '08:00' },
   customExerciseTags: {},
   setTargets: null,
-  bodyPartViewMode: 'sets'
+  bodyPartViewMode: 'sets',
+  splitPreset: 'upper-lower',
+  archivedPrograms: {}
 };
 
 let workout = null;   // active workout state
@@ -2570,6 +2615,9 @@ function load() {
   if (!data.customExerciseTags) data.customExerciseTags = {};
   if (data.setTargets === undefined) data.setTargets = null;
   if (!data.bodyPartViewMode) data.bodyPartViewMode = 'sets';
+  // Migration: split presets
+  if (!data.splitPreset) data.splitPreset = 'custom'; // existing users keep their setup
+  if (!data.archivedPrograms) data.archivedPrograms = {};
   // Keep nextType in sync
   data.nextType = data.schedule.pattern[data.schedule.patternIndex % data.schedule.pattern.length];
 
@@ -2891,6 +2939,125 @@ const DEFAULT_SET_TARGETS = {
   "Upper Back": { min: 8, max: 16 },
   "Biceps": { min: 6, max: 14 }, "Triceps": { min: 6, max: 14 },
   "Calves": { min: 6, max: 14 }, "Forearms": { min: 6, max: 14 }, "Core": { min: 6, max: 14 }
+};
+
+const SPLIT_PRESETS = {
+  'upper-lower': {
+    label: 'Upper / Lower',
+    desc: '4 days/week. Alternates upper and lower body.',
+    pattern: ['upper', 'lower'],
+    programs: {
+      upper: [
+        { name: 'Barbell Bench Press', sets: 4, reps: 8 },
+        { name: 'Barbell Row', sets: 4, reps: 8 },
+        { name: 'Overhead Press', sets: 3, reps: 10 },
+        { name: 'Lat Pulldown', sets: 3, reps: 10 },
+        { name: 'Dumbbell Curl', sets: 3, reps: 12 },
+        { name: 'Tricep Dip', sets: 3, reps: 12 },
+        { name: 'Face Pull', sets: 3, reps: 15 }
+      ],
+      lower: [
+        { name: 'Barbell Squat', sets: 4, reps: 8 },
+        { name: 'Romanian Deadlift', sets: 4, reps: 8 },
+        { name: 'Leg Press', sets: 3, reps: 10 },
+        { name: 'Walking Lunge', sets: 3, reps: 12 },
+        { name: 'Lying Leg Curl', sets: 3, reps: 12 },
+        { name: 'Standing Calf Raise', sets: 4, reps: 15 }
+      ]
+    }
+  },
+  'ppl': {
+    label: 'Push / Pull / Legs',
+    desc: '3–6 days/week. Groups by movement pattern.',
+    pattern: ['push', 'pull', 'legs'],
+    programs: {
+      push: [
+        { name: 'Barbell Bench Press', sets: 4, reps: 8 },
+        { name: 'Incline Dumbbell Press', sets: 3, reps: 10 },
+        { name: 'Cable Fly', sets: 3, reps: 12 },
+        { name: 'Overhead Press', sets: 3, reps: 10 },
+        { name: 'Lateral Raise', sets: 3, reps: 15 },
+        { name: 'Tricep Pushdown', sets: 3, reps: 12 },
+        { name: 'Overhead Tricep Extension', sets: 3, reps: 12 }
+      ],
+      pull: [
+        { name: 'Barbell Row', sets: 4, reps: 8 },
+        { name: 'Lat Pulldown', sets: 3, reps: 10 },
+        { name: 'Seated Cable Row', sets: 3, reps: 10 },
+        { name: 'Face Pull', sets: 3, reps: 15 },
+        { name: 'Barbell Curl', sets: 3, reps: 12 },
+        { name: 'Hammer Curl', sets: 3, reps: 12 }
+      ],
+      legs: [
+        { name: 'Barbell Squat', sets: 4, reps: 8 },
+        { name: 'Romanian Deadlift', sets: 4, reps: 8 },
+        { name: 'Leg Press', sets: 3, reps: 10 },
+        { name: 'Leg Extension', sets: 3, reps: 12 },
+        { name: 'Lying Leg Curl', sets: 3, reps: 12 },
+        { name: 'Standing Calf Raise', sets: 4, reps: 15 }
+      ]
+    }
+  },
+  'full-body': {
+    label: 'Full Body',
+    desc: '3 days/week. Hits everything each session.',
+    pattern: ['full'],
+    programs: {
+      full: [
+        { name: 'Barbell Squat', sets: 3, reps: 8 },
+        { name: 'Barbell Bench Press', sets: 3, reps: 8 },
+        { name: 'Barbell Row', sets: 3, reps: 8 },
+        { name: 'Overhead Press', sets: 3, reps: 10 },
+        { name: 'Romanian Deadlift', sets: 3, reps: 10 },
+        { name: 'Dumbbell Curl', sets: 2, reps: 12 },
+        { name: 'Tricep Pushdown', sets: 2, reps: 12 }
+      ]
+    }
+  },
+  'bro-split': {
+    label: '5-Day Bro Split',
+    desc: '5 days/week. One muscle group per day.',
+    pattern: ['chest', 'back', 'shoulders', 'legs', 'arms'],
+    programs: {
+      chest: [
+        { name: 'Barbell Bench Press', sets: 4, reps: 8 },
+        { name: 'Incline Dumbbell Press', sets: 3, reps: 10 },
+        { name: 'Decline Bench Press', sets: 3, reps: 10 },
+        { name: 'Cable Fly', sets: 3, reps: 12 },
+        { name: 'Pec Deck', sets: 3, reps: 12 }
+      ],
+      back: [
+        { name: 'Conventional Deadlift', sets: 4, reps: 6 },
+        { name: 'Lat Pulldown', sets: 3, reps: 10 },
+        { name: 'Barbell Row', sets: 3, reps: 10 },
+        { name: 'Seated Cable Row', sets: 3, reps: 10 },
+        { name: 'Face Pull', sets: 3, reps: 15 }
+      ],
+      shoulders: [
+        { name: 'Overhead Press', sets: 4, reps: 8 },
+        { name: 'Lateral Raise', sets: 4, reps: 15 },
+        { name: 'Rear Delt Fly', sets: 3, reps: 15 },
+        { name: 'Barbell Shrug', sets: 3, reps: 12 },
+        { name: 'Front Raise', sets: 3, reps: 12 }
+      ],
+      legs: [
+        { name: 'Barbell Squat', sets: 4, reps: 8 },
+        { name: 'Leg Press', sets: 3, reps: 10 },
+        { name: 'Romanian Deadlift', sets: 3, reps: 10 },
+        { name: 'Leg Extension', sets: 3, reps: 12 },
+        { name: 'Lying Leg Curl', sets: 3, reps: 12 },
+        { name: 'Standing Calf Raise', sets: 4, reps: 15 }
+      ],
+      arms: [
+        { name: 'Barbell Curl', sets: 3, reps: 10 },
+        { name: 'Skull Crusher', sets: 3, reps: 10 },
+        { name: 'Hammer Curl', sets: 3, reps: 12 },
+        { name: 'Tricep Pushdown', sets: 3, reps: 12 },
+        { name: 'Preacher Curl', sets: 3, reps: 12 },
+        { name: 'Overhead Tricep Extension', sets: 3, reps: 12 }
+      ]
+    }
+  }
 };
 
 function classifyExercise(name) {
@@ -5112,6 +5279,41 @@ function renderBuild() {
 
   // Schedule card
   const dayNames = ['S','M','T','W','T','F','S'];
+  const currentPreset = data.splitPreset || 'custom';
+
+  const splitTemplateHtml = `
+    <div class="card fade-in" style="margin-bottom:16px;">
+      <span class="label">Split Template</span>
+      <div class="split-templates mt-12">
+        ${Object.entries(SPLIT_PRESETS).map(([key, preset]) => `
+          <button class="split-template-btn ${currentPreset === key ? 'active' : ''}" onclick="selectSplit('${key}')">
+            <span class="split-tmpl-name">${preset.label}</span>
+            <span class="split-tmpl-desc">${preset.desc}</span>
+          </button>
+        `).join('')}
+        <button class="split-template-btn ${currentPreset === 'custom' ? 'active' : ''}" onclick="selectSplit('custom')">
+          <span class="split-tmpl-name">Custom</span>
+          <span class="split-tmpl-desc">Build your own split.</span>
+        </button>
+      </div>
+      ${currentPreset === 'custom' ? `
+        <div class="mt-12">
+          <div class="split-chips">
+            ${pat.map((p, i) => `
+              <span class="split-chip ${i === data.schedule.patternIndex % pat.length ? 'current' : ''}">
+                ${getTypeLabel(p)}
+                ${pat.length > 1 ? `<button class="split-chip-remove" onclick="removeCustomType(${i})">×</button>` : ''}
+              </span>
+            `).join('')}
+          </div>
+          <div class="mt-8" style="display:flex;gap:8px;">
+            <input type="text" id="custom-type-input" class="custom-type-input" placeholder="Type name (e.g. Arms)" onkeydown="if(event.key==='Enter')addCustomType()">
+            <button class="btn btn-secondary" onclick="addCustomType()" style="white-space:nowrap;">Add</button>
+          </div>
+        </div>
+      ` : ''}
+    </div>`;
+
   const scheduleHtml = `
     <div class="card fade-in" style="margin-bottom:16px;">
       <span class="label">Training Schedule</span>
@@ -5121,14 +5323,10 @@ function renderBuild() {
         `).join('')}
       </div>
       <div class="divider"></div>
-      <span class="label">Split Rotation</span>
-      <div class="split-chips mt-8">
-        ${pat.map((p, i) => `
-          <span class="split-chip ${i === data.schedule.patternIndex % pat.length ? 'current' : ''}">${getTypeLabel(p)}</span>
-        `).join('')}
-        <button class="split-chip split-add" onclick="addSplitDay()">+</button>
+      <span class="label">This Week</span>
+      <div class="week-row mt-8">
+        ${buildWeeklyPreview()}
       </div>
-      <p class="text-xs text-dim mt-8">Tap + to add a workout type. Long-press a chip to rename or remove.</p>
     </div>`;
 
   // Deload card
@@ -5208,6 +5406,7 @@ function renderBuild() {
   }
 
   el.innerHTML = `
+    ${splitTemplateHtml}
     ${scheduleHtml}
     ${deloadHtml}
     ${notifHtml}
@@ -5268,21 +5467,78 @@ function toggleTrainingDay(day) {
   renderBuildSafe();
 }
 
-function addSplitDay() {
-  const name = prompt('Workout type name (e.g., Push, Pull, Legs, Full Body):');
-  if (!name || !name.trim()) return;
-  const key = name.trim().toLowerCase().replace(/\s+/g, '_');
-  data.schedule.pattern.push(key);
-  ensureCustomPrograms();
-  if (!data.programs[key]) {
-    data.programs[key] = [{ name: 'Exercise 1', sets: 3, reps: 10 }];
+function selectSplit(presetKey) {
+  if (presetKey === data.splitPreset) return;
+
+  // If user has programs, warn and archive
+  if (data.programs && Object.keys(data.programs).length > 0) {
+    const confirmed = confirm('Switching split will change your program. Your current exercises will be saved and can be restored if you switch back.');
+    if (!confirmed) return;
+    // Archive current programs
+    data.archivedPrograms = JSON.parse(JSON.stringify(data.programs));
   }
+
+  if (presetKey === 'custom') {
+    // Keep current pattern + programs as-is
+    data.splitPreset = 'custom';
+    save();
+    renderBuild();
+    return;
+  }
+
+  const preset = SPLIT_PRESETS[presetKey];
+  if (!preset) return;
+
+  // Build merged programs: use archived version if type name matches, else preset default
+  const mergedPrograms = {};
+  for (const type of preset.pattern) {
+    if (data.archivedPrograms[type] && data.archivedPrograms[type].length > 0) {
+      mergedPrograms[type] = JSON.parse(JSON.stringify(data.archivedPrograms[type]));
+    } else {
+      mergedPrograms[type] = preset.programs[type].map(e => ({ ...e }));
+    }
+  }
+
+  data.schedule.pattern = [...preset.pattern];
+  data.programs = mergedPrograms;
+  data.schedule.patternIndex = 0;
+  data.nextType = data.schedule.pattern[0];
+  data.splitPreset = presetKey;
   save();
   renderBuild();
 }
 
-function removeSplitDay(index) {
+function addCustomType() {
+  const input = document.getElementById('custom-type-input');
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) return;
+  const key = name.toLowerCase().replace(/\s+/g, '_');
+  if (data.schedule.pattern.includes(key)) {
+    input.value = '';
+    return;
+  }
+  data.schedule.pattern.push(key);
+  ensureCustomPrograms();
+  // Restore from archive if available
+  if (data.archivedPrograms[key] && data.archivedPrograms[key].length > 0) {
+    data.programs[key] = JSON.parse(JSON.stringify(data.archivedPrograms[key]));
+  } else if (!data.programs[key]) {
+    data.programs[key] = [{ name: 'Exercise 1', sets: 3, reps: 10 }];
+  }
+  input.value = '';
+  save();
+  renderBuild();
+}
+
+function removeCustomType(index) {
   if (data.schedule.pattern.length <= 1) return;
+  const type = data.schedule.pattern[index];
+  // Archive the program before removing
+  if (data.programs && data.programs[type]) {
+    if (!data.archivedPrograms) data.archivedPrograms = {};
+    data.archivedPrograms[type] = JSON.parse(JSON.stringify(data.programs[type]));
+  }
   data.schedule.pattern.splice(index, 1);
   if (data.schedule.patternIndex >= data.schedule.pattern.length) {
     data.schedule.patternIndex = 0;
@@ -5290,6 +5546,25 @@ function removeSplitDay(index) {
   data.nextType = data.schedule.pattern[data.schedule.patternIndex];
   save();
   renderBuild();
+}
+
+function buildWeeklyPreview() {
+  const days = ['M','T','W','T','F','S','S'];
+  const dayNums = [1,2,3,4,5,6,0]; // Mon=1..Sat=6, Sun=0
+  let rotIdx = data.schedule.patternIndex;
+  return days.map((d, i) => {
+    const dayNum = dayNums[i];
+    const isTraining = data.schedule.trainingDays.includes(dayNum);
+    let type = '';
+    if (isTraining) {
+      type = getTypeLabel(data.schedule.pattern[rotIdx % data.schedule.pattern.length]);
+      rotIdx++;
+    }
+    return `<div class="week-day ${isTraining ? 'training' : ''}">
+      <span class="week-day-name">${d}</span>
+      <span class="week-day-type">${isTraining ? type : 'Rest'}</span>
+    </div>`;
+  }).join('');
 }
 
 function setDeloadMode(mode) {
@@ -5349,7 +5624,7 @@ function renderBuildProgram(type, exercises) {
     <div class="card build-program fade-in">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div class="display display-sm" style="margin-bottom:4px;">${label}</div>
-        ${data.schedule.pattern.length > 1 ? `<button class="build-icon-btn delete" onclick="removeSplitDay(${data.schedule.pattern.indexOf(type)})" title="Remove" style="width:24px;height:24px;font-size:12px;">×</button>` : ''}
+        ${data.splitPreset === 'custom' && data.schedule.pattern.length > 1 ? `<button class="build-icon-btn delete" onclick="removeCustomType(${data.schedule.pattern.indexOf(type)})" title="Remove" style="width:24px;height:24px;font-size:12px;">×</button>` : ''}
       </div>
       <span class="text-sm text-dim">${exercises.length} exercises · ${totalSets} sets</span>
       <div class="divider"></div>
