@@ -2297,6 +2297,26 @@
     .custom-type-input:focus { border-color: var(--accent); }
     .custom-type-input::placeholder { color: var(--text-3); }
 
+    /* Onboarding */
+    .onboarding-dots { display: flex; gap: 8px; justify-content: center; margin-bottom: 32px; }
+    .onboarding-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--surface-3); transition: all 0.3s ease; }
+    .onboarding-dot.active { background: var(--accent); width: 24px; border-radius: 4px; }
+    .onboarding-step { animation: fadeUp 0.35s ease; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .onboarding-feature { display: flex; align-items: center; gap: 16px; padding: 14px 0; }
+    .onboarding-feature-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--accent-dim); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .onboarding-feature h3 { font-size: 15px; font-weight: 600; color: var(--text); margin: 0 0 2px; }
+    .onboarding-feature p { font-size: 12px; color: var(--text-3); margin: 0; }
+    .split-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: 14px; padding: 16px; cursor: pointer; transition: all 0.2s ease; }
+    .split-card.selected { border-color: var(--accent); background: var(--accent-dim); }
+    .split-card h3 { font-size: 15px; font-weight: 600; color: var(--text); margin: 0 0 4px; }
+    .split-card p { font-size: 12px; color: var(--text-3); margin: 0; }
+    .split-card .split-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+    .split-card .split-tag { font-size: 10px; padding: 3px 8px; border-radius: 6px; background: var(--surface-2); color: var(--text-2); text-transform: uppercase; letter-spacing: 0.5px; }
+    .day-toggle { display: flex; gap: 6px; justify-content: space-between; width: 100%; }
+    .day-pill { width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--border); background: none; color: var(--text-3); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; font-family: 'DM Sans', sans-serif; display: flex; align-items: center; justify-content: center; }
+    .day-pill.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+
     /* Settings overlay */
     .settings-overlay {
       position: fixed; inset: 0; z-index: 100;
@@ -2480,11 +2500,13 @@
       <div id="cardio-content"></div>
     </section>
 
-    <!-- ═══════════ AUTH SCREEN ═══════════ -->
-    <div id="auth-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;padding:24px;">
-      <h1 style="font-family:'Teko',sans-serif;font-size:64px;font-weight:700;letter-spacing:6px;color:var(--accent);margin-bottom:4px;">I R O N</h1>
-      <p style="color:var(--text-3);font-size:13px;margin-bottom:32px;letter-spacing:1px;">TRACK. TRAIN. TRANSFORM.</p>
-      <div id="auth-form" style="width:100%;max-width:320px;"></div>
+    <!-- ═══════════ ONBOARDING / AUTH SCREEN ═══════════ -->
+    <div id="auth-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow-y:auto;">
+      <div style="width:100%;max-width:360px;padding:24px 0;">
+        <h1 id="onboarding-title" style="font-family:'Teko',sans-serif;font-size:64px;font-weight:700;letter-spacing:6px;color:var(--accent);margin-bottom:4px;text-align:center;">I R O N</h1>
+        <div id="onboarding-dots"></div>
+        <div id="auth-form" style="width:100%;"></div>
+      </div>
     </div>
 
     <!-- ═══════════ SETTINGS OVERLAY ═══════════ -->
@@ -6241,38 +6263,239 @@ let currentUser = null;
 let syncInFlight = false;
 let syncTimer = null;
 
-// --- Auth UI ---
-function renderAuthScreen(mode = 'login') {
+// --- Onboarding / Auth UI ---
+let onboardingStep = 1;
+const ONBOARDING_TOTAL = 4;
+let onboardingData = { weightUnit: 'kg', bodyWeight: '', trainingDays: [1,3,5], split: 'upper-lower' };
+
+function renderOnboardingDots(step) {
+  const dots = document.getElementById('onboarding-dots');
+  dots.innerHTML = `<div class="onboarding-dots">${Array.from({length: ONBOARDING_TOTAL}, (_, i) =>
+    `<div class="onboarding-dot ${i + 1 === step ? 'active' : ''}"></div>`
+  ).join('')}</div>`;
+}
+
+function renderOnboardingStep(step) {
+  onboardingStep = step;
   const el = document.getElementById('auth-form');
-  const isLogin = mode === 'login';
+  const title = document.getElementById('onboarding-title');
+  renderOnboardingDots(step);
+
+  if (step === 1) {
+    // Welcome
+    title.textContent = 'I R O N';
+    title.style.fontSize = '64px';
+    el.innerHTML = `
+      <div class="onboarding-step">
+        <p style="text-align:center;color:var(--text-3);font-size:13px;letter-spacing:1.5px;margin-bottom:36px;">TRACK. TRAIN. TRANSFORM.</p>
+        <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:36px;">
+          <div class="onboarding-feature">
+            <div class="onboarding-feature-icon">🏋️</div>
+            <div><h3>Smart Training</h3><p>Log workouts with auto-generated progressive overload to keep you moving forward</p></div>
+          </div>
+          <div class="onboarding-feature">
+            <div class="onboarding-feature-icon">🤖</div>
+            <div><h3>Smart Diet Coach</h3><p>Adjusts your calories based on your weight trends and goals — log weigh-ins regularly for best results</p></div>
+          </div>
+          <div class="onboarding-feature">
+            <div class="onboarding-feature-icon">📊</div>
+            <div><h3>Track Everything</h3><p>PRs, volume trends, streaks, body weight and cardio — all in one place</p></div>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="renderOnboardingStep(2)">Get Started</button>
+        <p style="text-align:center;margin-top:16px;">
+          <a href="#" onclick="showLoginScreen();return false;" style="color:var(--text-3);font-size:13px;">Already have an account? <span style="color:var(--accent);">Log in</span></a>
+        </p>
+      </div>`;
+  } else if (step === 2) {
+    // Basic setup
+    title.textContent = 'SETUP';
+    title.style.fontSize = '36px';
+    const days = ['S','M','T','W','T','F','S'];
+    el.innerHTML = `
+      <div class="onboarding-step">
+        <p style="color:var(--text-2);font-size:14px;text-align:center;margin-bottom:28px;">Let's get the basics right.</p>
+
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);margin-bottom:8px;display:block;">Units</label>
+        <div style="display:flex;gap:8px;margin-bottom:24px;">
+          <button class="btn ${onboardingData.weightUnit === 'kg' ? 'btn-primary' : 'btn-secondary'}" onclick="onboardingData.weightUnit='kg';renderOnboardingStep(2);" style="flex:1;">kg</button>
+          <button class="btn ${onboardingData.weightUnit === 'lbs' ? 'btn-primary' : 'btn-secondary'}" onclick="onboardingData.weightUnit='lbs';renderOnboardingStep(2);" style="flex:1;">lbs</button>
+        </div>
+
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);margin-bottom:8px;display:block;">Body weight <span style="color:var(--text-3);text-transform:none;letter-spacing:0;">(optional)</span></label>
+        <input type="number" id="ob-weight" placeholder="${onboardingData.weightUnit === 'kg' ? 'e.g. 80' : 'e.g. 176'}" value="${onboardingData.bodyWeight}"
+          oninput="onboardingData.bodyWeight=this.value"
+          style="width:100%;padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif;margin-bottom:24px;box-sizing:border-box;">
+
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);margin-bottom:10px;display:block;">Training Days</label>
+        <div class="day-toggle" style="margin-bottom:32px;">
+          ${days.map((d, i) => `<button class="day-pill ${onboardingData.trainingDays.includes(i) ? 'active' : ''}" onclick="toggleOnboardingDay(${i})">${d}</button>`).join('')}
+        </div>
+
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-secondary" onclick="renderOnboardingStep(1)" style="flex:0.4;">Back</button>
+          <button class="btn btn-primary" onclick="renderOnboardingStep(3)" style="flex:1;">Next</button>
+        </div>
+      </div>`;
+  } else if (step === 3) {
+    // Choose split
+    title.textContent = 'YOUR SPLIT';
+    title.style.fontSize = '36px';
+    const splits = [
+      { key: 'upper-lower', name: 'Upper / Lower', desc: '4 sessions per week, balanced push & pull', tags: ['Upper','Lower','Upper','Lower'] },
+      { key: 'ppl', name: 'Push / Pull / Legs', desc: '3–6 sessions, high volume per muscle', tags: ['Push','Pull','Legs'] },
+      { key: 'full-body', name: 'Full Body', desc: '3 sessions, hit everything each time', tags: ['Full','Full','Full'] },
+      { key: 'bro-split', name: 'Bro Split', desc: '5 sessions, one muscle group per day', tags: ['Chest','Back','Shoulders','Arms','Legs'] }
+    ];
+    el.innerHTML = `
+      <div class="onboarding-step">
+        <p style="color:var(--text-2);font-size:14px;text-align:center;margin-bottom:20px;">Pick a programme. You can change this later.</p>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:28px;">
+          ${splits.map(s => `
+            <div class="split-card ${onboardingData.split === s.key ? 'selected' : ''}" onclick="onboardingData.split='${s.key}';renderOnboardingStep(3);">
+              <h3>${s.name}</h3>
+              <p>${s.desc}</p>
+              <div class="split-tags">${s.tags.map(t => `<span class="split-tag">${t}</span>`).join('')}</div>
+            </div>
+          `).join('')}
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-secondary" onclick="renderOnboardingStep(2)" style="flex:0.4;">Back</button>
+          <button class="btn btn-primary" onclick="renderOnboardingStep(4)" style="flex:1;">Next</button>
+        </div>
+      </div>`;
+  } else if (step === 4) {
+    // Account
+    title.textContent = 'YOUR ACCOUNT';
+    title.style.fontSize = '36px';
+    el.innerHTML = `
+      <div class="onboarding-step">
+        <p style="color:var(--text-2);font-size:14px;text-align:center;margin-bottom:24px;">Create an account to sync across devices and never lose your data.</p>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <input type="email" id="auth-email" placeholder="Email" autocomplete="email"
+            style="padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif;">
+          <input type="password" id="auth-password" placeholder="Password (min 6 characters)" autocomplete="new-password"
+            style="padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif;">
+          <div id="auth-error" style="color:var(--danger);font-size:13px;min-height:20px;"></div>
+          <button onclick="finishOnboarding('signup')" id="auth-submit-btn" class="btn btn-primary">
+            Create Account
+          </button>
+          <p style="text-align:center;color:var(--text-3);font-size:13px;margin-top:4px;">
+            Already have an account? <a href="#" onclick="showLoginScreen();return false;" style="color:var(--accent);">Log in</a>
+          </p>
+          <div style="display:flex;gap:10px;margin-top:4px;">
+            <button class="btn btn-secondary" onclick="renderOnboardingStep(3)" style="flex:0.4;">Back</button>
+            <button class="btn btn-ghost" onclick="finishOnboarding('skip')" style="flex:1;border:1px solid var(--border);">Continue without account</button>
+          </div>
+        </div>
+      </div>`;
+    ['auth-email', 'auth-password'].forEach(id => {
+      document.getElementById(id)?.addEventListener('keydown', e => {
+        if (e.key === 'Enter') finishOnboarding('signup');
+      });
+    });
+  }
+}
+
+function toggleOnboardingDay(day) {
+  const idx = onboardingData.trainingDays.indexOf(day);
+  if (idx > -1) onboardingData.trainingDays.splice(idx, 1);
+  else onboardingData.trainingDays.push(day);
+  onboardingData.trainingDays.sort((a, b) => a - b);
+  renderOnboardingStep(2);
+}
+
+function applyOnboardingSettings() {
+  data.weightUnit = onboardingData.weightUnit;
+  data.schedule.trainingDays = onboardingData.trainingDays;
+  if (onboardingData.bodyWeight) {
+    const w = parseFloat(onboardingData.bodyWeight);
+    if (w > 0) {
+      if (!data.weights) data.weights = [];
+      data.weights.push({ date: new Date().toISOString().slice(0, 10), weight: w });
+    }
+  }
+  // Apply split preset directly (avoid selectSplit's confirm dialog for new users)
+  const preset = SPLIT_PRESETS[onboardingData.split];
+  if (preset) {
+    data.schedule.pattern = [...preset.pattern];
+    data.programs = {};
+    for (const type of preset.pattern) {
+      data.programs[type] = preset.programs[type].map(e => ({ ...e }));
+    }
+    data.schedule.patternIndex = 0;
+    data.nextType = data.schedule.pattern[0];
+    data.splitPreset = onboardingData.split;
+  }
+  localStorage.setItem('iron_onboarded', '1');
+  save();
+}
+
+async function finishOnboarding(action) {
+  applyOnboardingSettings();
+  if (action === 'signup') {
+    const email = document.getElementById('auth-email')?.value.trim();
+    const password = document.getElementById('auth-password')?.value;
+    const errorEl = document.getElementById('auth-error');
+    const btn = document.getElementById('auth-submit-btn');
+    if (!email || !password) { errorEl.textContent = 'Email and password required.'; return; }
+    if (password.length < 6) { errorEl.textContent = 'Password must be at least 6 characters.'; return; }
+    errorEl.textContent = '';
+    btn.textContent = 'Creating account…';
+    btn.disabled = true;
+    try {
+      const result = await sb.auth.signUp({ email, password });
+      if (result.error) {
+        errorEl.textContent = result.error.message;
+        btn.textContent = 'Create Account';
+        btn.disabled = false;
+        return;
+      }
+      // handleAuthStateChange will hide the screen and sync
+    } catch (e) {
+      errorEl.textContent = 'Connection failed. Try again.';
+      btn.textContent = 'Create Account';
+      btn.disabled = false;
+    }
+  } else {
+    skipAuth();
+  }
+  renderTrainHome();
+}
+
+function showLoginScreen() {
+  const el = document.getElementById('auth-form');
+  const title = document.getElementById('onboarding-title');
+  const dots = document.getElementById('onboarding-dots');
+  title.textContent = 'I R O N';
+  title.style.fontSize = '64px';
+  dots.innerHTML = '';
   el.innerHTML = `
-    <div style="display:flex;flex-direction:column;gap:12px;">
-      <input type="email" id="auth-email" placeholder="Email" autocomplete="email"
-        style="padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif;">
-      <input type="password" id="auth-password" placeholder="Password" autocomplete="${isLogin ? 'current-password' : 'new-password'}"
-        style="padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif;">
-      <div id="auth-error" style="color:var(--danger);font-size:13px;min-height:20px;"></div>
-      <button onclick="handleAuth('${mode}')" id="auth-submit-btn"
-        style="padding:14px;background:var(--accent);color:#1c1c1c;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
-        ${isLogin ? 'Log In' : 'Create Account'}
-      </button>
-      <p style="text-align:center;color:var(--text-3);font-size:13px;margin-top:8px;">
-        ${isLogin
-          ? `Don't have an account? <a href="#" onclick="renderAuthScreen('signup');return false;" style="color:var(--accent);">Sign up</a>`
-          : `Already have an account? <a href="#" onclick="renderAuthScreen('login');return false;" style="color:var(--accent);">Log in</a>`
-        }
-      </p>
-      <button onclick="skipAuth()" style="padding:10px;background:none;border:1px solid var(--border);border-radius:12px;color:var(--text-3);font-size:13px;cursor:pointer;margin-top:4px;font-family:'DM Sans',sans-serif;">
-        Continue without account
-      </button>
-    </div>
-  `;
-  // Allow enter key to submit
+    <div class="onboarding-step">
+      <p style="text-align:center;color:var(--text-3);font-size:13px;letter-spacing:1.5px;margin-bottom:28px;">WELCOME BACK</p>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <input type="email" id="auth-email" placeholder="Email" autocomplete="email"
+          style="padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif;">
+        <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password"
+          style="padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif;">
+        <div id="auth-error" style="color:var(--danger);font-size:13px;min-height:20px;"></div>
+        <button onclick="handleAuth('login')" id="auth-submit-btn" class="btn btn-primary">Log In</button>
+        <p style="text-align:center;color:var(--text-3);font-size:13px;margin-top:8px;">
+          New here? <a href="#" onclick="renderOnboardingStep(1);return false;" style="color:var(--accent);">Get started</a>
+        </p>
+      </div>
+    </div>`;
   ['auth-email', 'auth-password'].forEach(id => {
     document.getElementById(id)?.addEventListener('keydown', e => {
-      if (e.key === 'Enter') handleAuth(mode);
+      if (e.key === 'Enter') handleAuth('login');
     });
   });
+}
+
+// Keep renderAuthScreen as alias for settings sign-in button
+function renderAuthScreen(mode = 'login') {
+  if (mode === 'login') showLoginScreen();
+  else renderOnboardingStep(1);
 }
 
 async function handleAuth(mode) {
@@ -6317,6 +6540,7 @@ async function handleAuthStateChange(event, session) {
     currentUser = session.user;
     document.getElementById('auth-screen').style.display = 'none';
     localStorage.removeItem('iron_skip_auth');
+    localStorage.setItem('iron_onboarded', '1');
     // Pull cloud data on login
     await cloudPull();
   } else {
@@ -6818,9 +7042,14 @@ sb.auth.onAuthStateChange(handleAuthStateChange);
   if (session?.user) {
     currentUser = session.user;
     autoSyncPull();
-  } else if (!localStorage.getItem('iron_skip_auth')) {
+  } else if (!localStorage.getItem('iron_skip_auth') && !localStorage.getItem('iron_onboarded')) {
+    // Brand new user — show onboarding
     document.getElementById('auth-screen').style.display = 'flex';
-    renderAuthScreen('login');
+    renderOnboardingStep(1);
+  } else if (!localStorage.getItem('iron_skip_auth') && localStorage.getItem('iron_onboarded')) {
+    // Onboarded but not logged in and didn't skip — show login
+    document.getElementById('auth-screen').style.display = 'flex';
+    showLoginScreen();
   }
 })();
 
