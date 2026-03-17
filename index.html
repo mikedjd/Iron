@@ -2470,7 +2470,7 @@
       </button>
       <button class="nav-btn" data-tab="diet" onclick="switchTab('diet')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><path d="M6 1v3M10 1v3M14 1v3"/>
+          <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
         </svg>
         <span>Diet</span>
       </button>
@@ -4878,126 +4878,201 @@ function getMuscleFill(group, volumes, maxVal, mode) {
 }
 
 function buildBodyMapSVG(volumes, maxVal, mode) {
-  // --- FRONT VIEW (more muscular, anatomical detail) ---
+  // Bodybuilder proportions: wide shoulders, narrow waist, thick limbs
+  // ViewBox 200×400, figure centered at x=100
+  const W = 200, H = 400;
+
+  // --- FRONT VIEW ---
   const frontRegions = [
-    ['_head', ['M100,18 C89,18 81,26 81,37 C81,48 89,56 100,56 C111,56 119,48 119,37 C119,26 111,18 100,18']],
-    ['_neck', ['M91,56 Q91,64 89,68 L111,68 Q109,64 109,56']],
-    // Traps visible from front
+    // Head
+    ['_head', ['M100,20 C90,20 83,28 83,38 C83,49 90,55 100,55 C110,55 117,49 117,38 C117,28 110,20 100,20']],
+    // Neck — thick, traps visible
+    ['_neck', ['M90,55 L88,62 Q88,66 86,70 L114,70 Q112,66 112,62 L110,55']],
+    // Traps (front view — upper portion flanking neck)
     ['Upper Back', [
-      'M89,68 Q82,69 76,74 L80,76 Q86,71 89,70 Z',
-      'M111,68 Q118,69 124,74 L120,76 Q114,71 111,70 Z'
+      'M86,70 Q78,68 70,72 L74,76 Q80,72 86,71 Z',
+      'M114,70 Q122,68 130,72 L126,76 Q120,72 114,71 Z'
     ]],
-    // Chest — pec major with split
+    // Chest — pec major, two halves with proper teardrop shape
     ['Chest', [
-      'M80,76 Q76,78 74,84 L74,100 Q74,106 80,108 L98,106 L98,78 Q90,76 80,76 Z',
-      'M120,76 Q124,78 126,84 L126,100 Q126,106 120,108 L102,106 L102,78 Q110,76 120,76 Z'
+      // Left pec
+      'M74,76 Q70,80 68,88 Q67,96 70,104 Q73,110 80,112 L97,108 L97,80 Q88,76 74,76 Z',
+      // Right pec
+      'M126,76 Q130,80 132,88 Q133,96 130,104 Q127,110 120,112 L103,108 L103,80 Q112,76 126,76 Z'
     ]],
-    // Front Delts — capped shoulders
+    // Front Delts — thick capped shoulders
     ['Front Delts', [
-      'M76,74 Q62,70 56,80 Q54,88 58,96 L66,94 L74,84 L74,78 Z',
-      'M124,74 Q138,70 144,80 Q146,88 142,96 L134,94 L126,84 L126,78 Z'
+      'M70,72 Q58,68 50,76 Q46,84 48,94 L56,96 L60,90 L68,82 L68,78 Z',
+      'M130,72 Q142,68 150,76 Q154,84 152,94 L144,96 L140,90 L132,82 L132,78 Z'
     ]],
-    // Side/Rear Delts (lateral head visible from front)
+    // Side/Rear Delts — lateral head visible from front
     ['Side/Rear Delts', [
-      'M56,80 Q52,84 52,92 L58,96 Q54,88 56,80 Z',
-      'M144,80 Q148,84 148,92 L142,96 Q146,88 144,80 Z'
+      'M50,76 Q44,82 44,92 L48,94 Q46,84 50,76 Z',
+      'M150,76 Q156,82 156,92 L152,94 Q154,84 150,76 Z'
     ]],
-    // Biceps — peaked
+    // Biceps — thick with peak
     ['Biceps', [
-      'M58,96 L66,94 L68,104 Q70,118 68,132 L64,136 Q56,124 54,112 Q52,102 58,96 Z',
-      'M142,96 L134,94 L132,104 Q130,118 132,132 L136,136 Q144,124 146,112 Q148,102 142,96 Z'
+      'M56,96 L60,94 Q64,96 66,104 Q68,116 66,130 L62,136 Q54,124 52,112 Q50,102 56,96 Z',
+      'M144,96 L140,94 Q136,96 134,104 Q132,116 134,130 L138,136 Q146,124 148,112 Q150,102 144,96 Z'
     ]],
-    // Triceps — visible from front (lateral head)
+    // Triceps — lateral head visible from front
     ['Triceps', [
-      'M52,92 L58,96 Q52,102 54,112 Q56,124 64,136 L58,138 Q48,126 46,114 Q44,100 52,92 Z',
-      'M148,92 L142,96 Q148,102 146,112 Q144,124 136,136 L142,138 Q152,126 154,114 Q156,100 148,92 Z'
+      'M44,92 L48,94 L52,102 Q50,112 52,124 L58,136 L54,138 Q44,126 42,114 Q40,102 44,92 Z',
+      'M156,92 L152,94 L148,102 Q150,112 148,124 L142,136 L146,138 Q156,126 158,114 Q160,102 156,92 Z'
     ]],
-    // Forearms
+    // Forearms — thick
     ['Forearms', [
-      'M58,138 L64,136 L68,132 Q72,148 68,168 L60,182 Q54,176 52,164 Q50,150 58,138 Z',
-      'M142,138 L136,136 L132,132 Q128,148 132,168 L140,182 Q146,176 148,164 Q150,150 142,138 Z'
+      'M54,138 L62,136 L66,130 Q70,146 68,164 L62,180 Q56,174 52,164 Q48,152 54,138 Z',
+      'M146,138 L138,136 L134,130 Q130,146 132,164 L138,180 Q144,174 148,164 Q152,152 146,138 Z'
     ]],
-    // Core — abs with separation lines
+    // Serratus / obliques (sides of torso)
     ['Core', [
-      'M80,108 L98,106 L102,106 L120,108 L120,118 L118,140 Q116,158 114,168 L100,172 L86,168 Q84,158 82,140 L80,118 Z'
+      'M68,104 L70,104 Q73,110 80,112 L80,114 L76,128 Q72,120 68,112 Z',
+      'M132,104 L130,104 Q127,110 120,112 L120,114 L124,128 Q128,120 132,112 Z'
     ]],
-    // Quads — vastus lateralis, rectus femoris, vastus medialis
+    // Core — abs (center block with visible separations)
+    ['Core', [
+      // Rectus abdominis
+      'M80,112 L97,108 L103,108 L120,112 L120,122 L118,142 Q116,156 114,166 L100,170 L86,166 Q84,156 82,142 L80,122 Z'
+    ]],
+    // Obliques
+    ['Core', [
+      'M76,128 L80,122 L82,142 Q84,156 86,166 L82,168 Q76,158 74,144 Z',
+      'M124,128 L120,122 L118,142 Q116,156 114,166 L118,168 Q124,158 126,144 Z'
+    ]],
+    // Quads — vastus lateralis (outer)
     ['Quads', [
-      'M86,168 L99,172 L97,218 Q96,240 92,258 L84,260 Q78,248 76,230 Q74,210 76,190 Q78,176 86,168 Z',
-      'M114,168 L101,172 L103,218 Q104,240 108,258 L116,260 Q122,248 124,230 Q126,210 124,190 Q122,176 114,168 Z'
+      'M82,168 L90,170 L88,220 Q86,242 82,256 L76,258 Q70,244 70,226 Q70,200 74,182 Z',
+      'M118,168 L110,170 L112,220 Q114,242 118,256 L124,258 Q130,244 130,226 Q130,200 126,182 Z'
     ]],
-    // Hams/Glutes (adductors visible from front)
+    // Quads — rectus femoris (center) + vastus medialis (inner teardrop)
+    ['Quads', [
+      'M90,170 L98,172 L96,224 Q94,244 90,258 L82,256 L88,220 Z',
+      'M110,170 L102,172 L104,224 Q106,244 110,258 L118,256 L112,220 Z'
+    ]],
+    // Adductors / inner thigh
     ['Hams/Glutes', [
-      'M99,172 L100,172 L101,172 L103,218 L100,222 L97,218 Z'
+      'M98,172 L100,172 L102,172 L104,224 L100,228 L96,224 Z'
     ]],
-    // Calves — gastrocnemius
+    // Knees (outline)
+    ['_knee', [
+      'M76,258 Q76,270 82,274 L90,272 Q96,268 96,258',
+      'M124,258 Q124,270 118,274 L110,272 Q104,268 104,258'
+    ]],
+    // Calves — gastrocnemius with diamond shape
     ['Calves', [
-      'M84,260 L92,262 Q96,275 94,295 Q92,320 88,340 L82,342 Q78,325 78,305 Q78,280 84,260 Z',
-      'M116,260 L108,262 Q104,275 106,295 Q108,320 112,340 L118,342 Q122,325 122,305 Q122,280 116,260 Z'
+      'M82,274 L90,272 Q96,282 94,300 Q92,322 88,342 L80,344 Q74,328 74,306 Q74,286 82,274 Z',
+      'M118,274 L110,272 Q104,282 106,300 Q108,322 112,342 L120,344 Q126,328 126,306 Q126,286 118,274 Z'
+    ]],
+    // Tibialis (front of shin)
+    ['Calves', [
+      'M90,272 Q94,268 96,258 L96,262 Q98,280 96,302 Q94,324 92,342 L88,342 Q92,322 94,300 Q96,282 90,272 Z',
+      'M110,272 Q106,268 104,258 L104,262 Q102,280 104,302 Q106,324 108,342 L112,342 Q108,322 106,300 Q104,282 110,272 Z'
+    ]],
+    // Muscle definition lines (non-interactive striation hints)
+    ['_detail', [
+      // Ab horizontal lines
+      'M88,118 L112,118', 'M87,128 L113,128', 'M86,138 L114,138', 'M86,150 L114,150',
+      // Linea alba (center line)
+      'M100,108 L100,168',
+      // Pec separation line
+      'M97,80 L97,108', 'M103,80 L103,108',
+      // Serratus hints
+      'M70,106 L78,112', 'M69,110 L77,116', 'M68,114 L76,120',
+      'M130,106 L122,112', 'M131,110 L123,116', 'M132,114 L124,120'
     ]]
   ];
 
   // --- BACK VIEW ---
   const backRegions = [
-    ['_head', ['M100,18 C89,18 81,26 81,37 C81,48 89,56 100,56 C111,56 119,48 119,37 C119,26 111,18 100,18']],
-    ['_neck', ['M91,56 Q91,64 89,68 L111,68 Q109,64 109,56']],
-    // Traps — large diamond
+    ['_head', ['M100,20 C90,20 83,28 83,38 C83,49 90,55 100,55 C110,55 117,49 117,38 C117,28 110,20 100,20']],
+    ['_neck', ['M90,55 L88,62 Q88,66 86,70 L114,70 Q112,66 112,62 L110,55']],
+    // Traps — large diamond/kite shape
     ['Upper Back', [
-      'M89,68 Q80,69 76,72 L70,76 Q72,82 78,86 L84,82 L100,80 L116,82 L122,86 Q128,82 130,76 L124,72 Q120,69 111,68 L100,70 Z'
+      'M86,70 Q76,66 68,72 L62,78 Q68,84 76,88 L86,84 L100,82 L114,84 L124,88 Q132,84 138,78 L132,72 Q124,66 114,70 L100,72 Z'
     ]],
-    // Rear Delts
+    // Rear Delts — thick
     ['Side/Rear Delts', [
-      'M70,76 Q58,72 54,82 Q52,90 56,98 L64,96 L78,86 Q72,82 70,76 Z',
-      'M130,76 Q142,72 146,82 Q148,90 144,98 L136,96 L122,86 Q128,82 130,76 Z'
+      'M62,78 Q50,72 44,82 Q42,92 46,100 L56,98 L68,88 Q64,82 62,78 Z',
+      'M138,78 Q150,72 156,82 Q158,92 154,100 L144,98 L132,88 Q136,82 138,78 Z'
     ]],
-    // Lats — wide V-taper
-    ['Lats', [
-      'M78,86 L84,82 L98,80 L82,108 L80,130 L76,140 Q68,132 64,118 Q62,104 64,96 L78,86 Z',
-      'M122,86 L116,82 L102,80 L118,108 L120,130 L124,140 Q132,132 136,118 Q138,104 136,96 L122,86 Z'
-    ]],
-    // Upper back / rhomboids (center back)
+    // Infraspinatus / teres (upper back detail)
     ['Upper Back', [
-      'M98,80 L100,80 L102,80 L118,108 L100,112 L82,108 Z'
+      'M76,88 L86,84 L100,82 L114,84 L124,88 L120,100 L100,104 L80,100 Z'
     ]],
-    // Triceps — long head visible from back
+    // Lats — wide V-taper, dramatic spread
+    ['Lats', [
+      'M68,88 L76,88 L80,100 L78,120 L76,140 Q66,132 60,116 Q58,104 60,96 Z',
+      'M132,88 L124,88 L120,100 L122,120 L124,140 Q134,132 140,116 Q142,104 140,96 Z'
+    ]],
+    // Rhomboids / mid back
+    ['Lats', [
+      'M80,100 L100,104 L120,100 L122,120 L100,124 L78,120 Z'
+    ]],
+    // Triceps — long head + lateral head visible from back
     ['Triceps', [
-      'M56,98 L64,96 Q60,106 58,118 Q56,130 62,138 L54,140 Q46,128 46,116 Q46,104 56,98 Z',
-      'M144,98 L136,96 Q140,106 142,118 Q144,130 138,138 L146,140 Q154,128 154,116 Q154,104 144,98 Z'
+      'M46,100 L56,98 Q52,108 50,120 Q48,132 54,140 L48,142 Q38,130 38,116 Q38,104 46,100 Z',
+      'M154,100 L144,98 Q148,108 150,120 Q152,132 146,140 L152,142 Q162,130 162,116 Q162,104 154,100 Z'
     ]],
     // Biceps (inner arm from back)
     ['Biceps', [
-      'M64,96 L78,86 Q74,96 72,108 Q70,122 68,134 L62,138 Q60,106 64,96 Z',
-      'M136,96 L122,86 Q126,96 128,108 Q130,122 132,134 L138,138 Q140,106 136,96 Z'
+      'M56,98 L68,88 Q66,100 64,112 Q62,126 60,136 L54,140 Q50,120 56,98 Z',
+      'M144,98 L132,88 Q134,100 136,112 Q138,126 140,136 L146,140 Q150,120 144,98 Z'
     ]],
     // Forearms
     ['Forearms', [
-      'M54,140 L62,138 L68,134 Q72,150 68,170 L60,184 Q54,178 52,166 Q50,152 54,140 Z',
-      'M146,140 L138,138 L132,134 Q128,150 132,170 L140,184 Q146,178 148,166 Q150,152 146,140 Z'
+      'M48,142 L54,140 L60,136 Q66,152 62,170 L56,182 Q50,176 46,164 Q44,152 48,142 Z',
+      'M152,142 L146,140 L140,136 Q134,152 138,170 L144,182 Q150,176 154,164 Q156,152 152,142 Z'
     ]],
     // Lower back / erectors
     ['Core', [
-      'M82,108 L100,112 L118,108 L120,130 L118,150 Q116,160 114,168 L100,172 L86,168 Q84,160 82,150 L80,130 Z'
+      'M78,120 L100,124 L122,120 L124,140 L120,158 Q118,164 116,168 L100,172 L84,168 Q82,164 80,158 L76,140 Z'
     ]],
-    // Glutes
+    // Glutes — round, separated
     ['Hams/Glutes', [
-      'M86,168 L100,172 L114,168 Q118,176 118,184 L100,188 L82,184 Q82,176 86,168 Z'
+      'M84,168 L99,172 Q94,176 90,184 Q86,178 82,172 Z',
+      'M116,168 L101,172 Q106,176 110,184 Q114,178 118,172 Z'
     ]],
-    // Hamstrings
+    // Hamstrings — biceps femoris + semitendinosus
     ['Hams/Glutes', [
-      'M82,184 L99,188 L97,240 Q94,255 88,260 L80,258 Q76,245 76,228 Q76,204 82,184 Z',
-      'M118,184 L101,188 L103,240 Q106,255 112,260 L120,258 Q124,245 124,228 Q124,204 118,184 Z'
+      // Outer hamstring (biceps femoris)
+      'M82,172 L90,184 L88,220 Q86,240 82,256 L74,258 Q70,244 70,226 Q70,200 76,182 Z',
+      'M118,172 L110,184 L112,220 Q114,240 118,256 L126,258 Q130,244 130,226 Q130,200 124,182 Z',
+      // Inner hamstring (semitendinosus)
+      'M90,184 L100,188 L98,224 Q96,244 92,258 L82,256 L88,220 Z',
+      'M110,184 L100,188 L102,224 Q104,244 108,258 L118,256 L112,220 Z'
     ]],
-    // Calves
+    ['_knee', [
+      'M74,258 Q74,270 80,274 L92,272 Q98,268 98,258',
+      'M126,258 Q126,270 120,274 L108,272 Q102,268 102,258'
+    ]],
+    // Calves (back view — gastrocnemius diamond)
     ['Calves', [
-      'M80,258 L88,262 Q94,278 92,298 Q90,322 86,340 L80,342 Q76,326 76,308 Q76,282 80,258 Z',
-      'M120,258 L112,262 Q106,278 108,298 Q110,322 114,340 L120,342 Q124,326 124,308 Q124,282 120,258 Z'
+      'M80,274 L92,272 Q98,284 96,304 Q94,326 90,344 L82,346 Q76,330 76,310 Q76,290 80,274 Z',
+      'M120,274 L108,272 Q102,284 104,304 Q106,326 110,344 L118,346 Q124,330 124,310 Q124,290 120,274 Z'
+    ]],
+    // Back definition lines
+    ['_detail', [
+      // Spine line
+      'M100,82 L100,172',
+      // Erector spinae
+      'M96,110 L94,158', 'M104,110 L106,158',
+      // Glute separation
+      'M100,172 L100,186',
+      // Lat separation hints
+      'M80,100 L78,120', 'M120,100 L122,120'
     ]]
   ];
 
   function renderPaths(regions) {
     let paths = '';
     for (const [group, dPaths] of regions) {
-      if (group.startsWith('_')) {
+      if (group === '_detail') {
+        // Striation / definition lines
+        for (const d of dPaths) {
+          paths += `<path d="${d}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.6" stroke-linecap="round"/>`;
+        }
+      } else if (group.startsWith('_')) {
         for (const d of dPaths) paths += `<path class="body-outline" d="${d}"/>`;
       } else {
         const fill = getMuscleFill(group, volumes, maxVal, mode);
@@ -5007,8 +5082,9 @@ function buildBodyMapSVG(volumes, maxVal, mode) {
     return paths;
   }
 
-  const frontSvg = `<svg viewBox="40 10 120 345" class="body-map">${renderPaths(frontRegions)}</svg>`;
-  const backSvg = `<svg viewBox="40 10 120 345" class="body-map">${renderPaths(backRegions)}</svg>`;
+  const vb = `30 10 140 350`;
+  const frontSvg = `<svg viewBox="${vb}" class="body-map">${renderPaths(frontRegions)}</svg>`;
+  const backSvg = `<svg viewBox="${vb}" class="body-map">${renderPaths(backRegions)}</svg>`;
 
   return `<div class="body-map-wrap" onclick="toggleBodyView()">
     <div class="body-map-flipper" id="body-flipper">
