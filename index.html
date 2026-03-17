@@ -13,6 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     /* ═══════════════════════════════════════════════
        RESET & VARIABLES
@@ -1804,25 +1805,62 @@
        HISTORY TAB
        ═══════════════════════════════════════════════ */
     .progress-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr auto auto;
       align-items: center;
-      justify-content: space-between;
-      padding: 10px 0;
+      gap: 8px;
+      padding: 12px 0;
       border-bottom: 1px solid var(--divider);
       font-size: 14px;
     }
     .progress-row:last-child { border-bottom: none; }
-    .progress-name { font-weight: 500; flex: 1; }
-    .progress-reps { color: var(--text-2); font-variant-numeric: tabular-nums; margin-right: 12px; }
+    .progress-name {
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .progress-name-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .progress-reps {
+      color: var(--text-2);
+      font-variant-numeric: tabular-nums;
+      font-size: 13px;
+      white-space: nowrap;
+      text-align: right;
+    }
     .progress-delta {
       font-weight: 600;
       font-variant-numeric: tabular-nums;
-      min-width: 40px;
+      min-width: 48px;
       text-align: right;
+      font-size: 13px;
+      white-space: nowrap;
     }
     .progress-delta.positive { color: var(--accent); }
     .progress-delta.negative { color: var(--danger); }
     .progress-delta.neutral { color: var(--text-3); }
+    .progress-pin {
+      width: 20px; height: 20px;
+      background: none; border: none;
+      color: var(--text-3); cursor: pointer;
+      padding: 0; font-size: 14px;
+      opacity: 0.4; transition: opacity 0.2s;
+    }
+    .progress-pin.pinned { opacity: 1; color: var(--accent); }
+    .progress-toggle {
+      background: none; border: 1px solid var(--divider);
+      color: var(--text-2); padding: 6px 14px;
+      border-radius: 16px; font-size: 12px;
+      cursor: pointer; margin-top: 12px;
+      width: 100%; letter-spacing: 0.5px;
+    }
+    .progress-toggle:active { background: var(--divider); }
 
     .session-entry {
       padding: 12px 0;
@@ -2441,6 +2479,13 @@
       </div>
       <div id="cardio-content"></div>
     </section>
+
+    <!-- ═══════════ AUTH SCREEN ═══════════ -->
+    <div id="auth-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;padding:24px;">
+      <h1 style="font-family:'Teko',sans-serif;font-size:64px;font-weight:700;letter-spacing:6px;color:var(--accent);margin-bottom:4px;">I R O N</h1>
+      <p style="color:var(--text-3);font-size:13px;margin-bottom:32px;letter-spacing:1px;">TRACK. TRAIN. TRANSFORM.</p>
+      <div id="auth-form" style="width:100%;max-width:320px;"></div>
+    </div>
 
     <!-- ═══════════ SETTINGS OVERLAY ═══════════ -->
     <div id="settings-overlay" class="settings-overlay">
@@ -4874,190 +4919,137 @@ function buildBodyMapSVG(volumes, maxVal, mode) {
   // Slightly more muscular than reference but same clean aesthetic
   // Center x=100, figure height ~350
 
-  // Smooth body silhouette — athletic male
-  const silhouette = 'M100,18 C94,18 89,23 89,32 C89,41 94,47 100,47 C106,47 111,41 111,32 C111,23 106,18 100,18 Z M93,47 C91,49 89,53 88,58 C85,57 78,58 70,62 C62,66 55,73 52,80 C49,88 50,96 52,104 C52,110 52,118 54,126 C52,132 50,140 50,148 C48,156 48,162 50,166 L54,164 C54,160 56,156 58,154 C56,160 54,168 56,174 L60,172 C62,168 64,164 66,162 L68,160 C66,170 64,186 66,204 C68,222 72,240 76,252 C78,258 80,264 82,268 C82,274 80,284 78,298 C76,316 78,332 82,346 C84,354 88,360 94,362 L100,364 L106,362 C112,360 116,354 118,346 C122,332 124,316 122,298 C120,284 118,274 118,268 C120,264 122,258 124,252 C128,240 132,222 134,204 C136,186 134,170 132,160 L134,162 C136,164 138,168 140,172 L144,174 C146,168 144,160 142,154 C144,156 146,160 146,164 L150,166 C152,162 152,156 150,148 C150,140 148,132 146,126 C148,118 148,110 148,104 C150,96 151,88 148,80 C145,73 138,66 130,62 C122,58 115,57 112,58 C111,53 109,49 107,47 Z';
+  // Smooth body silhouette — athletic male, arms taper cleanly (no hands/fingers)
+  const silhouette = 'M100,18 C94,18 89,23 89,32 C89,41 94,47 100,47 C106,47 111,41 111,32 C111,23 106,18 100,18 Z M93,47 C91,49 89,53 88,58 C85,57 78,58 70,62 C62,66 55,73 52,80 C49,88 50,96 52,104 C52,110 52,118 54,126 C52,132 50,140 50,148 C52,156 56,160 62,162 C64,164 66,164 68,162 C66,174 64,190 66,206 C68,222 72,240 76,252 C78,258 80,264 82,268 C82,274 80,284 78,298 C76,316 78,332 82,346 C84,354 88,360 94,362 L100,364 L106,362 C112,360 116,354 118,346 C122,332 124,316 122,298 C120,284 118,274 118,268 C120,264 122,258 124,252 C128,240 132,222 134,206 C136,190 136,174 132,162 C134,164 136,164 138,162 C144,160 148,156 150,148 C150,140 148,132 146,126 C148,118 148,110 148,104 C150,96 151,88 148,80 C145,73 138,66 130,62 C122,58 115,57 112,58 C111,53 109,49 107,47 Z';
 
   // --- FRONT VIEW: Individual muscle shapes ---
   const frontRegions = [
     // --- SHOULDERS ---
-    // Left front delt (rounded cap)
     ['Front Delts', [
       'M70,64 C64,63 58,67 55,73 C53,79 53,85 55,90 L60,88 C60,84 62,78 66,74 C68,72 70,68 72,66 Z',
       'M130,64 C136,63 142,67 145,73 C147,79 147,85 145,90 L140,88 C140,84 138,78 134,74 C132,72 130,68 128,66 Z'
     ]],
-    // Lateral delt sliver
     ['Side/Rear Delts', [
       'M55,73 C52,78 51,84 52,88 L55,90 C53,84 54,78 55,73 Z',
       'M145,73 C148,78 149,84 148,88 L145,90 C147,84 146,78 145,73 Z'
     ]],
 
     // --- CHEST ---
-    // Left pec
     ['Chest', [
       'M72,70 C66,72 63,78 62,86 C62,94 65,100 70,104 C75,107 82,108 90,106 L98,102 L98,74 C90,70 80,68 72,70 Z',
       'M128,70 C134,72 137,78 138,86 C138,94 135,100 130,104 C125,107 118,108 110,106 L102,102 L102,74 C110,70 120,68 128,70 Z'
     ]],
 
     // --- ARMS ---
-    // Biceps (front — rounded belly)
     ['Biceps', [
       'M60,90 L64,88 C66,92 68,98 68,106 C68,114 66,122 64,128 L60,132 C58,124 56,114 56,106 C56,98 58,94 60,90 Z',
       'M140,90 L136,88 C134,92 132,98 132,106 C132,114 134,122 136,128 L140,132 C142,124 144,114 144,106 C144,98 142,94 140,90 Z'
     ]],
-    // Triceps (outer arm from front)
     ['Triceps', [
       'M52,88 L55,90 C54,98 54,108 56,118 C57,124 58,130 60,134 L56,136 C52,128 50,118 50,108 C50,98 50,92 52,88 Z',
       'M148,88 L145,90 C146,98 146,108 144,118 C143,124 142,130 140,134 L144,136 C148,128 150,118 150,108 C150,98 150,92 148,88 Z'
     ]],
-    // Forearms
     ['Forearms', [
       'M56,136 L60,134 L64,128 C66,138 66,150 64,160 L62,166 C58,162 56,156 54,148 C52,142 54,138 56,136 Z',
       'M144,136 L140,134 L136,128 C134,138 134,150 136,160 L138,166 C142,162 144,156 146,148 C148,142 146,138 144,136 Z'
     ]],
 
     // --- TORSO ---
-    // Upper abs (2 blocks)
     ['Core', [
       'M90,106 L98,102 L98,118 L90,118 Z',
       'M110,106 L102,102 L102,118 L110,118 Z'
     ]],
-    // Mid-upper abs
     ['Core', [
       'M89,120 L98,120 L98,134 L88,134 Z',
       'M111,120 L102,120 L102,134 L112,134 Z'
     ]],
-    // Mid-lower abs
     ['Core', [
       'M88,136 L98,136 L98,150 L87,150 Z',
       'M112,136 L102,136 L102,150 L113,150 Z'
     ]],
-    // Lower abs
     ['Core', [
       'M87,152 L98,152 L98,166 L86,166 Z',
       'M113,152 L102,152 L102,166 L114,166 Z'
     ]],
-    // Obliques
     ['Core', [
       'M74,120 L80,114 L82,118 L86,134 L86,154 L84,166 L80,168 C78,158 76,142 74,128 Z',
       'M126,120 L120,114 L118,118 L114,134 L114,154 L116,166 L120,168 C122,158 124,142 126,128 Z'
     ]],
-    // --- LEGS ---
-    // Outer quad (vastus lateralis) — leaf shape
+
+    // --- LEGS (solid quads — one shape per leg) ---
     ['Quads', [
-      'M80,170 C76,182 74,198 74,216 C74,234 76,248 80,258 L84,264 C84,254 84,240 84,226 C84,210 86,194 88,178 Z',
-      'M120,170 C124,182 126,198 126,216 C126,234 124,248 120,258 L116,264 C116,254 116,240 116,226 C116,210 114,194 112,178 Z'
+      'M80,170 C76,182 74,198 74,216 C74,234 76,248 80,260 L88,266 L96,268 C96,254 96,238 96,224 C96,208 96,192 96,178 L88,174 Z',
+      'M120,170 C124,182 126,198 126,216 C126,234 124,248 120,260 L112,266 L104,268 C104,254 104,238 104,224 C104,208 104,192 104,178 L112,174 Z'
     ]],
-    // Rectus femoris (center quad)
-    ['Quads', [
-      'M90,176 C88,192 88,210 88,228 C88,244 88,256 90,266 L96,268 C96,256 96,240 96,226 C96,210 96,194 96,176 Z',
-      'M110,176 C112,192 112,210 112,228 C112,244 112,256 110,266 L104,268 C104,256 104,240 104,226 C104,210 104,194 104,176 Z'
-    ]],
-    // Vastus medialis (teardrop near knee)
-    ['Quads', [
-      'M88,240 C86,248 86,256 88,264 L94,268 C94,260 94,250 92,242 Z',
-      'M112,240 C114,248 114,256 112,264 L106,268 C106,260 106,250 108,242 Z'
-    ]],
-    // Adductors (inner thigh)
     ['Hams/Glutes', [
       'M96,178 L100,178 L104,178 C104,194 104,210 104,224 L100,228 L96,224 C96,210 96,194 96,178 Z'
     ]],
 
-    // --- CALVES ---
-    // Outer calf (gastrocnemius lateral)
+    // --- CALVES (solid — one shape per leg) ---
     ['Calves', [
-      'M82,272 C80,280 78,292 78,306 C78,320 80,332 82,340 L86,344 C86,336 86,322 86,310 C86,296 84,282 84,274 Z',
-      'M118,272 C120,280 122,292 122,306 C122,320 120,332 118,340 L114,344 C114,336 114,322 114,310 C114,296 116,282 116,274 Z'
+      'M82,272 C80,282 78,294 78,308 C78,322 80,334 84,344 L90,346 C94,344 96,336 96,324 C96,310 94,294 92,272 Z',
+      'M118,272 C120,282 122,294 122,308 C122,322 120,334 116,344 L110,346 C106,344 104,336 104,324 C104,310 106,294 108,272 Z'
     ]],
-    // Inner calf (gastrocnemius medial)
-    ['Calves', [
-      'M88,272 C90,280 92,292 92,306 C92,318 90,330 88,338 L92,342 C94,332 96,318 96,306 C96,292 94,280 92,272 Z',
-      'M112,272 C110,280 108,292 108,306 C108,318 110,330 112,338 L108,342 C106,332 104,318 104,306 C104,292 106,280 108,272 Z'
-    ]],
-    // Tibialis anterior (shin)
-    ['Calves', [
-      'M94,272 C94,284 94,298 94,314 C94,330 92,342 92,350 L96,350 C96,340 98,326 98,312 C98,296 96,282 96,272 Z',
-      'M106,272 C106,284 106,298 106,314 C106,330 108,342 108,350 L104,350 C104,340 102,326 102,312 C102,296 104,282 104,272 Z'
-    ]],
-
   ];
 
-  // --- BACK VIEW: Individual muscle shapes ---
-  // Mirror front proportions — same silhouette, muscles sit inside it
+  // --- BACK VIEW: Clean — traps (leaf shapes from neck) + lats (V-wings) ---
   const backRegions = [
-    // --- TRAPS ---
+    // --- TRAPS: two leaf shapes fanning from neck outward & down ---
     ['Upper Back', [
-      // Upper traps (narrower to match front shoulder width)
-      'M88,58 C82,57 76,60 70,64 C66,68 64,72 64,76 L70,78 C72,74 76,70 82,66 L100,64 L118,66 C124,70 128,74 130,78 L136,76 C136,72 134,68 130,64 C124,60 118,57 112,58 L100,60 Z',
-      // Mid traps / rhomboids
-      'M70,78 C76,76 88,74 100,74 C112,74 124,76 130,78 L126,88 C118,92 110,94 100,94 C90,94 82,92 74,88 Z'
+      // Left trap — leaf from neck sweeping out-left to shoulder, curving back to mid-spine
+      'M98,58 C90,62 78,72 68,82 C62,90 64,100 72,106 C80,112 92,112 98,108 Z',
+      // Right trap — mirror
+      'M102,58 C110,62 122,72 132,82 C138,90 136,100 128,106 C120,112 108,112 102,108 Z'
+    ]],
+
+    // --- LATS: two large wing shapes — wide at armpit, narrow at waist ---
+    ['Lats', [
+      // Left lat — outer edge follows body contour, inner edge follows spine
+      'M62,86 C58,98 58,112 62,128 C66,142 74,154 86,162 L92,158 C82,148 74,136 70,122 C66,108 66,96 68,86 Z',
+      // Right lat — mirror
+      'M138,86 C142,98 142,112 138,128 C134,142 126,154 114,162 L108,158 C118,148 126,136 130,122 C134,108 134,96 132,86 Z'
     ]],
 
     // --- REAR DELTS ---
     ['Side/Rear Delts', [
-      'M60,74 C56,72 54,74 54,80 C54,86 56,90 58,94 L62,92 C62,88 62,84 64,80 Z',
-      'M140,74 C144,72 146,74 146,80 C146,86 144,90 142,94 L138,92 C138,88 138,84 136,80 Z'
-    ]],
-
-    // --- LATS ---
-    ['Lats', [
-      // Left lat
-      'M60,76 L70,78 L74,88 C76,100 76,112 76,122 C76,130 74,136 72,140 C68,132 64,122 62,110 C60,100 60,88 60,76 Z',
-      // Right lat
-      'M140,76 L130,78 L126,88 C124,100 124,112 124,122 C124,130 126,136 128,140 C132,132 136,122 138,110 C140,100 140,88 140,76 Z',
-      // Mid back
-      'M74,88 C82,92 90,94 100,94 C110,94 118,92 126,88 L126,106 C120,112 110,114 100,114 C90,114 80,112 74,106 Z'
+      'M62,74 C58,72 54,74 54,80 C54,86 56,90 60,92 L64,88 C62,84 62,80 62,76 Z',
+      'M138,74 C142,72 146,74 146,80 C146,86 144,90 140,92 L136,88 C138,84 138,80 138,76 Z'
     ]],
 
     // --- ARMS ---
     ['Triceps', [
-      'M58,94 L62,92 C60,102 58,114 58,124 C58,132 60,138 62,142 L56,144 C52,134 50,122 50,112 C50,104 52,98 58,94 Z',
-      'M142,94 L138,92 C140,102 142,114 142,124 C142,132 140,138 138,142 L144,144 C148,134 150,122 150,112 C150,104 148,98 142,94 Z'
-    ]],
-    ['Biceps', [
-      'M62,92 C66,88 68,84 70,80 C68,92 66,106 64,118 C62,128 62,136 62,142 L58,142 C58,132 60,116 62,102 Z',
-      'M138,92 C134,88 132,84 130,80 C132,92 134,106 136,118 C138,128 138,136 138,142 L142,142 C142,132 140,116 138,102 Z'
+      'M56,90 L60,88 C58,100 56,114 56,126 C56,134 58,140 60,144 L54,146 C50,136 48,124 48,112 C48,104 50,96 56,90 Z',
+      'M144,90 L140,88 C142,100 144,114 144,126 C144,134 142,140 140,144 L146,146 C150,136 152,124 152,112 C152,104 150,96 144,90 Z'
     ]],
     ['Forearms', [
-      'M56,144 L62,142 C64,152 64,162 62,170 L60,176 C56,172 54,164 52,156 C52,150 54,146 56,144 Z',
-      'M144,144 L138,142 C136,152 136,162 138,170 L140,176 C144,172 146,164 148,156 C148,150 146,146 144,144 Z'
+      'M54,146 L60,144 C62,154 62,162 60,168 L58,172 C54,168 52,162 50,154 C50,150 52,148 54,146 Z',
+      'M146,146 L140,144 C138,154 138,162 140,168 L142,172 C146,168 148,162 150,154 C150,150 148,148 146,146 Z'
     ]],
 
-    // --- LOWER BACK ---
+    // --- LOWER BACK (erectors) ---
     ['Core', [
-      // Erector spinae (two columns — wider, more visible)
-      'M90,106 L98,106 L98,166 L88,166 C88,156 88,136 90,118 Z',
-      'M110,106 L102,106 L102,166 L112,166 C112,156 112,136 110,118 Z'
+      'M90,112 L98,108 L98,166 L88,166 C88,152 88,134 90,120 Z',
+      'M110,112 L102,108 L102,166 L112,166 C112,152 112,134 110,120 Z'
     ]],
 
-    // --- GLUTES ---
+    // --- GLUTES & HAMSTRINGS ---
     ['Hams/Glutes', [
-      // Left glute (rounder, more prominent)
-      'M84,166 L98,170 C96,176 92,184 88,190 C84,184 82,176 82,170 Z',
-      // Right glute
-      'M116,166 L102,170 C104,176 108,184 112,190 C116,184 118,176 118,170 Z',
-
-      // Outer hamstring (biceps femoris)
-      'M82,170 C78,182 76,198 76,216 C76,234 78,248 80,258 L86,264 C86,254 86,240 86,226 C86,210 88,194 90,186 Z',
-      'M118,170 C122,182 124,198 124,216 C124,234 122,248 120,258 L114,264 C114,254 114,240 114,226 C114,210 112,194 110,186 Z',
-      // Inner hamstring (semitendinosus)
-      'M90,186 L98,192 C98,208 96,226 96,242 C96,254 96,262 96,266 L86,264 C86,254 86,240 86,226 C86,210 88,194 90,186 Z',
-      'M110,186 L102,192 C102,208 104,226 104,242 C104,254 104,262 104,266 L114,264 C114,254 114,240 114,226 C114,210 112,194 110,186 Z'
+      // Glutes
+      'M82,166 L98,170 C96,180 92,188 86,194 C82,188 78,180 78,172 Z',
+      'M118,166 L102,170 C104,180 108,188 114,194 C118,188 122,180 122,172 Z',
+      // Hamstrings (solid per leg)
+      'M78,172 C76,186 74,202 74,220 C74,238 76,252 80,264 L96,268 C96,254 96,238 96,224 C96,208 96,194 98,182 L86,194 Z',
+      'M122,172 C124,186 126,202 126,220 C126,238 124,252 120,264 L104,268 C104,254 104,238 104,224 C104,208 104,194 102,182 L114,194 Z'
     ]],
 
-    // --- CALVES ---
+    // --- CALVES (solid) ---
     ['Calves', [
-      // Lateral gastrocnemius
-      'M82,272 C80,280 78,292 78,306 C78,320 80,332 82,340 L86,344 C86,336 86,322 86,310 C86,296 84,282 84,274 Z',
-      'M118,272 C120,280 122,292 122,306 C122,320 120,332 118,340 L114,344 C114,336 114,322 114,310 C114,296 116,282 116,274 Z',
-      // Medial gastrocnemius
-      'M88,272 C90,280 92,294 92,308 C92,320 90,332 88,340 L92,344 C94,334 96,320 96,308 C96,294 94,280 92,272 Z',
-      'M112,272 C110,280 108,294 108,308 C108,320 110,332 112,340 L108,344 C106,334 104,320 104,308 C104,294 106,280 108,272 Z'
+      'M82,272 C80,282 78,294 78,308 C78,322 80,334 84,344 L90,346 C94,344 96,336 96,324 C96,310 94,294 92,272 Z',
+      'M118,272 C120,282 122,294 122,308 C122,322 120,334 116,344 L110,346 C106,344 104,336 104,324 C104,310 106,294 108,272 Z'
     ]],
-
   ];
 
   function renderPaths(regions) {
-    // Thin-outlined silhouette — Hevy style (stroke only, very subtle fill)
     let svg = `<path class="body-silhouette" d="${silhouette}"/>`;
     for (const [group, dPaths] of regions) {
       const fill = getMuscleFill(group, volumes, maxVal, mode);
@@ -5068,16 +5060,10 @@ function buildBodyMapSVG(volumes, maxVal, mode) {
 
   const vb = '40 8 120 370';
   const frontSvg = `<svg viewBox="${vb}" class="body-map">${renderPaths(frontRegions)}</svg>`;
-  const backSvg = `<svg viewBox="${vb}" class="body-map">${renderPaths(backRegions)}</svg>`;
 
   return `<div class="body-map-side-by-side">
     <div class="body-map-col">
       ${frontSvg}
-      <div class="body-map-label">Front</div>
-    </div>
-    <div class="body-map-col">
-      ${backSvg}
-      <div class="body-map-label">Back</div>
     </div>
   </div>`;
 }
@@ -5297,17 +5283,30 @@ function renderHistory() {
       </div>`;
   }
 
-  // Exercise progress
+  // Exercise progress — with pinning & show more
   const progress = getExerciseProgress(filtered);
+  const pinnedExercises = data.pinnedExercises || [];
   let progressHtml = '';
   if (progress.length > 0) {
+    // Sort: pinned first, then by weight delta descending
+    const sorted = [...progress].sort((a, b) => {
+      const aPinned = pinnedExercises.includes(a.name) ? 0 : 1;
+      const bPinned = pinnedExercises.includes(b.name) ? 0 : 1;
+      if (aPinned !== bPinned) return aPinned - bPinned;
+      return Math.abs(b.currentWeight || 0) - Math.abs(a.currentWeight || 0);
+    });
+    const showAll = data._showAllProgress;
+    const pinCount = sorted.filter(p => pinnedExercises.includes(p.name)).length;
+    const defaultShow = Math.max(5, pinCount);
+    const visible = showAll ? sorted : sorted.slice(0, defaultShow);
+    const hasMore = sorted.length > defaultShow;
+
     progressHtml = `
       <div class="card fade-in stagger-4">
         <span class="label">Exercise Progress</span>
         <p class="text-xs text-dim mt-4">${historyPeriod === 'all' ? 'First session' : 'Period start'} vs most recent</p>
         <div class="mt-12">
-          ${progress.map(p => {
-            // Weight-based display if available
+          ${visible.map(p => {
             const hasWeight = p.baselineWeight != null && p.currentWeight != null;
             let display, deltaStr, cls;
             if (hasWeight) {
@@ -5320,17 +5319,22 @@ function renderHistory() {
               display = `${p.baseline.toFixed(0)} → ${p.current.toFixed(0)}`;
               cls = classifyProgress(p.delta, false);
             }
-            // Strength badge
             const level = bw && p.currentWeight ? getStrengthLevel(p.name, p.currentWeight, bw) : null;
-            const levelBadge = level ? `<span class="strength-badge ${level}">${level.substring(0,3).toUpperCase()}</span>` : '';
+            const levelBadge = level ? ` <span class="strength-badge ${level}">${level.substring(0,3).toUpperCase()}</span>` : '';
+            const isPinned = pinnedExercises.includes(p.name);
             return `
               <div class="progress-row">
-                <span class="progress-name">${p.name}${levelBadge}</span>
+                <span class="progress-name">
+                  <button class="progress-pin ${isPinned ? 'pinned' : ''}" onclick="event.stopPropagation();togglePinExercise('${p.name.replace(/'/g, "\\'")}')" title="${isPinned ? 'Unpin' : 'Pin to top'}">★</button>
+                  <span class="progress-name-text">${p.name}${levelBadge}</span>
+                </span>
                 <span class="progress-reps">${display}</span>
                 <span class="progress-delta ${cls}">${deltaStr}</span>
               </div>`;
           }).join('')}
         </div>
+        ${hasMore && !showAll ? `<button class="progress-toggle" onclick="toggleShowAllProgress()">Show all ${sorted.length} exercises</button>` : ''}
+        ${showAll && hasMore ? `<button class="progress-toggle" onclick="toggleShowAllProgress()">Show less</button>` : ''}
       </div>`;
   }
 
@@ -5449,6 +5453,20 @@ function renderHistory() {
 function setWeightUnit(u) {
   data.weightUnit = u;
   save();
+  renderHistory();
+}
+
+function togglePinExercise(name) {
+  if (!data.pinnedExercises) data.pinnedExercises = [];
+  const idx = data.pinnedExercises.indexOf(name);
+  if (idx >= 0) data.pinnedExercises.splice(idx, 1);
+  else data.pinnedExercises.push(name);
+  save();
+  renderHistory();
+}
+
+function toggleShowAllProgress() {
+  data._showAllProgress = !data._showAllProgress;
   renderHistory();
 }
 
@@ -5818,32 +5836,26 @@ function renderSettings() {
         <input type="file" id="import-file-settings" accept=".json" style="display:none" onchange="importData(event)">
       </div>
       <div class="divider"></div>
-      <span class="label">Cloud Sync</span>
-      ${data.syncBinId ? `
+      <span class="label">Account & Sync</span>
+      ${currentUser ? `
         <div class="sync-status">
           <span class="sync-dot connected"></span>
-          <span>Auto-syncing to JSONBin</span>
-          <span style="margin-left:auto;opacity:0.5;">${data.lastSyncTime ? new Date(data.lastSyncTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : ''}</span>
+          <span>Signed in</span>
         </div>
+        <p class="text-xs text-dim mt-4">${currentUser.email}</p>
+        <p class="text-xs text-dim mt-4">Auto-syncs across all your devices${data.lastSyncTime ? ' · Last: ' + new Date(data.lastSyncTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : ''}</p>
         <div class="data-actions mt-8">
           <button class="btn btn-ghost" onclick="cloudPull()" style="flex:1;font-size:12px;">Pull from Cloud</button>
           <button class="btn btn-ghost" onclick="cloudPush()" style="flex:1;font-size:12px;">Push to Cloud</button>
         </div>
-        <p class="text-xs text-dim mt-8">Bin ID: ${data.syncBinId.slice(0,8)}… · <a href="#" onclick="disconnectSync();return false;" style="color:var(--danger);">Disconnect</a></p>
+        <button class="btn btn-ghost mt-8" onclick="logoutUser()" style="width:100%;color:var(--danger);font-size:12px;">Log Out</button>
       ` : `
         <div class="sync-status">
           <span class="sync-dot disconnected"></span>
-          <span>Not connected</span>
+          <span>Not signed in</span>
         </div>
-        <div class="sync-setup">
-          <p class="text-xs text-dim mb-8">Free cloud backup. Get an API key from <a href="https://jsonbin.io" target="_blank" style="color:var(--accent);">jsonbin.io</a> (Access Keys → Create).</p>
-          <input type="text" id="sync-api-key" placeholder="Paste your JSONBin Master Key" autocomplete="off">
-          <button class="btn btn-ghost mt-8" onclick="setupSync()" style="width:100%;">New Backup</button>
-          <div class="divider" style="margin:12px 0;"></div>
-          <p class="text-xs text-dim mb-8">Restore from an existing backup:</p>
-          <input type="text" id="sync-bin-id" placeholder="Paste your Bin ID" autocomplete="off">
-          <button class="btn btn-ghost mt-8" onclick="restoreFromCloud()" style="width:100%;">Restore from Cloud</button>
-        </div>
+        <p class="text-xs text-dim mt-4">Sign in to sync your data across devices.</p>
+        <button class="btn btn-ghost mt-8" onclick="closeSettings();document.getElementById('auth-screen').style.display='flex';renderAuthScreen('login');" style="width:100%;">Sign In / Sign Up</button>
       `}
     </div>
   `;
@@ -6219,170 +6231,189 @@ function shareData() {
 }
 
 /* ═══════════════════════════════════════════════
-   CLOUD SYNC (JSONBin.io)
+   SUPABASE AUTH & CLOUD SYNC
    ═══════════════════════════════════════════════ */
-let syncInFlight = false;
+const SUPABASE_URL = 'https://ffcdvuknoejqpuzsvkfe.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmY2R2dWtub2VqcXB1enN2a2ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NTMwNzEsImV4cCI6MjA4OTMyOTA3MX0.KUE5IQb3Ci8A_L8LTWqwbjM799JgnaLGJ69D0Z2xoQs';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+let currentUser = null;
+let syncInFlight = false;
+let syncTimer = null;
+
+// --- Auth UI ---
+function renderAuthScreen(mode = 'login') {
+  const el = document.getElementById('auth-form');
+  const isLogin = mode === 'login';
+  el.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <input type="email" id="auth-email" placeholder="Email" autocomplete="email"
+        style="padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif;">
+      <input type="password" id="auth-password" placeholder="Password" autocomplete="${isLogin ? 'current-password' : 'new-password'}"
+        style="padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif;">
+      <div id="auth-error" style="color:var(--danger);font-size:13px;min-height:20px;"></div>
+      <button onclick="handleAuth('${mode}')" id="auth-submit-btn"
+        style="padding:14px;background:var(--accent);color:#1c1c1c;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+        ${isLogin ? 'Log In' : 'Create Account'}
+      </button>
+      <p style="text-align:center;color:var(--text-3);font-size:13px;margin-top:8px;">
+        ${isLogin
+          ? `Don't have an account? <a href="#" onclick="renderAuthScreen('signup');return false;" style="color:var(--accent);">Sign up</a>`
+          : `Already have an account? <a href="#" onclick="renderAuthScreen('login');return false;" style="color:var(--accent);">Log in</a>`
+        }
+      </p>
+      <button onclick="skipAuth()" style="padding:10px;background:none;border:1px solid var(--border);border-radius:12px;color:var(--text-3);font-size:13px;cursor:pointer;margin-top:4px;font-family:'DM Sans',sans-serif;">
+        Continue without account
+      </button>
+    </div>
+  `;
+  // Allow enter key to submit
+  ['auth-email', 'auth-password'].forEach(id => {
+    document.getElementById(id)?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleAuth(mode);
+    });
+  });
+}
+
+async function handleAuth(mode) {
+  const email = document.getElementById('auth-email')?.value.trim();
+  const password = document.getElementById('auth-password')?.value;
+  const errorEl = document.getElementById('auth-error');
+  const btn = document.getElementById('auth-submit-btn');
+  if (!email || !password) { errorEl.textContent = 'Email and password required.'; return; }
+  if (mode === 'signup' && password.length < 6) { errorEl.textContent = 'Password must be at least 6 characters.'; return; }
+  errorEl.textContent = '';
+  btn.textContent = mode === 'login' ? 'Logging in…' : 'Creating account…';
+  btn.disabled = true;
+
+  try {
+    let result;
+    if (mode === 'signup') {
+      result = await sb.auth.signUp({ email, password });
+    } else {
+      result = await sb.auth.signInWithPassword({ email, password });
+    }
+    if (result.error) {
+      errorEl.textContent = result.error.message;
+      btn.textContent = mode === 'login' ? 'Log In' : 'Create Account';
+      btn.disabled = false;
+      return;
+    }
+    // Auth state change listener handles the rest
+  } catch (e) {
+    errorEl.textContent = 'Connection failed. Try again.';
+    btn.textContent = mode === 'login' ? 'Log In' : 'Create Account';
+    btn.disabled = false;
+  }
+}
+
+function skipAuth() {
+  document.getElementById('auth-screen').style.display = 'none';
+  localStorage.setItem('iron_skip_auth', '1');
+}
+
+async function handleAuthStateChange(event, session) {
+  if (session?.user) {
+    currentUser = session.user;
+    document.getElementById('auth-screen').style.display = 'none';
+    localStorage.removeItem('iron_skip_auth');
+    // Pull cloud data on login
+    await cloudPull();
+  } else {
+    currentUser = null;
+    // Show auth screen if not skipped
+    if (!localStorage.getItem('iron_skip_auth')) {
+      document.getElementById('auth-screen').style.display = 'flex';
+      renderAuthScreen('login');
+    }
+  }
+}
+
+// --- Cloud Sync (Supabase) ---
 function getSyncData() {
-  // Strip sync metadata from the payload to avoid recursion
   const { syncApiKey, syncBinId, lastSyncTime, ...rest } = data;
   return rest;
 }
 
-async function setupSync() {
-  const keyInput = document.getElementById('sync-api-key');
-  const apiKey = keyInput?.value.trim();
-  if (!apiKey) { alert('Please paste your JSONBin API key.'); return; }
-
-  try {
-    const res = await fetch('https://api.jsonbin.io/v3/b', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': apiKey,
-        'X-Bin-Name': 'IRON Backup',
-        'X-Bin-Private': 'true'
-      },
-      body: JSON.stringify(getSyncData())
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      alert('Could not connect: ' + (err.message || res.statusText));
-      return;
-    }
-    const result = await res.json();
-    data.syncApiKey = apiKey;
-    data.syncBinId = result.metadata.id;
-    data.lastSyncTime = Date.now();
-    save();
-    renderSettings();
-  } catch (e) {
-    alert('Connection failed. Check your API key and try again.');
-  }
-}
-
 async function cloudPush() {
-  if (!data.syncApiKey || !data.syncBinId || syncInFlight) return;
+  if (!currentUser || syncInFlight) return;
   syncInFlight = true;
   try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${data.syncBinId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': data.syncApiKey
-      },
-      body: JSON.stringify(getSyncData())
-    });
-    if (res.ok) {
+    const payload = { data: getSyncData(), updated_at: new Date().toISOString() };
+    const { error } = await sb
+      .from('user_data')
+      .upsert({ user_id: currentUser.id, ...payload }, { onConflict: 'user_id' });
+    if (!error) {
       data.lastSyncTime = Date.now();
-      save();
+      localStorage.setItem('iron_data', JSON.stringify(data));
     }
   } catch (e) { /* silent fail */ }
   syncInFlight = false;
 }
 
 async function autoSyncPull() {
-  if (!data.syncApiKey || !data.syncBinId || syncInFlight) return;
-  // Throttle: don't pull more than once per 30 seconds
+  if (!currentUser) return;
   if (window._lastAutoPull && Date.now() - window._lastAutoPull < 30000) return;
   window._lastAutoPull = Date.now();
+  await cloudPull(true);
+}
+
+async function cloudPull(silent = false) {
+  if (!currentUser || syncInFlight) return;
+  syncInFlight = true;
   try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${data.syncBinId}/latest`, {
-      headers: { 'X-Master-Key': data.syncApiKey }
-    });
-    if (!res.ok) return;
-    const result = await res.json();
-    const cloud = result.record;
-    if (!cloud || (!cloud.sessions && !cloud.programs)) return;
-    // Merge: take whichever has more sessions (simple conflict resolution)
-    const cloudSessions = cloud.sessions || [];
-    const localSessions = data.sessions || [];
-    if (cloudSessions.length > localSessions.length ||
-        (cloudSessions.length === localSessions.length && cloud.lastSyncTime > (data.lastSyncTime || 0))) {
-      const { syncApiKey, syncBinId } = data;
-      Object.assign(data, cloud, { syncApiKey, syncBinId, lastSyncTime: Date.now() });
-      save();
+    const { data: row, error } = await sb
+      .from('user_data')
+      .select('data, updated_at')
+      .eq('user_id', currentUser.id)
+      .single();
+
+    if (error && error.code === 'PGRST116') {
+      // No row yet — push current local data up
+      syncInFlight = false;
+      await cloudPush();
+      return;
+    }
+    if (error || !row?.data) { syncInFlight = false; return; }
+
+    const cloud = row.data;
+    const cloudTime = new Date(row.updated_at).getTime();
+    const localTime = data.lastSyncTime || 0;
+
+    // If cloud is newer, merge it
+    if (cloudTime > localTime) {
+      Object.assign(data, cloud, { lastSyncTime: Date.now() });
+      localStorage.setItem('iron_data', JSON.stringify(data));
       load();
       if (currentTab === 'train') renderTrainHome();
       else if (currentTab === 'build') renderBuild();
       else if (currentTab === 'diet') renderDiet();
-    }
-  } catch (e) { /* silent fail on auto-pull */ }
-}
-
-async function cloudPull() {
-  if (!data.syncApiKey || !data.syncBinId) return;
-  try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${data.syncBinId}/latest`, {
-      headers: { 'X-Master-Key': data.syncApiKey }
-    });
-    if (!res.ok) { alert('Could not fetch from cloud.'); return; }
-    const result = await res.json();
-    const cloud = result.record;
-    if (!cloud.sessions && !cloud.programs) { alert('Cloud data looks empty.'); return; }
-    if (!confirm('Replace local data with cloud backup?')) return;
-    const { syncApiKey, syncBinId } = data; // preserve sync credentials
-    Object.assign(data, cloud, { syncApiKey, syncBinId, lastSyncTime: Date.now() });
-    save();
-    load();
-    closeSettings();
-    switchTab('build');
-  } catch (e) {
-    alert('Pull failed. Check your connection.');
-  }
-}
-
-async function restoreFromCloud() {
-  const keyInput = document.getElementById('sync-api-key');
-  const binInput = document.getElementById('sync-bin-id');
-  const apiKey = keyInput?.value.trim();
-  const binId = binInput?.value.trim();
-  if (!apiKey) { alert('Paste your Master Key in the first field.'); return; }
-  if (!binId) { alert('Paste your Bin ID.'); return; }
-
-  try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
-      headers: { 'X-Master-Key': apiKey }
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      alert('Could not fetch: ' + (err.message || res.statusText));
+      else if (currentTab === 'history') renderHistory?.();
+    } else if (!silent) {
+      // Local is newer or same — push up
+      syncInFlight = false;
+      await cloudPush();
       return;
     }
-    const result = await res.json();
-    const cloud = result.record;
-    if (!cloud.sessions && !cloud.programs) {
-      alert('Cloud data looks empty or invalid.');
-      return;
-    }
-    if (!confirm('Replace all local data with cloud backup?')) return;
-    Object.assign(data, cloud, { syncApiKey: apiKey, syncBinId: binId, lastSyncTime: Date.now() });
-    save();
-    load();
-    closeSettings();
-    switchTab('build');
-  } catch (e) {
-    alert('Restore failed. Check your key and Bin ID.');
-  }
+  } catch (e) { /* silent fail */ }
+  syncInFlight = false;
 }
 
-function disconnectSync() {
-  if (!confirm('Disconnect cloud sync? Your cloud backup will remain on JSONBin but won\'t auto-update.')) return;
-  delete data.syncApiKey;
-  delete data.syncBinId;
-  delete data.lastSyncTime;
-  save();
-  renderSettings();
+async function logoutUser() {
+  await sb.auth.signOut();
+  currentUser = null;
+  document.getElementById('auth-screen').style.display = 'flex';
+  renderAuthScreen('login');
+  closeSettings();
 }
 
 // Auto-sync: debounced push after every save
-let syncTimer = null;
 const _origSave = save;
 save = function() {
   _origSave();
-  if (data.syncApiKey && data.syncBinId) {
+  if (currentUser) {
     clearTimeout(syncTimer);
-    syncTimer = setTimeout(cloudPush, 5000); // 5s debounce
+    syncTimer = setTimeout(cloudPush, 3000);
   }
 };
 
@@ -6777,7 +6808,21 @@ function renderCardio(quick) {
 load();
 renderTrainHome();
 scheduleNotificationChecks();
-autoSyncPull();
+
+// Supabase auth: listen for login/logout
+sb.auth.onAuthStateChange(handleAuthStateChange);
+
+// Check initial auth state
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    currentUser = session.user;
+    autoSyncPull();
+  } else if (!localStorage.getItem('iron_skip_auth')) {
+    document.getElementById('auth-screen').style.display = 'flex';
+    renderAuthScreen('login');
+  }
+})();
 
 // Re-check on tab focus
 document.addEventListener('visibilitychange', () => {
