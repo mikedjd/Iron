@@ -1516,30 +1516,21 @@
       align-items: center;
       gap: 20px;
     }
-    .body-map-wrap {
-      position: relative; perspective: 800px;
-      width: 180px; margin: 0 auto; cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
+    .body-map-side-by-side {
+      display: flex; justify-content: center; gap: 8px;
+      width: 100%; max-width: 320px; margin: 0 auto;
     }
-    .body-map-flipper {
-      position: relative; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-      transform-style: preserve-3d;
-    }
-    .body-map-flipper.flipped { transform: rotateY(180deg); }
-    .body-map-front, .body-map-back {
-      backface-visibility: hidden; -webkit-backface-visibility: hidden;
-    }
-    .body-map-back {
-      position: absolute; top: 0; left: 0; width: 100%;
-      transform: rotateY(180deg);
+    .body-map-col {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
     }
     .body-map { width: 100%; height: auto; display: block; }
-    .body-outline { fill: none; stroke: var(--text-3); stroke-width: 0.8; opacity: 0.25; }
-    .body-region { transition: fill 0.3s ease; stroke: rgba(255,255,255,0.06); stroke-width: 0.5; }
+    .body-outline { fill: none; stroke: rgba(255,255,255,0.12); stroke-width: 0.5; }
+    .body-silhouette { fill: rgba(255,255,255,0.04); stroke: rgba(255,255,255,0.12); stroke-width: 0.5; }
+    .body-region { transition: fill 0.3s ease; stroke: none; }
     .body-map-label {
-      text-align: center; font-size: 10px; font-weight: 600;
+      text-align: center; font-size: 9px; font-weight: 600;
       letter-spacing: 1.5px; text-transform: uppercase;
-      color: var(--text-3); margin-top: 4px;
+      color: var(--text-3); margin-top: 2px;
     }
     .body-volume-bars { width: 100%; }
     .bv-bar-row {
@@ -4878,220 +4869,216 @@ function getMuscleFill(group, volumes, maxVal, mode) {
 }
 
 function buildBodyMapSVG(volumes, maxVal, mode) {
-  // Bodybuilder proportions: wide shoulders, narrow waist, thick limbs
-  // ViewBox 200×400, figure centered at x=100
-  const W = 200, H = 400;
+  // Clean anatomy illustration — Hevy-style
+  // Thin outlined silhouette + simple rounded muscle shapes floating on top
+  // Slightly more muscular than reference but same clean aesthetic
+  // Center x=100, figure height ~350
 
-  // --- FRONT VIEW ---
+  // Smooth body silhouette — athletic male
+  const silhouette = 'M100,18 C94,18 89,23 89,32 C89,41 94,47 100,47 C106,47 111,41 111,32 C111,23 106,18 100,18 Z M93,47 C91,49 89,53 88,58 C85,57 78,58 70,62 C62,66 55,73 52,80 C49,88 50,96 52,104 C52,110 52,118 54,126 C52,132 50,140 50,148 C48,156 48,162 50,166 L54,164 C54,160 56,156 58,154 C56,160 54,168 56,174 L60,172 C62,168 64,164 66,162 L68,160 C66,170 64,186 66,204 C68,222 72,240 76,252 C78,258 80,264 82,268 C82,274 80,284 78,298 C76,316 78,332 82,346 C84,354 88,360 94,362 L100,364 L106,362 C112,360 116,354 118,346 C122,332 124,316 122,298 C120,284 118,274 118,268 C120,264 122,258 124,252 C128,240 132,222 134,204 C136,186 134,170 132,160 L134,162 C136,164 138,168 140,172 L144,174 C146,168 144,160 142,154 C144,156 146,160 146,164 L150,166 C152,162 152,156 150,148 C150,140 148,132 146,126 C148,118 148,110 148,104 C150,96 151,88 148,80 C145,73 138,66 130,62 C122,58 115,57 112,58 C111,53 109,49 107,47 Z';
+
+  // --- FRONT VIEW: Individual muscle shapes ---
   const frontRegions = [
-    // Head
-    ['_head', ['M100,20 C90,20 83,28 83,38 C83,49 90,55 100,55 C110,55 117,49 117,38 C117,28 110,20 100,20']],
-    // Neck — thick, traps visible
-    ['_neck', ['M90,55 L88,62 Q88,66 86,70 L114,70 Q112,66 112,62 L110,55']],
-    // Traps (front view — upper portion flanking neck)
-    ['Upper Back', [
-      'M86,70 Q78,68 70,72 L74,76 Q80,72 86,71 Z',
-      'M114,70 Q122,68 130,72 L126,76 Q120,72 114,71 Z'
-    ]],
-    // Chest — pec major, two halves with proper teardrop shape
-    ['Chest', [
-      // Left pec
-      'M74,76 Q70,80 68,88 Q67,96 70,104 Q73,110 80,112 L97,108 L97,80 Q88,76 74,76 Z',
-      // Right pec
-      'M126,76 Q130,80 132,88 Q133,96 130,104 Q127,110 120,112 L103,108 L103,80 Q112,76 126,76 Z'
-    ]],
-    // Front Delts — thick capped shoulders
+    // --- SHOULDERS ---
+    // Left front delt (rounded cap)
     ['Front Delts', [
-      'M70,72 Q58,68 50,76 Q46,84 48,94 L56,96 L60,90 L68,82 L68,78 Z',
-      'M130,72 Q142,68 150,76 Q154,84 152,94 L144,96 L140,90 L132,82 L132,78 Z'
+      'M70,64 C64,63 58,67 55,73 C53,79 53,85 55,90 L60,88 C60,84 62,78 66,74 C68,72 70,68 72,66 Z',
+      'M130,64 C136,63 142,67 145,73 C147,79 147,85 145,90 L140,88 C140,84 138,78 134,74 C132,72 130,68 128,66 Z'
     ]],
-    // Side/Rear Delts — lateral head visible from front
+    // Lateral delt sliver
     ['Side/Rear Delts', [
-      'M50,76 Q44,82 44,92 L48,94 Q46,84 50,76 Z',
-      'M150,76 Q156,82 156,92 L152,94 Q154,84 150,76 Z'
+      'M55,73 C52,78 51,84 52,88 L55,90 C53,84 54,78 55,73 Z',
+      'M145,73 C148,78 149,84 148,88 L145,90 C147,84 146,78 145,73 Z'
     ]],
-    // Biceps — thick with peak
-    ['Biceps', [
-      'M56,96 L60,94 Q64,96 66,104 Q68,116 66,130 L62,136 Q54,124 52,112 Q50,102 56,96 Z',
-      'M144,96 L140,94 Q136,96 134,104 Q132,116 134,130 L138,136 Q146,124 148,112 Q150,102 144,96 Z'
-    ]],
-    // Triceps — lateral head visible from front
-    ['Triceps', [
-      'M44,92 L48,94 L52,102 Q50,112 52,124 L58,136 L54,138 Q44,126 42,114 Q40,102 44,92 Z',
-      'M156,92 L152,94 L148,102 Q150,112 148,124 L142,136 L146,138 Q156,126 158,114 Q160,102 156,92 Z'
-    ]],
-    // Forearms — thick
-    ['Forearms', [
-      'M54,138 L62,136 L66,130 Q70,146 68,164 L62,180 Q56,174 52,164 Q48,152 54,138 Z',
-      'M146,138 L138,136 L134,130 Q130,146 132,164 L138,180 Q144,174 148,164 Q152,152 146,138 Z'
-    ]],
-    // Serratus / obliques (sides of torso)
-    ['Core', [
-      'M68,104 L70,104 Q73,110 80,112 L80,114 L76,128 Q72,120 68,112 Z',
-      'M132,104 L130,104 Q127,110 120,112 L120,114 L124,128 Q128,120 132,112 Z'
-    ]],
-    // Core — abs (center block with visible separations)
-    ['Core', [
-      // Rectus abdominis
-      'M80,112 L97,108 L103,108 L120,112 L120,122 L118,142 Q116,156 114,166 L100,170 L86,166 Q84,156 82,142 L80,122 Z'
-    ]],
-    // Obliques
-    ['Core', [
-      'M76,128 L80,122 L82,142 Q84,156 86,166 L82,168 Q76,158 74,144 Z',
-      'M124,128 L120,122 L118,142 Q116,156 114,166 L118,168 Q124,158 126,144 Z'
-    ]],
-    // Quads — vastus lateralis (outer)
-    ['Quads', [
-      'M82,168 L90,170 L88,220 Q86,242 82,256 L76,258 Q70,244 70,226 Q70,200 74,182 Z',
-      'M118,168 L110,170 L112,220 Q114,242 118,256 L124,258 Q130,244 130,226 Q130,200 126,182 Z'
-    ]],
-    // Quads — rectus femoris (center) + vastus medialis (inner teardrop)
-    ['Quads', [
-      'M90,170 L98,172 L96,224 Q94,244 90,258 L82,256 L88,220 Z',
-      'M110,170 L102,172 L104,224 Q106,244 110,258 L118,256 L112,220 Z'
-    ]],
-    // Adductors / inner thigh
-    ['Hams/Glutes', [
-      'M98,172 L100,172 L102,172 L104,224 L100,228 L96,224 Z'
-    ]],
-    // Knees (outline)
-    ['_knee', [
-      'M76,258 Q76,270 82,274 L90,272 Q96,268 96,258',
-      'M124,258 Q124,270 118,274 L110,272 Q104,268 104,258'
-    ]],
-    // Calves — gastrocnemius with diamond shape
-    ['Calves', [
-      'M82,274 L90,272 Q96,282 94,300 Q92,322 88,342 L80,344 Q74,328 74,306 Q74,286 82,274 Z',
-      'M118,274 L110,272 Q104,282 106,300 Q108,322 112,342 L120,344 Q126,328 126,306 Q126,286 118,274 Z'
-    ]],
-    // Tibialis (front of shin)
-    ['Calves', [
-      'M90,272 Q94,268 96,258 L96,262 Q98,280 96,302 Q94,324 92,342 L88,342 Q92,322 94,300 Q96,282 90,272 Z',
-      'M110,272 Q106,268 104,258 L104,262 Q102,280 104,302 Q106,324 108,342 L112,342 Q108,322 106,300 Q104,282 110,272 Z'
-    ]],
-    // Muscle definition lines (non-interactive striation hints)
-    ['_detail', [
-      // Ab horizontal lines
-      'M88,118 L112,118', 'M87,128 L113,128', 'M86,138 L114,138', 'M86,150 L114,150',
-      // Linea alba (center line)
-      'M100,108 L100,168',
-      // Pec separation line
-      'M97,80 L97,108', 'M103,80 L103,108',
-      // Serratus hints
-      'M70,106 L78,112', 'M69,110 L77,116', 'M68,114 L76,120',
-      'M130,106 L122,112', 'M131,110 L123,116', 'M132,114 L124,120'
-    ]]
-  ];
 
-  // --- BACK VIEW ---
-  const backRegions = [
-    ['_head', ['M100,20 C90,20 83,28 83,38 C83,49 90,55 100,55 C110,55 117,49 117,38 C117,28 110,20 100,20']],
-    ['_neck', ['M90,55 L88,62 Q88,66 86,70 L114,70 Q112,66 112,62 L110,55']],
-    // Traps — large diamond/kite shape
-    ['Upper Back', [
-      'M86,70 Q76,66 68,72 L62,78 Q68,84 76,88 L86,84 L100,82 L114,84 L124,88 Q132,84 138,78 L132,72 Q124,66 114,70 L100,72 Z'
+    // --- CHEST ---
+    // Left pec
+    ['Chest', [
+      'M72,70 C66,72 63,78 62,86 C62,94 65,100 70,104 C75,107 82,108 90,106 L98,102 L98,74 C90,70 80,68 72,70 Z',
+      'M128,70 C134,72 137,78 138,86 C138,94 135,100 130,104 C125,107 118,108 110,106 L102,102 L102,74 C110,70 120,68 128,70 Z'
     ]],
-    // Rear Delts — thick
-    ['Side/Rear Delts', [
-      'M62,78 Q50,72 44,82 Q42,92 46,100 L56,98 L68,88 Q64,82 62,78 Z',
-      'M138,78 Q150,72 156,82 Q158,92 154,100 L144,98 L132,88 Q136,82 138,78 Z'
-    ]],
-    // Infraspinatus / teres (upper back detail)
-    ['Upper Back', [
-      'M76,88 L86,84 L100,82 L114,84 L124,88 L120,100 L100,104 L80,100 Z'
-    ]],
-    // Lats — wide V-taper, dramatic spread
-    ['Lats', [
-      'M68,88 L76,88 L80,100 L78,120 L76,140 Q66,132 60,116 Q58,104 60,96 Z',
-      'M132,88 L124,88 L120,100 L122,120 L124,140 Q134,132 140,116 Q142,104 140,96 Z'
-    ]],
-    // Rhomboids / mid back
-    ['Lats', [
-      'M80,100 L100,104 L120,100 L122,120 L100,124 L78,120 Z'
-    ]],
-    // Triceps — long head + lateral head visible from back
-    ['Triceps', [
-      'M46,100 L56,98 Q52,108 50,120 Q48,132 54,140 L48,142 Q38,130 38,116 Q38,104 46,100 Z',
-      'M154,100 L144,98 Q148,108 150,120 Q152,132 146,140 L152,142 Q162,130 162,116 Q162,104 154,100 Z'
-    ]],
-    // Biceps (inner arm from back)
+
+    // --- ARMS ---
+    // Biceps (front — rounded belly)
     ['Biceps', [
-      'M56,98 L68,88 Q66,100 64,112 Q62,126 60,136 L54,140 Q50,120 56,98 Z',
-      'M144,98 L132,88 Q134,100 136,112 Q138,126 140,136 L146,140 Q150,120 144,98 Z'
+      'M60,90 L64,88 C66,92 68,98 68,106 C68,114 66,122 64,128 L60,132 C58,124 56,114 56,106 C56,98 58,94 60,90 Z',
+      'M140,90 L136,88 C134,92 132,98 132,106 C132,114 134,122 136,128 L140,132 C142,124 144,114 144,106 C144,98 142,94 140,90 Z'
+    ]],
+    // Triceps (outer arm from front)
+    ['Triceps', [
+      'M52,88 L55,90 C54,98 54,108 56,118 C57,124 58,130 60,134 L56,136 C52,128 50,118 50,108 C50,98 50,92 52,88 Z',
+      'M148,88 L145,90 C146,98 146,108 144,118 C143,124 142,130 140,134 L144,136 C148,128 150,118 150,108 C150,98 150,92 148,88 Z'
     ]],
     // Forearms
     ['Forearms', [
-      'M48,142 L54,140 L60,136 Q66,152 62,170 L56,182 Q50,176 46,164 Q44,152 48,142 Z',
-      'M152,142 L146,140 L140,136 Q134,152 138,170 L144,182 Q150,176 154,164 Q156,152 152,142 Z'
+      'M56,136 L60,134 L64,128 C66,138 66,150 64,160 L62,166 C58,162 56,156 54,148 C52,142 54,138 56,136 Z',
+      'M144,136 L140,134 L136,128 C134,138 134,150 136,160 L138,166 C142,162 144,156 146,148 C148,142 146,138 144,136 Z'
     ]],
-    // Lower back / erectors
+
+    // --- TORSO ---
+    // Upper abs (2 blocks)
     ['Core', [
-      'M78,120 L100,124 L122,120 L124,140 L120,158 Q118,164 116,168 L100,172 L84,168 Q82,164 80,158 L76,140 Z'
+      'M90,106 L98,102 L98,118 L90,118 Z',
+      'M110,106 L102,102 L102,118 L110,118 Z'
     ]],
-    // Glutes — round, separated
+    // Mid-upper abs
+    ['Core', [
+      'M89,120 L98,120 L98,134 L88,134 Z',
+      'M111,120 L102,120 L102,134 L112,134 Z'
+    ]],
+    // Mid-lower abs
+    ['Core', [
+      'M88,136 L98,136 L98,150 L87,150 Z',
+      'M112,136 L102,136 L102,150 L113,150 Z'
+    ]],
+    // Lower abs
+    ['Core', [
+      'M87,152 L98,152 L98,166 L86,166 Z',
+      'M113,152 L102,152 L102,166 L114,166 Z'
+    ]],
+    // Obliques
+    ['Core', [
+      'M74,120 L80,114 L82,118 L86,134 L86,154 L84,166 L80,168 C78,158 76,142 74,128 Z',
+      'M126,120 L120,114 L118,118 L114,134 L114,154 L116,166 L120,168 C122,158 124,142 126,128 Z'
+    ]],
+    // --- LEGS ---
+    // Outer quad (vastus lateralis) — leaf shape
+    ['Quads', [
+      'M80,170 C76,182 74,198 74,216 C74,234 76,248 80,258 L84,264 C84,254 84,240 84,226 C84,210 86,194 88,178 Z',
+      'M120,170 C124,182 126,198 126,216 C126,234 124,248 120,258 L116,264 C116,254 116,240 116,226 C116,210 114,194 112,178 Z'
+    ]],
+    // Rectus femoris (center quad)
+    ['Quads', [
+      'M90,176 C88,192 88,210 88,228 C88,244 88,256 90,266 L96,268 C96,256 96,240 96,226 C96,210 96,194 96,176 Z',
+      'M110,176 C112,192 112,210 112,228 C112,244 112,256 110,266 L104,268 C104,256 104,240 104,226 C104,210 104,194 104,176 Z'
+    ]],
+    // Vastus medialis (teardrop near knee)
+    ['Quads', [
+      'M88,240 C86,248 86,256 88,264 L94,268 C94,260 94,250 92,242 Z',
+      'M112,240 C114,248 114,256 112,264 L106,268 C106,260 106,250 108,242 Z'
+    ]],
+    // Adductors (inner thigh)
     ['Hams/Glutes', [
-      'M84,168 L99,172 Q94,176 90,184 Q86,178 82,172 Z',
-      'M116,168 L101,172 Q106,176 110,184 Q114,178 118,172 Z'
+      'M96,178 L100,178 L104,178 C104,194 104,210 104,224 L100,228 L96,224 C96,210 96,194 96,178 Z'
     ]],
-    // Hamstrings — biceps femoris + semitendinosus
-    ['Hams/Glutes', [
-      // Outer hamstring (biceps femoris)
-      'M82,172 L90,184 L88,220 Q86,240 82,256 L74,258 Q70,244 70,226 Q70,200 76,182 Z',
-      'M118,172 L110,184 L112,220 Q114,240 118,256 L126,258 Q130,244 130,226 Q130,200 124,182 Z',
-      // Inner hamstring (semitendinosus)
-      'M90,184 L100,188 L98,224 Q96,244 92,258 L82,256 L88,220 Z',
-      'M110,184 L100,188 L102,224 Q104,244 108,258 L118,256 L112,220 Z'
-    ]],
-    ['_knee', [
-      'M74,258 Q74,270 80,274 L92,272 Q98,268 98,258',
-      'M126,258 Q126,270 120,274 L108,272 Q102,268 102,258'
-    ]],
-    // Calves (back view — gastrocnemius diamond)
+
+    // --- CALVES ---
+    // Outer calf (gastrocnemius lateral)
     ['Calves', [
-      'M80,274 L92,272 Q98,284 96,304 Q94,326 90,344 L82,346 Q76,330 76,310 Q76,290 80,274 Z',
-      'M120,274 L108,272 Q102,284 104,304 Q106,326 110,344 L118,346 Q124,330 124,310 Q124,290 120,274 Z'
+      'M82,272 C80,280 78,292 78,306 C78,320 80,332 82,340 L86,344 C86,336 86,322 86,310 C86,296 84,282 84,274 Z',
+      'M118,272 C120,280 122,292 122,306 C122,320 120,332 118,340 L114,344 C114,336 114,322 114,310 C114,296 116,282 116,274 Z'
     ]],
-    // Back definition lines
-    ['_detail', [
-      // Spine line
-      'M100,82 L100,172',
-      // Erector spinae
-      'M96,110 L94,158', 'M104,110 L106,158',
-      // Glute separation
-      'M100,172 L100,186',
-      // Lat separation hints
-      'M80,100 L78,120', 'M120,100 L122,120'
-    ]]
+    // Inner calf (gastrocnemius medial)
+    ['Calves', [
+      'M88,272 C90,280 92,292 92,306 C92,318 90,330 88,338 L92,342 C94,332 96,318 96,306 C96,292 94,280 92,272 Z',
+      'M112,272 C110,280 108,292 108,306 C108,318 110,330 112,338 L108,342 C106,332 104,318 104,306 C104,292 106,280 108,272 Z'
+    ]],
+    // Tibialis anterior (shin)
+    ['Calves', [
+      'M94,272 C94,284 94,298 94,314 C94,330 92,342 92,350 L96,350 C96,340 98,326 98,312 C98,296 96,282 96,272 Z',
+      'M106,272 C106,284 106,298 106,314 C106,330 108,342 108,350 L104,350 C104,340 102,326 102,312 C102,296 104,282 104,272 Z'
+    ]],
+
+  ];
+
+  // --- BACK VIEW: Individual muscle shapes ---
+  // Mirror front proportions — same silhouette, muscles sit inside it
+  const backRegions = [
+    // --- TRAPS ---
+    ['Upper Back', [
+      // Upper traps (narrower to match front shoulder width)
+      'M88,58 C82,57 76,60 70,64 C66,68 64,72 64,76 L70,78 C72,74 76,70 82,66 L100,64 L118,66 C124,70 128,74 130,78 L136,76 C136,72 134,68 130,64 C124,60 118,57 112,58 L100,60 Z',
+      // Mid traps / rhomboids
+      'M70,78 C76,76 88,74 100,74 C112,74 124,76 130,78 L126,88 C118,92 110,94 100,94 C90,94 82,92 74,88 Z'
+    ]],
+
+    // --- REAR DELTS ---
+    ['Side/Rear Delts', [
+      'M60,74 C56,72 54,74 54,80 C54,86 56,90 58,94 L62,92 C62,88 62,84 64,80 Z',
+      'M140,74 C144,72 146,74 146,80 C146,86 144,90 142,94 L138,92 C138,88 138,84 136,80 Z'
+    ]],
+
+    // --- LATS ---
+    ['Lats', [
+      // Left lat
+      'M60,76 L70,78 L74,88 C76,100 76,112 76,122 C76,130 74,136 72,140 C68,132 64,122 62,110 C60,100 60,88 60,76 Z',
+      // Right lat
+      'M140,76 L130,78 L126,88 C124,100 124,112 124,122 C124,130 126,136 128,140 C132,132 136,122 138,110 C140,100 140,88 140,76 Z',
+      // Mid back
+      'M74,88 C82,92 90,94 100,94 C110,94 118,92 126,88 L126,106 C120,112 110,114 100,114 C90,114 80,112 74,106 Z'
+    ]],
+
+    // --- ARMS ---
+    ['Triceps', [
+      'M58,94 L62,92 C60,102 58,114 58,124 C58,132 60,138 62,142 L56,144 C52,134 50,122 50,112 C50,104 52,98 58,94 Z',
+      'M142,94 L138,92 C140,102 142,114 142,124 C142,132 140,138 138,142 L144,144 C148,134 150,122 150,112 C150,104 148,98 142,94 Z'
+    ]],
+    ['Biceps', [
+      'M62,92 C66,88 68,84 70,80 C68,92 66,106 64,118 C62,128 62,136 62,142 L58,142 C58,132 60,116 62,102 Z',
+      'M138,92 C134,88 132,84 130,80 C132,92 134,106 136,118 C138,128 138,136 138,142 L142,142 C142,132 140,116 138,102 Z'
+    ]],
+    ['Forearms', [
+      'M56,144 L62,142 C64,152 64,162 62,170 L60,176 C56,172 54,164 52,156 C52,150 54,146 56,144 Z',
+      'M144,144 L138,142 C136,152 136,162 138,170 L140,176 C144,172 146,164 148,156 C148,150 146,146 144,144 Z'
+    ]],
+
+    // --- LOWER BACK ---
+    ['Core', [
+      // Erector spinae (two columns — wider, more visible)
+      'M90,106 L98,106 L98,166 L88,166 C88,156 88,136 90,118 Z',
+      'M110,106 L102,106 L102,166 L112,166 C112,156 112,136 110,118 Z'
+    ]],
+
+    // --- GLUTES ---
+    ['Hams/Glutes', [
+      // Left glute (rounder, more prominent)
+      'M84,166 L98,170 C96,176 92,184 88,190 C84,184 82,176 82,170 Z',
+      // Right glute
+      'M116,166 L102,170 C104,176 108,184 112,190 C116,184 118,176 118,170 Z',
+
+      // Outer hamstring (biceps femoris)
+      'M82,170 C78,182 76,198 76,216 C76,234 78,248 80,258 L86,264 C86,254 86,240 86,226 C86,210 88,194 90,186 Z',
+      'M118,170 C122,182 124,198 124,216 C124,234 122,248 120,258 L114,264 C114,254 114,240 114,226 C114,210 112,194 110,186 Z',
+      // Inner hamstring (semitendinosus)
+      'M90,186 L98,192 C98,208 96,226 96,242 C96,254 96,262 96,266 L86,264 C86,254 86,240 86,226 C86,210 88,194 90,186 Z',
+      'M110,186 L102,192 C102,208 104,226 104,242 C104,254 104,262 104,266 L114,264 C114,254 114,240 114,226 C114,210 112,194 110,186 Z'
+    ]],
+
+    // --- CALVES ---
+    ['Calves', [
+      // Lateral gastrocnemius
+      'M82,272 C80,280 78,292 78,306 C78,320 80,332 82,340 L86,344 C86,336 86,322 86,310 C86,296 84,282 84,274 Z',
+      'M118,272 C120,280 122,292 122,306 C122,320 120,332 118,340 L114,344 C114,336 114,322 114,310 C114,296 116,282 116,274 Z',
+      // Medial gastrocnemius
+      'M88,272 C90,280 92,294 92,308 C92,320 90,332 88,340 L92,344 C94,334 96,320 96,308 C96,294 94,280 92,272 Z',
+      'M112,272 C110,280 108,294 108,308 C108,320 110,332 112,340 L108,344 C106,334 104,320 104,308 C104,294 106,280 108,272 Z'
+    ]],
+
   ];
 
   function renderPaths(regions) {
-    let paths = '';
+    // Thin-outlined silhouette — Hevy style (stroke only, very subtle fill)
+    let svg = `<path class="body-silhouette" d="${silhouette}"/>`;
     for (const [group, dPaths] of regions) {
-      if (group === '_detail') {
-        // Striation / definition lines
-        for (const d of dPaths) {
-          paths += `<path d="${d}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.6" stroke-linecap="round"/>`;
-        }
-      } else if (group.startsWith('_')) {
-        for (const d of dPaths) paths += `<path class="body-outline" d="${d}"/>`;
-      } else {
-        const fill = getMuscleFill(group, volumes, maxVal, mode);
-        for (const d of dPaths) paths += `<path class="body-region" d="${d}" fill="${fill}"/>`;
-      }
+      const fill = getMuscleFill(group, volumes, maxVal, mode);
+      for (const d of dPaths) svg += `<path class="body-region" d="${d}" fill="${fill}"/>`;
     }
-    return paths;
+    return svg;
   }
 
-  const vb = `30 10 140 350`;
+  const vb = '40 8 120 370';
   const frontSvg = `<svg viewBox="${vb}" class="body-map">${renderPaths(frontRegions)}</svg>`;
   const backSvg = `<svg viewBox="${vb}" class="body-map">${renderPaths(backRegions)}</svg>`;
 
-  return `<div class="body-map-wrap" onclick="toggleBodyView()">
-    <div class="body-map-flipper" id="body-flipper">
-      <div class="body-map-front">${frontSvg}</div>
-      <div class="body-map-back">${backSvg}</div>
+  return `<div class="body-map-side-by-side">
+    <div class="body-map-col">
+      ${frontSvg}
+      <div class="body-map-label">Front</div>
     </div>
-    <div class="body-map-label" id="body-view-label">Front · tap to rotate</div>
+    <div class="body-map-col">
+      ${backSvg}
+      <div class="body-map-label">Back</div>
+    </div>
   </div>`;
 }
 
@@ -6118,14 +6105,6 @@ document.addEventListener('click', e => {
   }
 });
 
-let bodyViewFlipped = false;
-function toggleBodyView() {
-  bodyViewFlipped = !bodyViewFlipped;
-  const flipper = document.getElementById('body-flipper');
-  const label = document.getElementById('body-view-label');
-  if (flipper) flipper.classList.toggle('flipped', bodyViewFlipped);
-  if (label) label.textContent = bodyViewFlipped ? 'Back · tap to rotate' : 'Front · tap to rotate';
-}
 
 function setBodyPartView(mode) {
   data.bodyPartViewMode = mode;
