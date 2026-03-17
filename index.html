@@ -19,6 +19,8 @@
        RESET & VARIABLES
        ═══════════════════════════════════════════════ */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    /* Prevent iOS zoom on input focus */
+    input, select, textarea { font-size: 16px !important; }
     :root {
       --bg: #1c1c1c;
       --surface: rgba(255,255,255,0.05);
@@ -432,7 +434,7 @@
       text-align: center;
     }
     .exercise-label {
-      font-size: 11px;
+      font-size: 13px;
       font-weight: 600;
       letter-spacing: 0.1em;
       text-transform: uppercase;
@@ -442,7 +444,7 @@
     .exercise-name {
       font-family: 'Teko', sans-serif;
       font-weight: 700;
-      font-size: clamp(40px, 11vw, 56px);
+      font-size: clamp(44px, 12vw, 60px);
       line-height: 1;
       text-transform: uppercase;
       letter-spacing: 0.02em;
@@ -538,8 +540,8 @@
       max-width: 340px;
       width: calc(100% - 40px);
       padding: 16px 20px;
-      background: var(--surface-2);
-      border: 1px solid rgba(255, 149, 0, 0.4);
+      background: #2a2520;
+      border: 1px solid #ff9500;
       border-radius: 14px;
       color: var(--text);
       font-size: 13px;
@@ -692,17 +694,17 @@
       margin-bottom: 32px;
     }
     .timer-next-label {
-      font-size: 11px;
+      font-size: 13px;
       font-weight: 600;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--text-3);
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
     .timer-next-exercise {
       font-family: 'Teko', sans-serif;
       font-weight: 600;
-      font-size: 24px;
+      font-size: 30px;
       color: var(--text-2);
       text-transform: uppercase;
     }
@@ -1608,8 +1610,8 @@
       z-index: 50;
       max-height: 200px;
       overflow-y: auto;
-      background: var(--surface-2);
-      border: 1px solid var(--border);
+      background: #2b2b2b;
+      border: 1px solid #3a3a3a;
       border-top: none;
       border-radius: 0 0 10px 10px;
       -webkit-overflow-scrolling: touch;
@@ -1920,8 +1922,12 @@
       padding: 12px 0;
       border-bottom: 1px solid var(--divider);
       gap: 8px;
+      transition: opacity 0.15s, background 0.15s;
     }
     .build-exercise:last-child { border-bottom: none; }
+    .build-exercise.dragging { opacity: 0.4; }
+    .build-exercise.drag-over { border-top: 2px solid var(--accent); padding-top: 10px; }
+    .drag-handle { cursor: grab; color: var(--text-3); font-size: 16px; padding: 4px 2px; touch-action: none; user-select: none; display: flex; align-items: center; }
     .build-exercise .ex-name { flex: 1; font-weight: 500; font-size: 15px; }
     .build-exercise .ex-detail { color: var(--text-2); font-size: 14px; font-variant-numeric: tabular-nums; margin-right: 4px; }
     .build-actions { display: flex; gap: 4px; }
@@ -5920,12 +5926,13 @@ function renderBuildProgram(type, exercises) {
     const weightStr = w ? ` @ ${displayWeight(w)}${weightLabel()}` : '';
 
     return `
-      <div class="build-exercise">
+      <div class="build-exercise" draggable="true" data-type="${type}" data-index="${i}"
+        ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondragend="onDragEnd(event)" ondrop="onDrop(event)"
+        ontouchstart="onTouchDragStart(event)" ontouchmove="onTouchDragMove(event)" ontouchend="onTouchDragEnd(event)">
+        <span class="drag-handle">☰</span>
         <span class="ex-name">${ex.name} ${badge}</span>
         <span class="ex-detail">${ex.sets} × ${ex.reps}${weightStr}</span>
         <div class="build-actions">
-          ${i > 0 ? `<button class="build-icon-btn" onclick="moveExercise('${type}', ${i}, -1)" title="Move up">↑</button>` : ''}
-          ${i < exercises.length - 1 ? `<button class="build-icon-btn" onclick="moveExercise('${type}', ${i}, 1)" title="Move down">↓</button>` : ''}
           <button class="build-icon-btn" onclick="editExercise('${type}', ${i})" title="Edit">✎</button>
           <button class="build-icon-btn delete" onclick="deleteExercise('${type}', ${i})" title="Delete">×</button>
         </div>
@@ -6183,6 +6190,95 @@ function moveExercise(type, index, direction) {
   }
   save();
   renderBuildSafe();
+}
+
+// --- Drag & Drop for Build exercises ---
+let dragType = null, dragIndex = null;
+
+function onDragStart(e) {
+  const el = e.currentTarget;
+  dragType = el.dataset.type;
+  dragIndex = parseInt(el.dataset.index);
+  el.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+function onDragOver(e) {
+  e.preventDefault();
+  const el = e.currentTarget;
+  if (el.dataset.type === dragType) {
+    document.querySelectorAll('.build-exercise').forEach(r => r.classList.remove('drag-over'));
+    el.classList.add('drag-over');
+  }
+}
+function onDrop(e) {
+  e.preventDefault();
+  const el = e.currentTarget;
+  const toIndex = parseInt(el.dataset.index);
+  if (dragType === el.dataset.type && dragIndex !== toIndex) {
+    ensureCustomPrograms();
+    const arr = data.programs[dragType];
+    const [moved] = arr.splice(dragIndex, 1);
+    arr.splice(toIndex, 0, moved);
+    save();
+    renderBuildSafe();
+  }
+  document.querySelectorAll('.build-exercise').forEach(r => r.classList.remove('drag-over'));
+}
+function onDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.build-exercise').forEach(r => r.classList.remove('drag-over'));
+  dragType = null; dragIndex = null;
+}
+
+// Touch drag support for mobile
+let touchDragEl = null, touchStartY = 0, touchClone = null;
+function onTouchDragStart(e) {
+  const handle = e.target.closest('.drag-handle');
+  if (!handle) return; // Only drag from handle
+  const el = e.currentTarget;
+  dragType = el.dataset.type;
+  dragIndex = parseInt(el.dataset.index);
+  touchDragEl = el;
+  touchStartY = e.touches[0].clientY;
+  el.classList.add('dragging');
+}
+function onTouchDragMove(e) {
+  if (!touchDragEl) return;
+  e.preventDefault();
+  const y = e.touches[0].clientY;
+  const items = [...document.querySelectorAll(`.build-exercise[data-type="${dragType}"]`)];
+  items.forEach(r => r.classList.remove('drag-over'));
+  for (const item of items) {
+    const rect = item.getBoundingClientRect();
+    if (y > rect.top && y < rect.bottom && item !== touchDragEl) {
+      item.classList.add('drag-over');
+      break;
+    }
+  }
+}
+function onTouchDragEnd(e) {
+  if (!touchDragEl) return;
+  const y = e.changedTouches[0].clientY;
+  const items = [...document.querySelectorAll(`.build-exercise[data-type="${dragType}"]`)];
+  let toIndex = dragIndex;
+  for (const item of items) {
+    const rect = item.getBoundingClientRect();
+    if (y > rect.top && y < rect.bottom && item !== touchDragEl) {
+      toIndex = parseInt(item.dataset.index);
+      break;
+    }
+  }
+  if (dragIndex !== toIndex) {
+    ensureCustomPrograms();
+    const arr = data.programs[dragType];
+    const [moved] = arr.splice(dragIndex, 1);
+    arr.splice(toIndex, 0, moved);
+    save();
+    renderBuildSafe();
+  }
+  touchDragEl.classList.remove('dragging');
+  items.forEach(r => r.classList.remove('drag-over'));
+  touchDragEl = null; dragType = null; dragIndex = null;
 }
 
 function resetPrograms() {
