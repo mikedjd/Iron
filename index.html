@@ -4564,7 +4564,8 @@ function renderExercise() {
             const cls = 'plate-' + String(size).replace('.', '-');
             return `<span class="plate ${cls}">${count > 1 ? count + '×' : ''}${size}</span>`;
           }).join('');
-        prepPlateHtml = `<div class="plate-calc" style="justify-content:center;padding:12px 0 0;border:none;">${chips}<span class="plate-label">per side</span></div>`;
+        const barLabel = data.weightUnit === 'lbs' ? '45lb bar' : '20kg bar';
+        prepPlateHtml = `<div class="plate-calc" style="justify-content:center;padding:12px 0 0;border:none;">${chips}<span class="plate-label">per side · ${barLabel}</span></div>`;
       }
     }
 
