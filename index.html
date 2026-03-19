@@ -395,7 +395,31 @@
       font-size: 11px; font-weight: 700; color: var(--accent);
       white-space: nowrap;
     }
-    /* Dumbbell text fallback */
+    /* Dumbbell Visual */
+    .dumbbell-visual {
+      display: flex; align-items: center; justify-content: center;
+      gap: 20px; padding: 8px 0;
+    }
+    .dumbbell {
+      display: flex; align-items: center; gap: 0;
+    }
+    .db-weight {
+      width: 22px; height: 36px; border-radius: 3px;
+      background: rgba(48,120,209,0.25); color: #6ba3ff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 700;
+    }
+    .db-handle {
+      width: 28px; height: 8px; background: #666; border-radius: 2px;
+    }
+    .db-end {
+      width: 4px; height: 28px; background: #555; border-radius: 1px;
+    }
+    .db-label {
+      font-size: 11px; font-weight: 700; color: var(--accent);
+      text-align: center; margin-top: 4px;
+    }
+    /* Fallback text */
     .plate-calc {
       padding: 4px 0 8px;
       display: flex; align-items: center; justify-content: center;
@@ -3590,7 +3614,14 @@ function buildWeightInfoHtml(exerciseName, weight, style) {
   if (eqType === 'dumbbell') {
     const perDb = weight / 2;
     const displayVal = perDb % 1 === 0 ? perDb : perDb.toFixed(1);
-    return `<div class="plate-calc" id="dynamic-plate-calc" style="${s}"><span class="plate-label">${displayVal}${unit} per dumbbell</span></div>`;
+    const db = `<div class="dumbbell">
+      <div class="db-end"></div><div class="db-weight">${displayVal}</div>
+      <div class="db-handle"></div>
+      <div class="db-weight">${displayVal}</div><div class="db-end"></div>
+    </div>`;
+    return `<div class="dumbbell-visual" id="dynamic-plate-calc">
+      ${db}${db}
+      </div>`;
   }
 
   if (eqType === 'barbell') {
