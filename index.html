@@ -4542,41 +4542,79 @@ function exerciseReady() {
   renderExercise();
 }
 
+const DEFAULT_WARMUP_STEPS = [
+  { pct: 0, reps: 12 },   // Set 1: empty bar / lightest
+  { pct: 50, reps: 8 },   // Set 2: ~50%
+  { pct: 75, reps: 5 },   // Set 3: ~75%
+];
+
+function getWarmupSteps() {
+  return data.warmupSteps || DEFAULT_WARMUP_STEPS;
+}
+
 function getWarmupRec(exName, workingWeight, setNum) {
   const eqType = getEquipmentType(exName);
   const barWeight = getBarWeight();
   const inc = data.weightUnit === 'lbs' ? 5 : 2.5;
+  const steps = getWarmupSteps();
 
-  if (eqType === 'barbell') {
-    // Barbell: 1st = empty bar, 2nd = 50%, 3rd = 75%
-    const recs = [
-      { weight: barWeight, reps: 12, label: 'Empty bar' },
-      { weight: Math.round(workingWeight * 0.5 / inc) * inc, reps: 8, label: '~50% working weight' },
-      { weight: Math.round(workingWeight * 0.75 / inc) * inc, reps: 5, label: '~75% working weight' },
-    ];
-    if (setNum < recs.length) return recs[setNum];
-    return { weight: Math.round(workingWeight * 0.85 / inc) * inc, reps: 3, label: '~85% working weight' };
+  const step = setNum < steps.length ? steps[setNum] : { pct: 90, reps: 3 };
+
+  let weight, label;
+  if (step.pct === 0) {
+    // First set: empty bar for barbell, lightest practical for others
+    if (eqType === 'barbell') {
+      weight = barWeight;
+      label = 'Empty bar';
+    } else {
+      weight = Math.max(inc, Math.round(workingWeight * 0.3 / inc) * inc);
+      label = 'Light weight';
+    }
+  } else {
+    weight = Math.round(workingWeight * (step.pct / 100) / inc) * inc;
+    // Ensure at least bar weight for barbell
+    if (eqType === 'barbell') weight = Math.max(barWeight, weight);
+    label = `~${step.pct}% working weight`;
   }
 
-  if (eqType === 'dumbbell') {
-    // Dumbbell: 1st = ~30%, 2nd = ~50%, 3rd = ~75%
-    const recs = [
-      { weight: Math.max(inc, Math.round(workingWeight * 0.3 / inc) * inc), reps: 12, label: 'Light weight' },
-      { weight: Math.round(workingWeight * 0.5 / inc) * inc, reps: 8, label: '~50% working weight' },
-      { weight: Math.round(workingWeight * 0.75 / inc) * inc, reps: 5, label: '~75% working weight' },
-    ];
-    if (setNum < recs.length) return recs[setNum];
-    return { weight: Math.round(workingWeight * 0.85 / inc) * inc, reps: 3, label: '~85% working weight' };
-  }
+  return { weight, reps: step.reps, label };
+}
 
-  // Machine / cable / other: 1st = ~30%, 2nd = ~60%, 3rd = ~80%
-  const recs = [
-    { weight: Math.max(inc, Math.round(workingWeight * 0.3 / inc) * inc), reps: 12, label: 'Light weight' },
-    { weight: Math.round(workingWeight * 0.6 / inc) * inc, reps: 8, label: '~60% working weight' },
-    { weight: Math.round(workingWeight * 0.8 / inc) * inc, reps: 5, label: '~80% working weight' },
-  ];
-  if (setNum < recs.length) return recs[setNum];
-  return { weight: Math.round(workingWeight * 0.9 / inc) * inc, reps: 3, label: '~90% working weight' };
+function adjustWarmupStep(index, field, delta) {
+  if (!data.warmupSteps) data.warmupSteps = JSON.parse(JSON.stringify(DEFAULT_WARMUP_STEPS));
+  const step = data.warmupSteps[index];
+  if (!step) return;
+  if (field === 'pct') {
+    step.pct = Math.max(0, Math.min(95, step.pct + delta));
+  } else if (field === 'reps') {
+    step.reps = Math.max(1, Math.min(20, step.reps + delta));
+  }
+  save();
+  renderBuildSafe();
+}
+
+function addWarmupStep() {
+  if (!data.warmupSteps) data.warmupSteps = JSON.parse(JSON.stringify(DEFAULT_WARMUP_STEPS));
+  if (data.warmupSteps.length >= 5) return;
+  const last = data.warmupSteps[data.warmupSteps.length - 1];
+  const newPct = Math.min(95, (last?.pct || 50) + 10);
+  data.warmupSteps.push({ pct: newPct, reps: 3 });
+  save();
+  renderBuildSafe();
+}
+
+function removeWarmupStep(index) {
+  if (!data.warmupSteps) return;
+  if (data.warmupSteps.length <= 1) return;
+  data.warmupSteps.splice(index, 1);
+  save();
+  renderBuildSafe();
+}
+
+function resetWarmupSteps() {
+  delete data.warmupSteps;
+  save();
+  renderBuildSafe();
 }
 
 function startWarmup() {
@@ -7171,6 +7209,27 @@ function renderBuild() {
         <button class="timer-adj-btn" onclick="changeRestDuration(-15)">−15s</button>
         <span style="font-family:'Teko',sans-serif;font-size:22px;font-weight:600;color:var(--text);min-width:50px;text-align:center;" id="rest-duration-display">${data.restDuration || 90}s</span>
         <button class="timer-adj-btn" onclick="changeRestDuration(15)">+15s</button>
+      </div>
+      <div class="divider"></div>
+      <span class="label">Warm-up Protocol</span>
+      <div class="mt-8" style="font-size:11px;color:var(--text-3);margin-bottom:10px;">Recommended % of working weight per warm-up set. Set 1 at 0% = empty bar (barbell) or lightest weight.</div>
+      ${getWarmupSteps().map((step, i) => `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+          <span style="font-size:12px;color:var(--text-3);min-width:32px;">Set ${i+1}</span>
+          <button class="timer-adj-btn" onclick="adjustWarmupStep(${i},'pct',-5)" style="padding:4px 8px;font-size:11px;">−5</button>
+          <span style="font-family:'Teko',sans-serif;font-size:18px;font-weight:600;color:var(--text);min-width:36px;text-align:center;">${step.pct === 0 ? 'Bar' : step.pct + '%'}</span>
+          <button class="timer-adj-btn" onclick="adjustWarmupStep(${i},'pct',5)" style="padding:4px 8px;font-size:11px;">+5</button>
+          <span style="color:var(--text-3);font-size:11px;">×</span>
+          <button class="timer-adj-btn" onclick="adjustWarmupStep(${i},'reps',-1)" style="padding:4px 8px;font-size:11px;">−</button>
+          <span style="font-family:'Teko',sans-serif;font-size:18px;font-weight:600;color:var(--text);min-width:20px;text-align:center;">${step.reps}</span>
+          <button class="timer-adj-btn" onclick="adjustWarmupStep(${i},'reps',1)" style="padding:4px 8px;font-size:11px;">+</button>
+          <span style="font-size:11px;color:var(--text-3);">reps</span>
+          ${getWarmupSteps().length > 1 ? `<button onclick="removeWarmupStep(${i})" style="margin-left:auto;background:none;border:none;color:var(--text-3);font-size:16px;cursor:pointer;padding:2px 6px;">×</button>` : ''}
+        </div>
+      `).join('')}
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        ${getWarmupSteps().length < 5 ? `<button class="btn btn-secondary" onclick="addWarmupStep()" style="font-size:12px;padding:6px 14px;">+ Add Set</button>` : ''}
+        ${data.warmupSteps ? `<button class="btn btn-secondary" onclick="resetWarmupSteps()" style="font-size:12px;padding:6px 14px;opacity:0.6;">Reset</button>` : ''}
       </div>
       <div class="divider"></div>
       <span class="label">This Week</span>
