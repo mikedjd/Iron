@@ -4465,6 +4465,23 @@ function renderExercise() {
   // Type badge
   let typeBadge = '';
   let setLabel = `Set ${currentSet} of ${ex.targetSets}`;
+  // Last set motivational message
+  const lastSetMessages = [
+    'Last set \u2014 make it count.',
+    'Final set. Dig deep.',
+    'One more. Leave nothing behind.',
+    'Last set \u2014 this is where you grow.',
+    "Final push. You've got this.",
+    'Last one. Empty the tank.',
+    'Finish strong. Last set.',
+    'This is the set that matters most.',
+    'One set left. No regrets.',
+    'Last set \u2014 be better than yesterday.'
+  ];
+  if (currentSet === ex.targetSets && ex.targetSets > 1) {
+    const msgIdx = Math.floor(Math.random() * lastSetMessages.length);
+    setLabel = lastSetMessages[msgIdx];
+  }
   if (ex.supersetNext || workout.supersetPartnerPending) {
     const phase = workout.supersetPartnerPending ? '2/2' : '1/2';
     typeBadge = `<div class="workout-type-badge ss">Superset ${phase}</div>`;
@@ -4660,7 +4677,7 @@ function showWorkoutNoteInput() {
   if (!workout) return;
   const ex = workout.exercises[workout.currentExerciseIndex];
   // Replace the "+ add note" element with a textarea
-  const addEl = document.querySelector('.exercise-note-add');
+  const addEl = document.querySelector('.exercise-note-add') || document.querySelector('.prep-note.empty');
   if (addEl) {
     const ta = document.createElement('textarea');
     ta.className = 'exercise-note-edit';
