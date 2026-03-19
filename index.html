@@ -411,6 +411,12 @@
     }
     .db-handle {
       width: 28px; height: 8px; background: #666; border-radius: 2px;
+      position: relative;
+    }
+    .db-handle-label {
+      position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+      font-size: 11px; font-weight: 700; color: var(--accent);
+      white-space: nowrap;
     }
     .db-end {
       width: 4px; height: 28px; background: #555; border-radius: 1px;
@@ -3510,7 +3516,10 @@ function parseWeightInput(val) {
   return data.weightUnit === 'lbs' ? n / KG_TO_LBS : n;
 }
 
-function weightIncrement() {
+function weightIncrement(exName) {
+  if (exName && getEquipmentType(exName) === 'dumbbell') {
+    return data.weightUnit === 'lbs' ? (5 / KG_TO_LBS) : 2; // 5lbs or 2kg (1kg per dumbbell)
+  }
   return data.weightUnit === 'lbs' ? (5 / KG_TO_LBS) : 2.5; // 5lbs or 2.5kg
 }
 
@@ -3615,9 +3624,9 @@ function buildWeightInfoHtml(exerciseName, weight, style) {
     const perDb = weight / 2;
     const displayVal = perDb % 1 === 0 ? perDb : perDb.toFixed(1);
     const db = `<div class="dumbbell">
-      <div class="db-end"></div><div class="db-weight">${displayVal}</div>
-      <div class="db-handle"></div>
-      <div class="db-weight">${displayVal}</div><div class="db-end"></div>
+      <div class="db-end"></div><div class="db-weight"></div>
+      <div class="db-handle"><span class="db-handle-label">${displayVal}</span></div>
+      <div class="db-weight"></div><div class="db-end"></div>
     </div>`;
     return `<div class="dumbbell-visual" id="dynamic-plate-calc">
       ${db}${db}
@@ -5002,7 +5011,7 @@ function tapToEditWeight() {
   if (val === null) return;
   const num = parseFloat(val);
   if (isNaN(num) || num < 0) return;
-  const inc = weightIncrement();
+  const inc = weightIncrement(ex.name);
   ex.currentWeight = Math.round(num / inc) * inc;
   ex.progressionBadge = null;
   saveWorkoutState();
@@ -5024,7 +5033,7 @@ function tapToEditReps() {
 function adjustWeight(delta) {
   if (!workout) return;
   const ex = workout.exercises[workout.currentExerciseIndex];
-  const inc = weightIncrement();
+  const inc = weightIncrement(ex.name);
   ex.currentWeight = Math.max(0, ex.currentWeight + delta * inc);
   ex.progressionBadge = null; // clear badge once manually adjusted
   saveWorkoutState();
