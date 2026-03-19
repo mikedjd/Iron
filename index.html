@@ -402,8 +402,11 @@
       flex-direction: column;
       max-width: 430px;
       margin: 0 auto;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     #workout-screen.active { display: flex; }
+    body.workout-active { overflow: hidden; }
 
     /* Progress pills */
     .progress-bar {
@@ -765,6 +768,29 @@
     }
     .timer-skip:active { border-color: var(--accent); background: var(--accent-dim); }
 
+    .timer-adjust {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 32px;
+    }
+    .timer-adj-btn {
+      padding: 10px 20px;
+      border: 1px solid var(--border-light);
+      border-radius: 100px;
+      background: none;
+      color: var(--text-2);
+      font-family: 'Teko', sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .timer-adj-btn:active { border-color: var(--accent); color: var(--accent); }
+
     /* ═══════════════════════════════════════════════
        DONE SCREEN
        ═══════════════════════════════════════════════ */
@@ -815,6 +841,140 @@
       padding: 16px 20px;
       padding-bottom: calc(16px + var(--safe-bottom));
     }
+    .done-rpe-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .done-rpe-btn {
+      flex: 1;
+      padding: 10px 0;
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      background: none;
+      color: var(--text-2);
+      font-family: 'Teko', sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .done-rpe-btn.selected {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+    .done-rpe-btn:active { opacity: 0.7; }
+    .done-notes-input {
+      width: 100%;
+      padding: 12px 14px;
+      margin-top: 10px;
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      background: var(--card);
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+      min-height: 60px;
+    }
+    .done-notes-input::placeholder { color: var(--text-3); }
+
+    /* Exercise Chart Modal */
+    #exercise-chart-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #exercise-chart-modal.active { display: flex; }
+    .chart-sheet {
+      width: 100%;
+      max-width: 430px;
+      background: var(--card);
+      border-radius: 24px 24px 0 0;
+      padding: 20px 20px calc(20px + var(--safe-bottom));
+      max-height: 75vh;
+      overflow-y: auto;
+      animation: slide-up 0.25s ease-out;
+    }
+    @keyframes slide-up {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .chart-sheet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .chart-sheet-title {
+      font-family: 'Teko', sans-serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: 0.02em;
+    }
+    .chart-sheet-close {
+      background: none;
+      border: none;
+      color: var(--text-3);
+      font-size: 22px;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    .chart-svg-wrap {
+      width: 100%;
+      aspect-ratio: 2 / 1;
+      margin-bottom: 16px;
+    }
+    .chart-svg-wrap svg { width: 100%; height: 100%; }
+    .chart-stat-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .chart-stat {
+      flex: 1;
+      text-align: center;
+      padding: 10px 0;
+      background: var(--bg);
+      border-radius: 12px;
+    }
+    .chart-stat-val {
+      font-family: 'Teko', sans-serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .chart-stat-lbl {
+      font-size: 10px;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .chart-recent-title {
+      font-size: 11px;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+    .chart-recent-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--divider);
+      font-size: 13px;
+    }
+    .chart-recent-row:last-child { border-bottom: none; }
+    .chart-recent-date { color: var(--text-3); }
+    .chart-recent-data { color: var(--text); font-weight: 500; }
 
     /* PR Celebrations */
     .pr-card {
@@ -1351,6 +1511,64 @@
       -webkit-tap-highlight-color: transparent;
     }
     .food-add-row button:active { background: #8fa05a; }
+
+    .macro-summary {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .macro-pill {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-2);
+      background: var(--surface-3);
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+    .macro-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .suggested-foods-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .suggested-food-btn {
+      display: flex;
+      flex-direction: column;
+      padding: 10px 12px;
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      background: none;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .suggested-food-btn:active {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .suggested-food-name {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+    .suggested-food-macros {
+      font-size: 10px;
+      color: var(--text-3);
+      letter-spacing: 0.03em;
+    }
+
     .food-log-entry {
       display: flex;
       align-items: center;
@@ -1537,39 +1755,42 @@
     }
     .body-volume-bars { width: 100%; }
     .bv-bar-row {
-      display: grid;
-      grid-template-columns: 90px 1fr auto;
-      align-items: center;
-      gap: 8px;
-      padding: 5px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--divider);
+    }
+    .bv-bar-row:last-child { border-bottom: none; }
+    .bv-bar-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
     }
     .bv-bar-label {
-      font-size: 11px;
+      font-size: 13px;
       font-weight: 500;
-      color: var(--text-2);
-      text-align: right;
+      color: var(--text);
       white-space: nowrap;
     }
     .bv-bar-track {
-      height: 10px;
+      height: 14px;
       background: var(--surface-3);
-      border-radius: 5px;
+      border-radius: 7px;
       overflow: hidden;
     }
     .bv-bar-fill {
       height: 100%;
-      border-radius: 5px;
+      border-radius: 7px;
       background: var(--accent);
       transition: width 0.4s ease;
-      min-width: 2px;
+      min-width: 4px;
     }
     .bv-bar-value {
       font-family: 'Teko', sans-serif;
       font-weight: 500;
       font-size: 16px;
-      color: var(--text);
-      min-width: 50px;
-      text-align: right;
+      color: var(--text-2);
     }
     .bv-bar-fill.under { background: var(--warning); }
     .bv-bar-fill.in-range { background: var(--accent); }
@@ -2583,7 +2804,11 @@
         <div class="timer-sec-label">seconds</div>
       </div>
     </div>
-    <button class="timer-skip" onclick="skipRest()">Skip Rest</button>
+    <div class="timer-adjust">
+      <button class="timer-adj-btn" onclick="adjustRest(-30)">−30s</button>
+      <button class="timer-skip" onclick="skipRest()">Skip</button>
+      <button class="timer-adj-btn" onclick="adjustRest(30)">+30s</button>
+    </div>
   </div>
 
   <!-- ═══════════ DONE SCREEN OVERLAY ═══════════ -->
@@ -2600,6 +2825,11 @@
     <div class="done-footer">
       <button class="btn btn-primary" onclick="saveWorkout()">Save & Finish</button>
     </div>
+  </div>
+
+  <!-- ═══════════ EXERCISE CHART MODAL ═══════════ -->
+  <div id="exercise-chart-modal" onclick="if(event.target===this)closeExerciseChart()">
+    <div class="chart-sheet" id="chart-sheet-content"></div>
   </div>
 
   <!-- ═══════════ INFO POPUP ═══════════ -->
@@ -2652,7 +2882,7 @@ const PROGRAMS = {
   ]
 };
 
-const REST_DURATION = 90;
+function getRestDuration() { return (data && data.restDuration) || 90; }
 const CIRCUMFERENCE = 2 * Math.PI * 90; // 565.49
 const KG_TO_LBS = 2.20462;
 
@@ -3916,12 +4146,15 @@ function discardWorkout() {
 function showWorkoutScreen() {
   document.getElementById('workout-screen').classList.add('active');
   document.getElementById('nav').classList.add('hidden');
+  document.body.classList.add('workout-active');
+  window.scrollTo(0, 0);
   renderExercise();
 }
 
 function hideWorkoutScreen() {
   document.getElementById('workout-screen').classList.remove('active');
   document.getElementById('nav').classList.remove('hidden');
+  document.body.classList.remove('workout-active');
 }
 
 function exitWorkout() {
@@ -4354,7 +4587,7 @@ function completeSet(btnEl) {
    REST TIMER
    ═══════════════════════════════════════════════════════════ */
 function startRestTimer(onComplete, duration) {
-  const restDuration = duration || REST_DURATION;
+  const restDuration = duration || getRestDuration();
   window._timerCallback = onComplete;
   const timerScreen = document.getElementById('timer-screen');
   const arc = document.getElementById('timer-arc');
@@ -4446,6 +4679,40 @@ function skipRest() {
   if (window._timerCallback) window._timerCallback();
 }
 
+function adjustRest(seconds) {
+  if (!timerInterval) return;
+  clearInterval(timerInterval);
+
+  const secondsEl = document.getElementById('timer-seconds');
+  const arc = document.getElementById('timer-arc');
+  const currentRemaining = parseInt(secondsEl.textContent) || 0;
+  const newRemaining = Math.max(0, currentRemaining + seconds);
+
+  if (newRemaining <= 0) { skipRest(); return; }
+
+  // Track total duration for progress ring calculation
+  window._timerTotal = newRemaining;
+  const endTime = Date.now() + newRemaining * 1000;
+
+  secondsEl.textContent = newRemaining;
+  arc.style.strokeDashoffset = '0';
+
+  timerInterval = setInterval(() => {
+    const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+    secondsEl.textContent = remaining;
+    const progress = 1 - remaining / window._timerTotal;
+    arc.style.strokeDashoffset = (progress * CIRCUMFERENCE).toFixed(1);
+
+    if (remaining <= 0) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      saveSetFeedback();
+      document.getElementById('timer-screen').classList.remove('active');
+      if (window._timerCallback) window._timerCallback();
+    }
+  }, 100);
+}
+
 /* ═══════════════════════════════════════════════════════════
    DONE SCREEN
    ═══════════════════════════════════════════════════════════ */
@@ -4471,7 +4738,7 @@ function showDoneScreen() {
     const isPR = prs.some(pr => pr.name === ex.name);
     const prTag = isPR ? ' <span class="pr-inline-badge">PR</span>' : '';
     return `
-      <div class="done-exercise-row fade-in" style="animation-delay:${0.3 + i * 0.05}s">
+      <div class="done-exercise-row fade-in" style="animation-delay:${0.3 + i * 0.05}s;cursor:pointer;" onclick="showExerciseChart('${ex.name.replace(/'/g, "\\'")}')">
         <span class="done-exercise-name">${ex.name}${badge}${prTag}</span>
         <span class="done-exercise-sets">${setsDisplay}${weightStr}</span>
       </div>`;
@@ -4529,13 +4796,35 @@ function showDoneScreen() {
         ${exerciseSummary}
       </div>
     </div>
+    <div class="card fade-in stagger-${stagger + 1}">
+      <span class="label">Session Rating</span>
+      <div class="done-rpe-row">
+        <button class="done-rpe-btn" onclick="selectSessionRating(1, this)">1<br><span style="font-size:11px;font-family:Inter,sans-serif;">Easy</span></button>
+        <button class="done-rpe-btn" onclick="selectSessionRating(2, this)">2</button>
+        <button class="done-rpe-btn" onclick="selectSessionRating(3, this)">3<br><span style="font-size:11px;font-family:Inter,sans-serif;">Moderate</span></button>
+        <button class="done-rpe-btn" onclick="selectSessionRating(4, this)">4</button>
+        <button class="done-rpe-btn" onclick="selectSessionRating(5, this)">5<br><span style="font-size:11px;font-family:Inter,sans-serif;">Brutal</span></button>
+      </div>
+      <div class="divider"></div>
+      <span class="label">Notes</span>
+      <textarea class="done-notes-input" id="session-notes" placeholder="Injury, fatigue, energy level, anything to note..."></textarea>
+    </div>
   `;
 
   doneScreen.classList.add('active');
 }
 
+let sessionRating = null;
+
+function selectSessionRating(rating, btn) {
+  sessionRating = rating;
+  document.querySelectorAll('.done-rpe-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
 function saveWorkout() {
   if (!workout) return;
+  const notesEl = document.getElementById('session-notes');
   const session = {
     id: 'ses_' + Date.now(),
     date: today(),
@@ -4548,8 +4837,11 @@ function saveWorkout() {
       sets: [...ex.completedSets]
     })),
     duration: Date.now() - workout.startTime,
-    startTime: workout.startTime
+    startTime: workout.startTime,
+    rating: sessionRating || null,
+    notes: (notesEl && notesEl.value.trim()) || null
   };
+  sessionRating = null;
 
   data.sessions.push(session);
 
@@ -4582,7 +4874,7 @@ function saveWorkout() {
    ═══════════════════════════════════════════════════════════ */
 /* Preserve input values across a Diet re-render */
 function renderDietSafe() {
-  const ids = ['food-cal-input', 'food-pro-input', 'weight-input', 'cal-override'];
+  const ids = ['food-cal-input', 'food-pro-input', 'food-carb-input', 'food-fat-input', 'weight-input', 'cal-override'];
   const saved = {};
   ids.forEach(id => { const el = document.getElementById(id); if (el) saved[id] = el.value; });
   renderDiet();
@@ -4730,9 +5022,21 @@ function renderDiet() {
         <input type="number" id="food-pro-input" inputmode="numeric" placeholder="protein g">
         <button onclick="addFood()">ADD</button>
       </div>
+      <div class="food-add-row mt-8">
+        <input type="number" id="food-carb-input" inputmode="numeric" placeholder="carbs g">
+        <input type="number" id="food-fat-input" inputmode="numeric" placeholder="fats g">
+        <span style="width:52px;"></span>
+      </div>
+      <div class="macro-summary mt-12">
+        <div class="macro-pill"><span class="macro-dot" style="background:var(--accent)"></span>Cal ${todayTotals.calories}</div>
+        <div class="macro-pill"><span class="macro-dot" style="background:var(--protein-ring)"></span>P ${todayTotals.protein}g</div>
+        <div class="macro-pill"><span class="macro-dot" style="background:#5ac8fa"></span>C ${todayTotals.carbs}g</div>
+        <div class="macro-pill"><span class="macro-dot" style="background:#ff9f0a"></span>F ${todayTotals.fats}g</div>
+      </div>
     </div>
+    ${buildSuggestedFoodsHtml()}
 
-    <div class="card fade-in stagger-2">
+    <div class="card fade-in stagger-3">
       <span class="label">Log Today's Weight</span>
       <div class="weight-input-row mt-12">
         <input type="number" id="weight-input" inputmode="decimal" step="0.1" placeholder="${todayWeight ? todayWeight.weight : (lastWeight ? lastWeight.weight : '80.0')}" value="${todayWeight ? todayWeight.weight : ''}">
@@ -4742,7 +5046,7 @@ function renderDiet() {
       ${todayWeight ? `<p class="text-xs text-dim mt-8">Logged today: ${todayWeight.weight} kg</p>` : ''}
     </div>
 
-    <div class="card fade-in stagger-3">
+    <div class="card fade-in stagger-4">
       <span class="label">Goal</span>
       <div class="diet-goal-selector">
         ${Object.entries(DIET_GOALS).map(([key, g]) => `<button class="diet-goal-btn ${key} ${data.dietGoal === key ? 'active' : ''}" onclick="setDietGoal('${key}')">${g.label}</button>`).join('')}
@@ -4904,22 +5208,76 @@ function getTodayTotals() {
   const entries = data.foodLog.filter(f => f.date === today());
   return {
     calories: entries.reduce((sum, f) => sum + f.calories, 0),
-    protein: entries.reduce((sum, f) => sum + f.protein, 0)
+    protein: entries.reduce((sum, f) => sum + f.protein, 0),
+    carbs: entries.reduce((sum, f) => sum + (f.carbs || 0), 0),
+    fats: entries.reduce((sum, f) => sum + (f.fats || 0), 0)
   };
 }
 
 function addFood() {
   const calInput = document.getElementById('food-cal-input');
   const proInput = document.getElementById('food-pro-input');
+  const carbInput = document.getElementById('food-carb-input');
+  const fatInput = document.getElementById('food-fat-input');
   const cal = parseInt(calInput.value);
   const pro = parseInt(proInput.value);
+  const carb = parseInt(carbInput?.value);
+  const fat = parseInt(fatInput?.value);
   if (!cal || cal < 1 || cal > 9999) return;
   const protein = (pro && pro >= 0 && pro <= 999) ? pro : 0;
+  const carbs = (carb && carb >= 0 && carb <= 999) ? carb : 0;
+  const fats = (fat && fat >= 0 && fat <= 999) ? fat : 0;
   const now = new Date();
   const time = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-  data.foodLog.push({ id: Date.now(), date: today(), calories: cal, protein: protein, time: time });
+  data.foodLog.push({ id: Date.now(), date: today(), calories: cal, protein: protein, carbs: carbs, fats: fats, time: time });
   save();
   renderDiet();
+}
+
+function addSuggestedFood(cal, pro, carb, fat, name) {
+  const now = new Date();
+  const time = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+  data.foodLog.push({ id: Date.now(), date: today(), calories: cal, protein: pro, carbs: carb, fats: fat, time: time, name: name });
+  save();
+  renderDiet();
+}
+
+const SUGGESTED_FOODS = [
+  { name: 'Chicken Breast (150g)', cal: 248, pro: 46, carb: 0, fat: 5 },
+  { name: 'Salmon Fillet (150g)', cal: 312, pro: 34, carb: 0, fat: 19 },
+  { name: 'Eggs × 3', cal: 234, pro: 19, carb: 2, fat: 16 },
+  { name: 'Greek Yoghurt (200g)', cal: 130, pro: 20, carb: 8, fat: 2 },
+  { name: 'Rice (200g cooked)', cal: 260, pro: 5, carb: 57, fat: 1 },
+  { name: 'Sweet Potato (200g)', cal: 172, pro: 3, carb: 40, fat: 0 },
+  { name: 'Oats (80g dry)', cal: 303, pro: 11, carb: 51, fat: 6 },
+  { name: 'Banana', cal: 105, pro: 1, carb: 27, fat: 0 },
+  { name: 'Avocado (half)', cal: 161, pro: 2, carb: 9, fat: 15 },
+  { name: 'Whey Shake', cal: 120, pro: 24, carb: 3, fat: 1 },
+  { name: 'Almonds (30g)', cal: 174, pro: 6, carb: 6, fat: 15 },
+  { name: 'Broccoli (150g)', cal: 51, pro: 4, carb: 7, fat: 1 },
+  { name: 'Tuna Tin (120g)', cal: 132, pro: 30, carb: 0, fat: 1 },
+  { name: 'Peanut Butter (30g)', cal: 188, pro: 7, carb: 6, fat: 16 },
+  { name: 'Pasta (200g cooked)', cal: 262, pro: 9, carb: 50, fat: 2 },
+  { name: 'Steak (200g)', cal: 412, pro: 50, carb: 0, fat: 22 },
+];
+
+function buildSuggestedFoodsHtml() {
+  const showAll = data._showAllFoods;
+  const visible = showAll ? SUGGESTED_FOODS : SUGGESTED_FOODS.slice(0, 6);
+  return `
+    <div class="card fade-in stagger-2" style="margin-bottom:12px;">
+      <span class="label">Quick Foods</span>
+      <div class="suggested-foods-grid">
+        ${visible.map(f => `
+          <button class="suggested-food-btn" onclick="addSuggestedFood(${f.cal},${f.pro},${f.carb},${f.fat},'${f.name.replace(/'/g, "\\'")}')">
+            <span class="suggested-food-name">${f.name}</span>
+            <span class="suggested-food-macros">${f.cal} cal · ${f.pro}p · ${f.carb}c · ${f.fat}f</span>
+          </button>
+        `).join('')}
+      </div>
+      ${!showAll && SUGGESTED_FOODS.length > 6 ? `<button class="progress-toggle" onclick="data._showAllFoods=true;renderDiet();">Show all ${SUGGESTED_FOODS.length} foods</button>` : ''}
+      ${showAll ? `<button class="progress-toggle" onclick="data._showAllFoods=false;renderDiet();">Show less</button>` : ''}
+    </div>`;
 }
 
 function deleteFood(id) {
@@ -5351,7 +5709,7 @@ function renderHistory() {
             const levelBadge = level ? ` <span class="strength-badge ${level}">${level.substring(0,3).toUpperCase()}</span>` : '';
             const isPinned = pinnedExercises.includes(p.name);
             return `
-              <div class="progress-row">
+              <div class="progress-row" onclick="showExerciseChart('${p.name.replace(/'/g, "\\'")}')" style="cursor:pointer;">
                 <span class="progress-name">
                   <button class="progress-pin ${isPinned ? 'pinned' : ''}" onclick="event.stopPropagation();togglePinExercise('${p.name.replace(/'/g, "\\'")}')" title="${isPinned ? 'Unpin' : 'Pin to top'}">★</button>
                   <span class="progress-name-text">${p.name}${levelBadge}</span>
@@ -5421,25 +5779,28 @@ function renderHistory() {
     }
     const maxVol = bpGroups[0][1].volume;
     const maxSets = bpGroups[0][1].sets;
-    const svgHtml = buildBodyMapSVG(bodyPartVolumes, viewMode === 'sets' ? maxSets : maxVol, viewMode);
     const barsHtml = bpGroups.map(([name, d]) => {
       if (viewMode === 'sets') {
         const pct = (d.sets / maxSets * 100).toFixed(0);
         const colorClass = getBarColorClass(name, d.sets);
         const targets = getSetTargets()[name];
-        const targetStr = targets ? `<span class="bv-bar-target">(${targets.min}-${targets.max})</span>` : '';
+        const targetStr = targets ? ` / ${targets.min}-${targets.max}` : '';
         return `<div class="bv-bar-row">
-          <span class="bv-bar-label">${name}</span>
+          <div class="bv-bar-meta">
+            <span class="bv-bar-label">${name}</span>
+            <span class="bv-bar-value">${d.sets} sets${targetStr}</span>
+          </div>
           <div class="bv-bar-track"><div class="bv-bar-fill ${colorClass}" style="width:${pct}%"></div></div>
-          <span class="bv-bar-value">${d.sets} sets ${targetStr}</span>
         </div>`;
       } else {
         const pct = (d.volume / maxVol * 100).toFixed(0);
         const volStr = d.volume >= 1000 ? (d.volume / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : Math.round(d.volume);
         return `<div class="bv-bar-row">
-          <span class="bv-bar-label">${name}</span>
+          <div class="bv-bar-meta">
+            <span class="bv-bar-label">${name}</span>
+            <span class="bv-bar-value">${volStr} ${unit}</span>
+          </div>
           <div class="bv-bar-track"><div class="bv-bar-fill" style="width:${pct}%"></div></div>
-          <span class="bv-bar-value">${volStr} ${unit}</span>
         </div>`;
       }
     }).join('');
@@ -5452,8 +5813,7 @@ function renderHistory() {
             <button class="unit-opt ${viewMode === 'volume' ? 'active' : ''}" onclick="setBodyPartView('volume')">Volume</button>
           </div>
         </div>
-        <div class="body-volume-layout mt-12">
-          ${svgHtml}
+        <div class="mt-12">
           <div class="body-volume-bars">${barsHtml}</div>
         </div>
       </div>`;
@@ -5543,6 +5903,155 @@ function getExerciseProgress(sessions) {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   EXERCISE CHART
+   ═══════════════════════════════════════════════════════════ */
+function showExerciseChart(exerciseName) {
+  const modal = document.getElementById('exercise-chart-modal');
+  const sheet = document.getElementById('chart-sheet-content');
+
+  // Gather all data points for this exercise across all sessions
+  const points = [];
+  for (const s of data.sessions) {
+    for (const ex of s.exercises) {
+      if (ex.name !== exerciseName) continue;
+      const validSets = ex.sets.filter(set => !normalizeSet(set).skipped);
+      if (validSets.length === 0) continue;
+      const w = getSetWeight(validSets[0]);
+      const avgReps = validSets.map(set => getSetReps(set)).reduce((a, b) => a + b, 0) / validSets.length;
+      const totalSets = validSets.length;
+      points.push({ date: s.date, weight: w, avgReps: Math.round(avgReps * 10) / 10, sets: totalSets });
+    }
+  }
+
+  if (points.length === 0) {
+    sheet.innerHTML = `
+      <div class="chart-sheet-header">
+        <span class="chart-sheet-title">${exerciseName}</span>
+        <button class="chart-sheet-close" onclick="closeExerciseChart()">✕</button>
+      </div>
+      <p style="color:var(--text-3);font-size:14px;text-align:center;padding:40px 0;">No data yet for this exercise.</p>`;
+    modal.classList.add('active');
+    return;
+  }
+
+  // Stats
+  const unit = weightLabel();
+  const weights = points.filter(p => p.weight > 0).map(p => p.weight);
+  const maxW = weights.length > 0 ? Math.max(...weights) : 0;
+  const firstW = weights.length > 0 ? weights[0] : 0;
+  const lastW = weights.length > 0 ? weights[weights.length - 1] : 0;
+  const change = lastW - firstW;
+  const changeStr = change === 0 ? '0' + unit : (change >= 0 ? '+' : '') + displayWeight(change) + unit;
+
+  // Build SVG line chart
+  const chartSvg = buildExerciseChartSVG(points);
+
+  // Recent sessions (last 5)
+  const recent = [...points].reverse().slice(0, 5);
+  const recentHtml = recent.map(p => `
+    <div class="chart-recent-row">
+      <span class="chart-recent-date">${formatDate(p.date)}</span>
+      <span class="chart-recent-data">${p.weight > 0 ? displayWeight(p.weight) + unit : '—'} · ${p.sets}×${p.avgReps}</span>
+    </div>`).join('');
+
+  sheet.innerHTML = `
+    <div class="chart-sheet-header">
+      <span class="chart-sheet-title">${exerciseName}</span>
+      <button class="chart-sheet-close" onclick="closeExerciseChart()">✕</button>
+    </div>
+    <div class="chart-svg-wrap">${chartSvg}</div>
+    <div class="chart-stat-row">
+      <div class="chart-stat">
+        <div class="chart-stat-val">${displayWeight(maxW)}${unit}</div>
+        <div class="chart-stat-lbl">Best</div>
+      </div>
+      <div class="chart-stat">
+        <div class="chart-stat-val">${displayWeight(lastW)}${unit}</div>
+        <div class="chart-stat-lbl">Current</div>
+      </div>
+      <div class="chart-stat">
+        <div class="chart-stat-val" style="color:${change >= 0 ? 'var(--accent)' : 'var(--danger)'}">${changeStr}</div>
+        <div class="chart-stat-lbl">Change</div>
+      </div>
+      <div class="chart-stat">
+        <div class="chart-stat-val">${points.length}</div>
+        <div class="chart-stat-lbl">Sessions</div>
+      </div>
+    </div>
+    <div class="chart-recent-title">Recent Sessions</div>
+    ${recentHtml}
+  `;
+  modal.classList.add('active');
+}
+
+function buildExerciseChartSVG(points) {
+  const W = 360, H = 160, PAD_L = 40, PAD_R = 10, PAD_T = 10, PAD_B = 30;
+  const plotW = W - PAD_L - PAD_R;
+  const plotH = H - PAD_T - PAD_B;
+
+  const weights = points.map(p => p.weight || 0);
+  const minW = Math.min(...weights);
+  const maxW = Math.max(...weights);
+  const range = maxW - minW || 1;
+
+  // X positions evenly spaced
+  const xStep = points.length > 1 ? plotW / (points.length - 1) : plotW / 2;
+
+  const coords = points.map((p, i) => {
+    const x = PAD_L + (points.length > 1 ? i * xStep : plotW / 2);
+    const y = PAD_T + plotH - ((p.weight - minW) / range) * plotH;
+    return { x, y };
+  });
+
+  // Gradient fill path
+  const linePath = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+  const areaPath = linePath + ` L${coords[coords.length - 1].x.toFixed(1)},${PAD_T + plotH} L${coords[0].x.toFixed(1)},${PAD_T + plotH} Z`;
+
+  // Y axis labels (3 values)
+  const yLabels = [minW, minW + range / 2, maxW].map(v => ({
+    val: displayWeight(v),
+    y: PAD_T + plotH - ((v - minW) / range) * plotH
+  }));
+
+  // X axis labels (first, last dates)
+  const first = points[0].date;
+  const last = points[points.length - 1].date;
+
+  // Grid lines
+  const gridLines = yLabels.map(l =>
+    `<line x1="${PAD_L}" y1="${l.y}" x2="${W - PAD_R}" y2="${l.y}" stroke="var(--divider)" stroke-dasharray="3,3"/>`
+  ).join('');
+
+  const yLabelsSvg = yLabels.map(l =>
+    `<text x="${PAD_L - 6}" y="${l.y + 4}" fill="var(--text-3)" font-size="10" text-anchor="end" font-family="Inter,sans-serif">${l.val}</text>`
+  ).join('');
+
+  const dots = coords.map((c, i) =>
+    `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${points.length > 20 ? 2 : 3}" fill="var(--accent)"/>`
+  ).join('');
+
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+    <defs>
+      <linearGradient id="chart-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.3"/>
+        <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    ${gridLines}
+    ${yLabelsSvg}
+    <text x="${PAD_L}" y="${H - 4}" fill="var(--text-3)" font-size="9" font-family="Inter,sans-serif">${formatDate(first)}</text>
+    <text x="${W - PAD_R}" y="${H - 4}" fill="var(--text-3)" font-size="9" text-anchor="end" font-family="Inter,sans-serif">${formatDate(last)}</text>
+    <path d="${areaPath}" fill="url(#chart-grad)"/>
+    <path d="${linePath}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    ${dots}
+  </svg>`;
+}
+
+function closeExerciseChart() {
+  document.getElementById('exercise-chart-modal').classList.remove('active');
+}
+
+/* ═══════════════════════════════════════════════════════════
    BUILD
    ═══════════════════════════════════════════════════════════ */
 function ensureCustomPrograms() {
@@ -5620,6 +6129,13 @@ function renderBuild() {
         `).join('')}
       </div>
       <div class="divider"></div>
+      <span class="label">Rest Timer</span>
+      <div class="mt-8" style="display:flex;align-items:center;gap:12px;">
+        <button class="timer-adj-btn" onclick="changeRestDuration(-15)">−15s</button>
+        <span style="font-family:'Teko',sans-serif;font-size:22px;font-weight:600;color:var(--text);min-width:50px;text-align:center;" id="rest-duration-display">${data.restDuration || 90}s</span>
+        <button class="timer-adj-btn" onclick="changeRestDuration(15)">+15s</button>
+      </div>
+      <div class="divider"></div>
       <span class="label">This Week</span>
       <div class="week-row mt-8">
         ${buildWeeklyPreview()}
@@ -5661,6 +6177,14 @@ function toggleTrainingDay(day) {
   }
   save();
   renderBuildSafe();
+}
+
+function changeRestDuration(delta) {
+  const current = data.restDuration || 90;
+  data.restDuration = Math.max(15, Math.min(300, current + delta));
+  save();
+  const display = document.getElementById('rest-duration-display');
+  if (display) display.textContent = data.restDuration + 's';
 }
 
 function selectSplit(presetKey) {
