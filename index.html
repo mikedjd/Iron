@@ -2300,40 +2300,36 @@
     }
     .progress-toggle:active { background: var(--divider); }
 
-    .session-entry {
-      padding: 12px 0;
-      border-bottom: 1px solid var(--divider);
-      cursor: pointer;
+    /* Calendar */
+    .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .cal-header button { background: none; border: none; color: var(--text-2); font-size: 20px; padding: 8px 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .cal-header button:active { color: var(--accent); }
+    .cal-month-label { font-family: 'Teko', sans-serif; font-size: 20px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text); }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+    .cal-day-header { font-size: 10px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 0; }
+    .cal-day {
+      aspect-ratio: 1;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; color: var(--text-3);
+      border-radius: 50%;
+      cursor: default;
+      position: relative;
       -webkit-tap-highlight-color: transparent;
     }
-    .session-entry:last-child { border-bottom: none; }
-    .session-meta {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .session-date { font-size: 13px; color: var(--text-2); }
-    .session-summary {
-      font-size: 12px; color: var(--text-3); margin-top: 4px;
-    }
-    .session-type-badge {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      padding: 3px 10px;
-      border-radius: 100px;
-      background: var(--accent-dim);
-      color: var(--accent);
-    }
-    .session-detail {
-      max-height: 0; overflow: hidden;
-      transition: max-height 0.3s ease, opacity 0.3s ease;
-      opacity: 0;
-    }
-    .session-entry.expanded .session-detail {
-      max-height: 500px; opacity: 1;
-    }
+    .cal-day.today { color: var(--text); font-weight: 700; }
+    .cal-day.has-session { background: var(--accent-dim); color: var(--accent); cursor: pointer; font-weight: 600; }
+    .cal-day.has-session:active { background: var(--accent); color: var(--bg); }
+    .cal-day.selected { background: var(--accent); color: var(--bg); font-weight: 700; }
+    .cal-day.other-month { opacity: 0.25; }
+    .cal-day .cal-dot { position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
+    .cal-detail { margin-top: 16px; animation: fadeIn 0.2s ease; }
+    .cal-detail-date { font-family: 'Teko', sans-serif; font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+    .cal-detail-type { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 10px; border-radius: 100px; background: var(--accent-dim); color: var(--accent); display: inline-block; margin-bottom: 10px; }
+    .cal-detail-meta { font-size: 12px; color: var(--text-3); margin-bottom: 12px; }
+    .cal-detail-rating { display: inline-flex; gap: 2px; margin-left: 8px; }
+    .cal-detail-star { color: var(--accent); font-size: 12px; }
+    .cal-detail-star.empty { opacity: 0.2; }
+    .cal-detail-notes { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; font-size: 13px; color: var(--text-2); margin-bottom: 12px; font-style: italic; }
     .session-detail-row {
       display: flex; justify-content: space-between; align-items: center;
       padding: 6px 0; font-size: 13px;
@@ -6362,47 +6358,8 @@ function renderHistory() {
       </div>`;
   }
 
-  // Session log
-  let sessionLogHtml = '';
-  if (filtered.length > 0) {
-    const recent = [...filtered].reverse().slice(0, 20);
-    sessionLogHtml = `
-      <div class="card fade-in stagger-5">
-        <span class="label">Session Log</span>
-        <div class="mt-12">
-          ${recent.map((s, si) => {
-            const tLabel = getTypeLabel(s.type);
-            const totalSets = s.exercises.reduce((sum, e) => sum + e.sets.filter(set => !normalizeSet(set).skipped).length, 0);
-            const totalVol = s.exercises.reduce((sum, e) => sum + e.sets.reduce((v, set) => {
-              const ns = normalizeSet(set);
-              return v + (ns.skipped ? 0 : (ns.reps || 0) * (ns.weight || 0));
-            }, 0), 0);
-            const volStr = totalVol > 0 ? ` · ${totalVol >= 1000 ? (totalVol/1000).toFixed(1) + 'k' : totalVol} ${data.weightUnit}` : '';
-            const deloadBadge = s.isDeload ? ' <span class="type-badge rp" style="font-size:8px">DL</span>' : '';
-            const detailRows = s.exercises.map(e => {
-              const validSets = e.sets.filter(set => !normalizeSet(set).skipped);
-              const reps = validSets.map(set => getSetReps(set));
-              const w = validSets.length > 0 ? getSetWeight(validSets[0]) : null;
-              const wStr = w ? ` @ ${displayWeight(w)}` : '';
-              const repStr = reps.length > 0 ? `${reps.length} × ${Math.round(reps.reduce((a,b)=>a+b,0)/reps.length)}` : '—';
-              return `<div class="session-detail-row">
-                <span class="session-detail-name">${e.name}</span>
-                <span class="session-detail-stats">${repStr}${wStr}</span>
-              </div>`;
-            }).join('');
-            return `
-              <div class="session-entry" onclick="this.classList.toggle('expanded')">
-                <div class="session-meta">
-                  <span class="session-date">${formatDate(s.date)}</span>
-                  <span class="session-type-badge">${tLabel}${deloadBadge}</span>
-                </div>
-                <div class="session-summary">${totalSets} sets${volStr}</div>
-                <div class="session-detail">${detailRows}</div>
-              </div>`;
-          }).join('')}
-        </div>
-      </div>`;
-  }
+  // Session calendar
+  const calendarHtml = buildSessionCalendar();
 
   // Body part volume
   const bodyPartVolumes = calculateBodyPartVolume(filtered);
@@ -6472,8 +6429,138 @@ function renderHistory() {
     ${bodyPartHtml}
     ${weightHtml}
     ${progressHtml}
-    ${sessionLogHtml}
+    ${calendarHtml}
   `;
+}
+
+// ── Session Calendar ──
+let calMonth = new Date().getMonth();
+let calYear = new Date().getFullYear();
+let calSelectedDate = null;
+
+function buildSessionCalendar() {
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const dayHeaders = ['M','T','W','T','F','S','S'];
+
+  // Build session lookup by date
+  const sessionsByDate = {};
+  data.sessions.forEach(s => {
+    if (!sessionsByDate[s.date]) sessionsByDate[s.date] = [];
+    sessionsByDate[s.date].push(s);
+  });
+
+  // Calendar grid
+  const firstDay = new Date(calYear, calMonth, 1);
+  const lastDay = new Date(calYear, calMonth + 1, 0);
+  let startDay = firstDay.getDay() - 1; // Monday = 0
+  if (startDay < 0) startDay = 6;
+
+  const todayStr = today();
+  let dayCells = dayHeaders.map(d => `<div class="cal-day-header">${d}</div>`).join('');
+
+  // Previous month padding
+  const prevMonthLast = new Date(calYear, calMonth, 0).getDate();
+  for (let i = startDay - 1; i >= 0; i--) {
+    dayCells += `<div class="cal-day other-month">${prevMonthLast - i}</div>`;
+  }
+
+  // Current month days
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const hasSession = sessionsByDate[dateStr];
+    const isToday = dateStr === todayStr;
+    const isSelected = dateStr === calSelectedDate;
+    let cls = 'cal-day';
+    if (hasSession) cls += ' has-session';
+    if (isToday) cls += ' today';
+    if (isSelected) cls += ' selected';
+    const onclick = hasSession ? ` onclick="selectCalDay('${dateStr}')"` : '';
+    dayCells += `<div class="${cls}"${onclick}>${d}</div>`;
+  }
+
+  // Next month padding
+  const totalCells = startDay + lastDay.getDate();
+  const remaining = (7 - (totalCells % 7)) % 7;
+  for (let i = 1; i <= remaining; i++) {
+    dayCells += `<div class="cal-day other-month">${i}</div>`;
+  }
+
+  // Detail panel for selected date
+  let detailHtml = '';
+  if (calSelectedDate && sessionsByDate[calSelectedDate]) {
+    detailHtml = sessionsByDate[calSelectedDate].map(s => {
+      const tLabel = getTypeLabel(s.type);
+      const totalSets = s.exercises.reduce((sum, e) => sum + e.sets.filter(set => !normalizeSet(set).skipped).length, 0);
+      const totalVol = s.exercises.reduce((sum, e) => sum + e.sets.reduce((v, set) => {
+        const ns = normalizeSet(set);
+        return v + (ns.skipped ? 0 : (ns.reps || 0) * (ns.weight || 0));
+      }, 0), 0);
+      const volStr = totalVol > 0 ? ` · ${totalVol >= 1000 ? (totalVol/1000).toFixed(1) + 'k' : totalVol} ${data.weightUnit}` : '';
+      const durStr = s.duration ? ' · ' + formatDuration(s.duration) : '';
+      const deloadBadge = s.isDeload ? ' <span class="cal-detail-type" style="background:rgba(255,159,10,0.12);color:#ff9f0a;margin-left:6px;">Deload</span>' : '';
+
+      let ratingHtml = '';
+      if (s.rating) {
+        ratingHtml = '<span class="cal-detail-rating">' +
+          [1,2,3,4,5].map(i => `<span class="cal-detail-star${i > s.rating ? ' empty' : ''}">★</span>`).join('') +
+          '</span>';
+      }
+
+      const notesHtml = s.notes ? `<div class="cal-detail-notes">"${s.notes}"</div>` : '';
+
+      const exerciseRows = s.exercises.map(e => {
+        const validSets = e.sets.filter(set => !normalizeSet(set).skipped);
+        const reps = validSets.map(set => getSetReps(set));
+        const w = validSets.length > 0 ? getSetWeight(validSets[0]) : null;
+        const wStr = w ? ` @ ${displayWeight(w)}${weightLabel()}` : '';
+        const repStr = reps.length > 0 ? `${reps.length} × ${Math.round(reps.reduce((a,b)=>a+b,0)/reps.length)}` : '—';
+        return `<div class="session-detail-row">
+          <span class="session-detail-name">${e.name}</span>
+          <span class="session-detail-stats">${repStr}${wStr}</span>
+        </div>`;
+      }).join('');
+
+      return `
+        <div class="cal-detail">
+          <div class="cal-detail-date">${formatDate(calSelectedDate)}${ratingHtml}</div>
+          <span class="cal-detail-type">${tLabel}</span>${deloadBadge}
+          <div class="cal-detail-meta">${totalSets} sets${volStr}${durStr}</div>
+          ${notesHtml}
+          ${exerciseRows}
+        </div>`;
+    }).join('');
+  }
+
+  return `
+    <div class="card fade-in stagger-5">
+      <div class="cal-header">
+        <button onclick="changeCalMonth(-1)">‹</button>
+        <span class="cal-month-label">${months[calMonth]} ${calYear}</span>
+        <button onclick="changeCalMonth(1)">›</button>
+      </div>
+      <div class="cal-grid">${dayCells}</div>
+      ${detailHtml}
+    </div>`;
+}
+
+function changeCalMonth(delta) {
+  calMonth += delta;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  calSelectedDate = null;
+  renderHistory();
+}
+
+function selectCalDay(dateStr) {
+  calSelectedDate = calSelectedDate === dateStr ? null : dateStr;
+  // Re-render without scroll jump
+  const container = document.getElementById('history-content');
+  const scrollY = container ? container.parentElement.scrollTop || window.scrollY : 0;
+  renderHistory();
+  requestAnimationFrame(() => {
+    if (container && container.parentElement.scrollTop !== undefined) container.parentElement.scrollTop = scrollY;
+    window.scrollTo(0, scrollY);
+  });
 }
 
 function setWeightUnit(u) {
