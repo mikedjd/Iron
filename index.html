@@ -1535,18 +1535,93 @@
       flex-shrink: 0;
     }
 
-    .suggested-foods-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
+    /* Food Search */
+    .food-search-wrap {
+      position: relative;
       margin-top: 12px;
     }
-    .suggested-food-btn {
-      display: flex;
-      flex-direction: column;
-      padding: 10px 12px;
+    .food-search-input {
+      width: 100%;
+      padding: 12px 14px 12px 36px;
       border: 1px solid var(--border-light);
       border-radius: 12px;
+      background: var(--surface-3);
+      color: var(--text);
+      font-size: 16px !important;
+      font-family: inherit;
+    }
+    .food-search-input::placeholder { color: var(--text-3); }
+    .food-search-input:focus { border-color: var(--accent); outline: none; }
+    .food-search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-3);
+      font-size: 14px;
+      pointer-events: none;
+    }
+    .food-results {
+      margin-top: 8px;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .food-result-btn {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 10px 12px;
+      border: none;
+      border-bottom: 1px solid var(--divider);
+      background: none;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      transition: background 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .food-result-btn:last-child { border-bottom: none; }
+    .food-result-btn:active { background: var(--accent-dim); }
+    .food-result-name { font-size: 13px; font-weight: 500; }
+    .food-result-macros { font-size: 11px; color: var(--text-3); white-space: nowrap; }
+
+    /* Common Foods Accordion */
+    .common-foods-toggle {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 0;
+      border: none;
+      background: none;
+      color: var(--label-color);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .common-foods-toggle .label { pointer-events: none; }
+    .common-foods-arrow {
+      font-size: 12px;
+      color: var(--text-3);
+      transition: transform 0.2s;
+    }
+    .common-foods-arrow.open { transform: rotate(180deg); }
+    .common-foods-body {
+      display: none;
+      margin-top: 12px;
+    }
+    .common-foods-body.open { display: block; }
+    .common-foods-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    .common-food-btn {
+      display: flex;
+      flex-direction: column;
+      padding: 8px 10px;
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
       background: none;
       color: var(--text);
       text-align: left;
@@ -1554,20 +1629,53 @@
       transition: all 0.15s;
       -webkit-tap-highlight-color: transparent;
     }
-    .suggested-food-btn:active {
+    .common-food-btn:active {
       border-color: var(--accent);
       background: var(--accent-dim);
     }
-    .suggested-food-name {
-      font-size: 13px;
+    .common-food-name {
+      font-size: 12px;
       font-weight: 600;
-      margin-bottom: 3px;
+      line-height: 1.2;
     }
-    .suggested-food-macros {
-      font-size: 10px;
+    .common-food-macros {
+      font-size: 9px;
       color: var(--text-3);
       letter-spacing: 0.03em;
+      margin-top: 2px;
     }
+
+    /* Custom Food Input */
+    .custom-food-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .custom-food-fields input {
+      padding: 8px 4px;
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      background: var(--surface-3);
+      color: var(--text);
+      font-size: 16px !important;
+      font-family: inherit;
+      text-align: center;
+      min-width: 0;
+    }
+    .custom-food-fields input::placeholder { color: var(--text-3); font-size: 11px; }
+    .custom-food-name-input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      background: var(--surface-3);
+      color: var(--text);
+      font-size: 16px !important;
+      font-family: inherit;
+      margin-bottom: 6px;
+    }
+    .custom-food-name-input::placeholder { color: var(--text-3); }
 
     .food-log-entry {
       display: flex;
@@ -4874,11 +4982,14 @@ function saveWorkout() {
    ═══════════════════════════════════════════════════════════ */
 /* Preserve input values across a Diet re-render */
 function renderDietSafe() {
-  const ids = ['food-cal-input', 'food-pro-input', 'food-carb-input', 'food-fat-input', 'weight-input', 'cal-override'];
+  const ids = ['food-cal-input', 'food-pro-input', 'food-carb-input', 'food-fat-input', 'weight-input', 'cal-override', 'custom-food-name', 'cf-cal', 'cf-pro', 'cf-carb', 'cf-fat'];
   const saved = {};
   ids.forEach(id => { const el = document.getElementById(id); if (el) saved[id] = el.value; });
   renderDiet();
   ids.forEach(id => { const el = document.getElementById(id); if (el && saved[id]) el.value = saved[id]; });
+  // Restore search focus
+  const searchEl = document.getElementById('food-search');
+  if (searchEl && foodSearchQuery) { searchEl.focus(); searchEl.setSelectionRange(foodSearchQuery.length, foodSearchQuery.length); }
 }
 
 function renderDiet() {
@@ -5034,7 +5145,7 @@ function renderDiet() {
         <div class="macro-pill"><span class="macro-dot" style="background:#ff9f0a"></span>F ${todayTotals.fats}g</div>
       </div>
     </div>
-    ${buildSuggestedFoodsHtml()}
+    ${buildFoodSearchHtml()}
 
     <div class="card fade-in stagger-3">
       <span class="label">Log Today's Weight</span>
@@ -5242,42 +5353,186 @@ function addSuggestedFood(cal, pro, carb, fat, name) {
   renderDiet();
 }
 
-const SUGGESTED_FOODS = [
-  { name: 'Chicken Breast (150g)', cal: 248, pro: 46, carb: 0, fat: 5 },
-  { name: 'Salmon Fillet (150g)', cal: 312, pro: 34, carb: 0, fat: 19 },
-  { name: 'Eggs × 3', cal: 234, pro: 19, carb: 2, fat: 16 },
-  { name: 'Greek Yoghurt (200g)', cal: 130, pro: 20, carb: 8, fat: 2 },
-  { name: 'Rice (200g cooked)', cal: 260, pro: 5, carb: 57, fat: 1 },
-  { name: 'Sweet Potato (200g)', cal: 172, pro: 3, carb: 40, fat: 0 },
-  { name: 'Oats (80g dry)', cal: 303, pro: 11, carb: 51, fat: 6 },
-  { name: 'Banana', cal: 105, pro: 1, carb: 27, fat: 0 },
-  { name: 'Avocado (half)', cal: 161, pro: 2, carb: 9, fat: 15 },
-  { name: 'Whey Shake', cal: 120, pro: 24, carb: 3, fat: 1 },
-  { name: 'Almonds (30g)', cal: 174, pro: 6, carb: 6, fat: 15 },
-  { name: 'Broccoli (150g)', cal: 51, pro: 4, carb: 7, fat: 1 },
-  { name: 'Tuna Tin (120g)', cal: 132, pro: 30, carb: 0, fat: 1 },
-  { name: 'Peanut Butter (30g)', cal: 188, pro: 7, carb: 6, fat: 16 },
-  { name: 'Pasta (200g cooked)', cal: 262, pro: 9, carb: 50, fat: 2 },
-  { name: 'Steak (200g)', cal: 412, pro: 50, carb: 0, fat: 22 },
+/* Curated food database — verified macros, no duplicates, common serving sizes */
+const FOOD_DB = [
+  // Protein sources
+  { name: 'Chicken Breast', serv: '150g', cal: 248, pro: 46, carb: 0, fat: 5, cat: 'protein' },
+  { name: 'Chicken Thigh', serv: '150g', cal: 330, pro: 36, carb: 0, fat: 20, cat: 'protein' },
+  { name: 'Turkey Mince', serv: '150g', cal: 248, pro: 38, carb: 0, fat: 10, cat: 'protein' },
+  { name: 'Salmon Fillet', serv: '150g', cal: 312, pro: 34, carb: 0, fat: 19, cat: 'protein' },
+  { name: 'Tuna Tin', serv: '120g', cal: 132, pro: 30, carb: 0, fat: 1, cat: 'protein' },
+  { name: 'Cod Fillet', serv: '150g', cal: 126, pro: 28, carb: 0, fat: 1, cat: 'protein' },
+  { name: 'Prawns', serv: '150g', cal: 150, pro: 33, carb: 1, fat: 2, cat: 'protein' },
+  { name: 'Steak (Sirloin)', serv: '200g', cal: 412, pro: 50, carb: 0, fat: 22, cat: 'protein' },
+  { name: 'Lean Beef Mince', serv: '150g', cal: 322, pro: 32, carb: 0, fat: 21, cat: 'protein' },
+  { name: 'Pork Loin', serv: '150g', cal: 248, pro: 41, carb: 0, fat: 8, cat: 'protein' },
+  { name: 'Eggs', serv: '× 3', cal: 234, pro: 19, carb: 2, fat: 16, cat: 'protein' },
+  { name: 'Egg Whites', serv: '× 4', cal: 68, pro: 14, carb: 1, fat: 0, cat: 'protein' },
+  { name: 'Whey Protein Shake', serv: '1 scoop', cal: 120, pro: 24, carb: 3, fat: 1, cat: 'protein' },
+  { name: 'Tofu', serv: '150g', cal: 120, pro: 13, carb: 3, fat: 7, cat: 'protein' },
+  // Dairy
+  { name: 'Greek Yoghurt', serv: '200g', cal: 130, pro: 20, carb: 8, fat: 2, cat: 'dairy' },
+  { name: 'Cottage Cheese', serv: '150g', cal: 147, pro: 18, carb: 5, fat: 6, cat: 'dairy' },
+  { name: 'Whole Milk', serv: '250ml', cal: 160, pro: 8, carb: 12, fat: 9, cat: 'dairy' },
+  { name: 'Skimmed Milk', serv: '250ml', cal: 88, pro: 9, carb: 13, fat: 0, cat: 'dairy' },
+  { name: 'Cheddar Cheese', serv: '30g', cal: 122, pro: 8, carb: 0, fat: 10, cat: 'dairy' },
+  // Carb sources
+  { name: 'White Rice', serv: '200g cooked', cal: 260, pro: 5, carb: 57, fat: 1, cat: 'carbs' },
+  { name: 'Brown Rice', serv: '200g cooked', cal: 248, pro: 6, carb: 52, fat: 2, cat: 'carbs' },
+  { name: 'Pasta', serv: '200g cooked', cal: 262, pro: 9, carb: 50, fat: 2, cat: 'carbs' },
+  { name: 'Sweet Potato', serv: '200g', cal: 172, pro: 3, carb: 40, fat: 0, cat: 'carbs' },
+  { name: 'White Potato', serv: '200g', cal: 154, pro: 4, carb: 35, fat: 0, cat: 'carbs' },
+  { name: 'Oats', serv: '80g dry', cal: 303, pro: 11, carb: 51, fat: 6, cat: 'carbs' },
+  { name: 'Bread (2 slices)', serv: '80g', cal: 192, pro: 7, carb: 36, fat: 2, cat: 'carbs' },
+  { name: 'Bagel', serv: '1 large', cal: 270, pro: 10, carb: 53, fat: 2, cat: 'carbs' },
+  { name: 'Wrap / Tortilla', serv: '1 large', cal: 220, pro: 6, carb: 36, fat: 6, cat: 'carbs' },
+  { name: 'Couscous', serv: '200g cooked', cal: 232, pro: 8, carb: 46, fat: 1, cat: 'carbs' },
+  // Fruit
+  { name: 'Banana', serv: '1 medium', cal: 105, pro: 1, carb: 27, fat: 0, cat: 'fruit' },
+  { name: 'Apple', serv: '1 medium', cal: 95, pro: 0, carb: 25, fat: 0, cat: 'fruit' },
+  { name: 'Blueberries', serv: '100g', cal: 57, pro: 1, carb: 14, fat: 0, cat: 'fruit' },
+  { name: 'Strawberries', serv: '150g', cal: 48, pro: 1, carb: 12, fat: 0, cat: 'fruit' },
+  { name: 'Orange', serv: '1 medium', cal: 62, pro: 1, carb: 15, fat: 0, cat: 'fruit' },
+  // Veg
+  { name: 'Broccoli', serv: '150g', cal: 51, pro: 4, carb: 7, fat: 1, cat: 'veg' },
+  { name: 'Spinach', serv: '100g', cal: 23, pro: 3, carb: 4, fat: 0, cat: 'veg' },
+  { name: 'Mixed Salad', serv: '100g', cal: 20, pro: 1, carb: 4, fat: 0, cat: 'veg' },
+  { name: 'Green Beans', serv: '150g', cal: 47, pro: 3, carb: 10, fat: 0, cat: 'veg' },
+  { name: 'Peppers', serv: '150g', cal: 46, pro: 1, carb: 9, fat: 0, cat: 'veg' },
+  // Fats & nuts
+  { name: 'Avocado', serv: 'half', cal: 161, pro: 2, carb: 9, fat: 15, cat: 'fats' },
+  { name: 'Almonds', serv: '30g', cal: 174, pro: 6, carb: 6, fat: 15, cat: 'fats' },
+  { name: 'Peanut Butter', serv: '30g', cal: 188, pro: 7, carb: 6, fat: 16, cat: 'fats' },
+  { name: 'Walnuts', serv: '30g', cal: 196, pro: 5, carb: 4, fat: 20, cat: 'fats' },
+  { name: 'Olive Oil', serv: '1 tbsp', cal: 119, pro: 0, carb: 0, fat: 14, cat: 'fats' },
+  { name: 'Coconut Oil', serv: '1 tbsp', cal: 121, pro: 0, carb: 0, fat: 14, cat: 'fats' },
+  // Snacks & misc
+  { name: 'Protein Bar', serv: '1 bar', cal: 210, pro: 20, carb: 22, fat: 8, cat: 'snacks' },
+  { name: 'Rice Cakes', serv: '× 3', cal: 105, pro: 2, carb: 23, fat: 1, cat: 'snacks' },
+  { name: 'Dark Chocolate', serv: '30g', cal: 170, pro: 2, carb: 13, fat: 12, cat: 'snacks' },
+  { name: 'Hummus', serv: '60g', cal: 100, pro: 3, carb: 8, fat: 6, cat: 'snacks' },
+  // Drinks
+  { name: 'Orange Juice', serv: '250ml', cal: 112, pro: 2, carb: 26, fat: 0, cat: 'drinks' },
+  { name: 'Smoothie (fruit)', serv: '300ml', cal: 180, pro: 4, carb: 40, fat: 1, cat: 'drinks' },
+  // Meals (common)
+  { name: 'Chicken & Rice Bowl', serv: '1 bowl', cal: 520, pro: 42, carb: 58, fat: 10, cat: 'meals' },
+  { name: 'Tuna Sandwich', serv: '1', cal: 380, pro: 28, carb: 38, fat: 12, cat: 'meals' },
+  { name: 'Overnight Oats', serv: '1 bowl', cal: 410, pro: 18, carb: 58, fat: 12, cat: 'meals' },
 ];
 
-function buildSuggestedFoodsHtml() {
-  const showAll = data._showAllFoods;
-  const visible = showAll ? SUGGESTED_FOODS : SUGGESTED_FOODS.slice(0, 6);
-  return `
-    <div class="card fade-in stagger-2" style="margin-bottom:12px;">
-      <span class="label">Quick Foods</span>
-      <div class="suggested-foods-grid">
-        ${visible.map(f => `
-          <button class="suggested-food-btn" onclick="addSuggestedFood(${f.cal},${f.pro},${f.carb},${f.fat},'${f.name.replace(/'/g, "\\'")}')">
-            <span class="suggested-food-name">${f.name}</span>
-            <span class="suggested-food-macros">${f.cal} cal · ${f.pro}p · ${f.carb}c · ${f.fat}f</span>
-          </button>
-        `).join('')}
+let foodSearchQuery = '';
+
+function buildFoodSearchHtml() {
+  // Custom foods from user
+  const customFoods = data.customFoods || [];
+  const allFoods = [...FOOD_DB, ...customFoods.map(f => ({ ...f, custom: true }))];
+
+  // Search results
+  let resultsHtml = '';
+  if (foodSearchQuery.length >= 2) {
+    const q = foodSearchQuery.toLowerCase();
+    const matches = allFoods.filter(f => f.name.toLowerCase().includes(q) || (f.cat && f.cat.includes(q)));
+    if (matches.length > 0) {
+      resultsHtml = `<div class="food-results">
+        ${matches.slice(0, 12).map(f => {
+          const displayName = f.name + (f.serv ? ` (${f.serv})` : '') + (f.custom ? ' ★' : '');
+          return `<button class="food-result-btn" onclick="addSuggestedFood(${f.cal},${f.pro},${f.carb},${f.fat},'${(f.name + (f.serv ? ' ' + f.serv : '')).replace(/'/g, "\\'")}')">
+            <span class="food-result-name">${displayName}</span>
+            <span class="food-result-macros">${f.cal} · ${f.pro}p · ${f.carb}c · ${f.fat}f</span>
+          </button>`;
+        }).join('')}
+      </div>`;
+    } else {
+      resultsHtml = `<p style="color:var(--text-3);font-size:12px;padding:12px 0;">No matches — try adding a custom food below.</p>`;
+    }
+  }
+
+  // Common foods (collapsible)
+  const isOpen = data._commonFoodsOpen;
+  const commonFoods = FOOD_DB.filter(f => ['protein','carbs','dairy'].includes(f.cat)).slice(0, 12);
+  const commonHtml = `
+    <div style="margin-top:16px;">
+      <button class="common-foods-toggle" onclick="data._commonFoodsOpen=!data._commonFoodsOpen;renderDiet();">
+        <span class="label">Common Foods</span>
+        <span class="common-foods-arrow ${isOpen ? 'open' : ''}">▼</span>
+      </button>
+      <div class="common-foods-body ${isOpen ? 'open' : ''}">
+        <div class="common-foods-grid">
+          ${commonFoods.map(f => `
+            <button class="common-food-btn" onclick="addSuggestedFood(${f.cal},${f.pro},${f.carb},${f.fat},'${(f.name + ' ' + f.serv).replace(/'/g, "\\'")}')">
+              <span class="common-food-name">${f.name}</span>
+              <span class="common-food-macros">${f.serv} · ${f.cal}cal</span>
+            </button>
+          `).join('')}
+        </div>
       </div>
-      ${!showAll && SUGGESTED_FOODS.length > 6 ? `<button class="progress-toggle" onclick="data._showAllFoods=true;renderDiet();">Show all ${SUGGESTED_FOODS.length} foods</button>` : ''}
-      ${showAll ? `<button class="progress-toggle" onclick="data._showAllFoods=false;renderDiet();">Show less</button>` : ''}
     </div>`;
+
+  // Custom food input (collapsible)
+  const customOpen = data._customFoodOpen;
+  const customInputHtml = `
+    <div style="margin-top:12px;">
+      <button class="common-foods-toggle" onclick="data._customFoodOpen=!data._customFoodOpen;renderDiet();">
+        <span class="label">Custom Food</span>
+        <span class="common-foods-arrow ${customOpen ? 'open' : ''}">▼</span>
+      </button>
+      <div class="common-foods-body ${customOpen ? 'open' : ''}">
+        <input type="text" class="custom-food-name-input" id="custom-food-name" placeholder="Food name (e.g. My Protein Pancakes)">
+        <div class="custom-food-fields">
+          <input type="number" id="cf-cal" inputmode="numeric" placeholder="kcal">
+          <input type="number" id="cf-pro" inputmode="numeric" placeholder="prot">
+          <input type="number" id="cf-carb" inputmode="numeric" placeholder="carbs">
+          <input type="number" id="cf-fat" inputmode="numeric" placeholder="fats">
+        </div>
+        <button class="btn btn-secondary" onclick="saveCustomFood()" style="width:100%;margin-top:8px;padding:10px;">Save to My Foods</button>
+        ${customFoods.length > 0 ? `
+          <div style="margin-top:10px;">
+            <span style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;">Your Foods</span>
+            ${customFoods.map((f, i) => `
+              <div class="food-result-btn" style="padding:6px 0;">
+                <span class="food-result-name">${f.name}</span>
+                <span style="display:flex;align-items:center;gap:8px;">
+                  <span class="food-result-macros">${f.cal} · ${f.pro}p</span>
+                  <button style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;padding:2px 6px;" onclick="event.stopPropagation();deleteCustomFood(${i})">✕</button>
+                </span>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+      </div>
+    </div>`;
+
+  return `
+    <div class="card fade-in stagger-2">
+      <span class="label">Search Foods</span>
+      <div class="food-search-wrap">
+        <span class="food-search-icon">🔍</span>
+        <input type="text" class="food-search-input" id="food-search" placeholder="Search foods..." value="${foodSearchQuery}" oninput="foodSearchQuery=this.value;renderDiet();" autocomplete="off">
+      </div>
+      ${resultsHtml}
+      ${commonHtml}
+      ${customInputHtml}
+    </div>`;
+}
+
+function saveCustomFood() {
+  const name = document.getElementById('custom-food-name')?.value?.trim();
+  const cal = parseInt(document.getElementById('cf-cal')?.value);
+  const pro = parseInt(document.getElementById('cf-pro')?.value) || 0;
+  const carb = parseInt(document.getElementById('cf-carb')?.value) || 0;
+  const fat = parseInt(document.getElementById('cf-fat')?.value) || 0;
+  if (!name || !cal || cal < 1) return;
+  if (!data.customFoods) data.customFoods = [];
+  data.customFoods.push({ name, cal, pro, carb, fat, cat: 'custom' });
+  save();
+  renderDiet();
+}
+
+function deleteCustomFood(index) {
+  if (!data.customFoods) return;
+  data.customFoods.splice(index, 1);
+  save();
+  renderDiet();
 }
 
 function deleteFood(id) {
