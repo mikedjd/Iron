@@ -1375,6 +1375,91 @@
       color: var(--text-3);
       margin-top: 2px;
     }
+    /* Diet summary tiles — tap to toggle */
+    .diet-swipe-container {
+      position: relative;
+      cursor: pointer;
+    }
+    .diet-swipe-tile {
+      display: none;
+      animation: dietTileFade 0.25s ease;
+    }
+    .diet-swipe-tile.active { display: block; }
+    @keyframes dietTileFade {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .diet-swipe-dots {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .diet-swipe-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+    .diet-swipe-dot.active { background: var(--accent); }
+    .custom-macro-input {
+      width: 100%;
+      margin-top: 4px;
+      padding: 10px 10px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-variant-numeric: tabular-nums;
+      outline: none;
+      transition: border-color 0.2s;
+      box-sizing: border-box;
+    }
+    .custom-macro-input:focus { border-color: var(--accent); }
+    .custom-macro-input::placeholder { color: var(--text-3); }
+    .macro-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .macro-bar-label {
+      width: 55px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .macro-bar-track {
+      flex: 1;
+      height: 18px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 9px;
+      overflow: hidden;
+      position: relative;
+    }
+    .macro-bar-fill {
+      height: 100%;
+      border-radius: 9px;
+      transition: width 0.4s ease;
+      min-width: 2px;
+    }
+    .macro-bar-text {
+      font-family: 'Teko', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      min-width: 70px;
+      text-align: right;
+      color: var(--text-2);
+      flex-shrink: 0;
+    }
+
     .macro-rec-grid {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr 1fr;
@@ -1383,8 +1468,6 @@
     .macro-rec-item {
       text-align: center;
       padding: 8px 0;
-      background: var(--surface-3);
-      border-radius: 10px;
     }
     .macro-rec-val {
       display: block;
@@ -3071,7 +3154,36 @@ function getMacroTargets() {
   const carbCals = Math.max(0, cal - proCals - (fatGrams * 9));
   const carbGrams = Math.round(carbCals / 4);
 
-  return { protein: proGrams, carbs: carbGrams, fats: fatGrams, calories: cal };
+  // Allow custom overrides
+  return {
+    protein: data.customProtein || proGrams,
+    carbs: data.customCarbs || carbGrams,
+    fats: data.customFats || fatGrams,
+    calories: cal,
+    // Keep recommended values for display
+    recProtein: proGrams,
+    recCarbs: carbGrams,
+    recFats: fatGrams,
+  };
+}
+
+function setCustomMacro(macro, value) {
+  const v = parseInt(value);
+  if (isNaN(v) || v <= 0) {
+    delete data['custom' + macro.charAt(0).toUpperCase() + macro.slice(1)];
+  } else {
+    data['custom' + macro.charAt(0).toUpperCase() + macro.slice(1)] = v;
+  }
+  save();
+  renderDietNoScroll();
+}
+
+function resetCustomMacros() {
+  delete data.customProtein;
+  delete data.customCarbs;
+  delete data.customFats;
+  save();
+  renderDietNoScroll();
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -5054,10 +5166,23 @@ function toggleAccordion(btn, stateKey) {
   if (stateKey) data['_' + stateKey] = isOpen;
 }
 
+function toggleDietTile(index) {
+  const tiles = document.querySelectorAll('.diet-swipe-tile');
+  const dots = document.querySelectorAll('.diet-swipe-dot');
+  if (!tiles.length) return;
+  // If index given, go to that tile; otherwise toggle between 0 and 1
+  if (index === undefined) {
+    const current = document.querySelector('.diet-swipe-tile.active');
+    index = current === tiles[0] ? 1 : 0;
+  }
+  tiles.forEach((t, i) => t.classList.toggle('active', i === index));
+  dots.forEach((d, i) => d.classList.toggle('active', i === index));
+}
+
 function renderDietNoScroll() {
   const container = document.getElementById('diet-content');
   const scrollY = container ? container.parentElement.scrollTop || window.scrollY : 0;
-  const ids = ['food-cal-input', 'food-pro-input', 'food-carb-input', 'food-fat-input', 'weight-input', 'cal-override', 'custom-food-name', 'cf-cal', 'cf-pro', 'cf-carb', 'cf-fat'];
+  const ids = ['food-cal-input', 'food-pro-input', 'food-carb-input', 'food-fat-input', 'weight-input', 'weight-goal-input', 'cal-override', 'custom-food-name', 'cf-cal', 'cf-pro', 'cf-carb', 'cf-fat'];
   const saved = {};
   ids.forEach(id => { const el = document.getElementById(id); if (el) saved[id] = el.value; });
   renderDiet();
@@ -5078,6 +5203,7 @@ function renderDiet() {
   const proteinGrams = macros.protein;
   const carbGrams = macros.carbs;
   const fatGrams = macros.fats;
+  const hasCustomMacros = !!(data.customProtein || data.customCarbs || data.customFats);
   const todayTotals = getTodayTotals();
   const todayFood = getTodayFood();
   const calPct = data.targetCalories > 0 ? (todayTotals.calories / data.targetCalories) * 100 : 0;
@@ -5166,12 +5292,10 @@ function renderDiet() {
   const calRemaining = Math.max(0, effectiveCalTarget - todayTotals.calories);
   const effCalPct = effectiveCalTarget > 0 ? (todayTotals.calories / effectiveCalTarget) * 100 : 0;
 
-  // Ring calculations — 4 concentric rings
+  // Ring calculations — 2 concentric rings (cal + protein)
   const rings = [
-    { r: 56, w: 7, pct: effCalPct, color: 'var(--accent)', label: 'Cal' },
-    { r: 46, w: 6, pct: proPct, color: 'var(--protein-ring)', label: 'Pro' },
-    { r: 36, w: 5, pct: carbPct, color: '#5ac8fa', label: 'Carb' },
-    { r: 26, w: 5, pct: fatPct, color: '#ff9f0a', label: 'Fat' },
+    { r: 52, w: 8, pct: effCalPct, color: 'var(--accent)', label: 'Cal' },
+    { r: 40, w: 7, pct: proPct, color: 'var(--protein-ring)', label: 'Pro' },
   ];
   const ringsSvg = rings.map(ring => {
     const c = 2 * Math.PI * ring.r;
@@ -5184,35 +5308,59 @@ function renderDiet() {
         stroke-linecap="round" transform="rotate(-90 65 65)" style="transition:stroke-dashoffset 0.5s ease;"/>`;
   }).join('');
 
+  // Macro bar data for tile 2
+  const macroBarData = [
+    { label: 'Calories', cur: todayTotals.calories, tgt: effectiveCalTarget, color: 'var(--accent)', unit: '' },
+    { label: 'Protein', cur: todayTotals.protein, tgt: proteinGrams, color: 'var(--protein-ring)', unit: 'g' },
+    { label: 'Carbs', cur: todayTotals.carbs, tgt: carbGrams, color: '#5ac8fa', unit: 'g' },
+    { label: 'Fats', cur: todayTotals.fats, tgt: fatGrams, color: '#ff9f0a', unit: 'g' },
+  ];
+  const macroBarsHtml = macroBarData.map(m => {
+    const pct = m.tgt > 0 ? Math.min((m.cur / m.tgt) * 100, 100) : 0;
+    const barColor = m.tgt > 0 && m.cur > m.tgt * 1.2 ? 'var(--danger)' : m.tgt > 0 && m.cur > m.tgt ? 'var(--warning)' : m.color;
+    return `<div class="macro-bar-row">
+      <span class="macro-bar-label" style="color:${m.color}">${m.label}</span>
+      <div class="macro-bar-track">
+        <div class="macro-bar-fill" style="width:${pct}%;background:${barColor};"></div>
+      </div>
+      <span class="macro-bar-text">${m.cur}${m.unit} / ${m.tgt}${m.unit}</span>
+    </div>`;
+  }).join('');
+
   el.innerHTML = `
-    <div class="card fade-in" style="padding-bottom:16px;">
-      <div style="display:flex;align-items:center;gap:20px;">
-        <div style="flex-shrink:0;">
-          <svg width="130" height="130" viewBox="0 0 130 130">
-            ${ringsSvg}
-            <text x="65" y="60" text-anchor="middle" fill="var(--text)" font-family="'Teko',sans-serif" font-size="26" font-weight="600">${calRemaining.toLocaleString()}</text>
-            <text x="65" y="76" text-anchor="middle" fill="var(--text-2)" font-size="9" font-weight="500" letter-spacing="0.06em">CAL LEFT</text>
-          </svg>
-        </div>
-        <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;">
-            <span style="font-size:11px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Calories</span>
-            <span style="font-size:14px;font-weight:600;">${todayTotals.calories.toLocaleString()} <span style="color:var(--text-3);font-weight:400;">/ ${effectiveCalTarget.toLocaleString()}</span></span>
-          </div>
-          ${activityCals > 0 ? `<div style="font-size:10px;color:var(--accent);margin-top:-6px;">+${activityCals} activity</div>` : ''}
-          <div style="display:flex;justify-content:space-between;align-items:baseline;">
-            <span style="font-size:11px;color:var(--protein-ring);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Protein</span>
-            <span style="font-size:14px;font-weight:600;">${todayTotals.protein}g <span style="color:var(--text-3);font-weight:400;">/ ${proteinGrams}g</span></span>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:baseline;">
-            <span style="font-size:11px;color:#5ac8fa;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Carbs</span>
-            <span style="font-size:14px;font-weight:600;">${todayTotals.carbs}g <span style="color:var(--text-3);font-weight:400;">/ ${carbGrams}g</span></span>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:baseline;">
-            <span style="font-size:11px;color:#ff9f0a;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Fats</span>
-            <span style="font-size:14px;font-weight:600;">${todayTotals.fats}g <span style="color:var(--text-3);font-weight:400;">/ ${fatGrams}g</span></span>
+    <div class="card fade-in" style="padding-bottom:12px;">
+      <div class="diet-swipe-container" onclick="toggleDietTile()">
+        <div class="diet-swipe-tile active">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <div style="flex-shrink:0;">
+              <svg width="130" height="130" viewBox="0 0 130 130">
+                ${ringsSvg}
+                <text x="65" y="60" text-anchor="middle" fill="var(--text)" font-family="'Teko',sans-serif" font-size="26" font-weight="600">${calRemaining.toLocaleString()}</text>
+                <text x="65" y="76" text-anchor="middle" fill="var(--text-2)" font-size="9" font-weight="500" letter-spacing="0.06em">CAL LEFT</text>
+              </svg>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                <span style="font-size:11px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Calories</span>
+                <span style="font-size:14px;font-weight:600;">${todayTotals.calories.toLocaleString()} <span style="color:var(--text-3);font-weight:400;">/ ${effectiveCalTarget.toLocaleString()}</span></span>
+              </div>
+              ${activityCals > 0 ? `<div style="font-size:10px;color:var(--accent);margin-top:-6px;">+${activityCals} activity</div>` : ''}
+              <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                <span style="font-size:11px;color:var(--protein-ring);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Protein</span>
+                <span style="font-size:14px;font-weight:600;">${todayTotals.protein}g <span style="color:var(--text-3);font-weight:400;">/ ${proteinGrams}g</span></span>
+              </div>
+            </div>
           </div>
         </div>
+        <div class="diet-swipe-tile">
+          <div style="padding:8px 4px 0;">
+            ${macroBarsHtml}
+          </div>
+        </div>
+      </div>
+      <div class="diet-swipe-dots">
+        <div class="diet-swipe-dot active" onclick="event.stopPropagation();toggleDietTile(0)"></div>
+        <div class="diet-swipe-dot" onclick="event.stopPropagation();toggleDietTile(1)"></div>
       </div>
     </div>
 
@@ -5225,14 +5373,14 @@ function renderDiet() {
       </div>
       <div style="margin-top:12px;">
         <button class="common-foods-toggle" onclick="toggleAccordion(this,'extraMileOpen')">
-          <span class="label">Go The Extra Mile</span>
+          <span class="label">The Extra Mile</span>
           <span class="common-foods-arrow ${data._extraMileOpen ? 'open' : ''}">▼</span>
         </button>
         <div class="common-foods-body ${data._extraMileOpen ? 'open' : ''}">
           <div class="food-add-row mt-8">
             <input type="number" id="food-carb-input" inputmode="numeric" placeholder="carbs g">
             <input type="number" id="food-fat-input" inputmode="numeric" placeholder="fats g">
-            <span style="width:52px;"></span>
+            <button onclick="addFood()">ADD</button>
           </div>
         </div>
       </div>
@@ -5245,8 +5393,9 @@ function renderDiet() {
         <input type="number" id="weight-input" inputmode="decimal" step="0.1" placeholder="${todayWeight ? todayWeight.weight : (lastWeight ? lastWeight.weight : '80.0')}" value="${todayWeight ? todayWeight.weight : ''}">
         <button onclick="logWeight()">${todayWeight ? 'Update' : 'Log'}</button>
       </div>
-      ${lastWeight && !todayWeight ? `<p class="text-xs text-dim mt-8">Last: ${lastWeight.weight} kg on ${formatDate(lastWeight.date)}</p>` : ''}
-      ${todayWeight ? `<p class="text-xs text-dim mt-8">Logged today: ${todayWeight.weight} kg</p>` : ''}
+      ${lastWeight && !todayWeight ? `<p class="text-xs text-dim mt-8">Last: ${lastWeight.weight} ${weightLabel()} on ${formatDate(lastWeight.date)}</p>` : ''}
+      ${todayWeight ? `<p class="text-xs text-dim mt-8">Logged today: ${todayWeight.weight} ${weightLabel()}</p>` : ''}
+      ${buildWeightGoalHtml(todayWeight || lastWeight)}
     </div>
 
     <div class="card fade-in stagger-4">
@@ -5256,7 +5405,7 @@ function renderDiet() {
       </div>
       <div class="diet-goal-desc">${(DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk']).desc}</div>
       <div class="divider"></div>
-      <span class="label">Recommended Macros</span>
+      <span class="label">${hasCustomMacros ? 'Your Macros' : 'Recommended Macros'}</span>
       <div class="macro-rec-grid mt-8">
         <div class="macro-rec-item">
           <span class="macro-rec-val" style="color:var(--accent)">${effectiveCalTarget}</span>
@@ -5275,7 +5424,28 @@ function renderDiet() {
           <span class="macro-rec-lbl">fats</span>
         </div>
       </div>
-      <p class="text-xs text-dim mt-8">Based on ${getCurrentBodyweight() ? displayWeight(getCurrentBodyweight()) + weightLabel() + ' bodyweight' : 'estimated bodyweight'}. Protein ${(DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk']).proPerKg}g/kg, fat ${Math.round((DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk']).fatPct * 100)}% of calories, carbs from remainder.</p>
+      ${hasCustomMacros ? `<p class="text-xs mt-8" style="color:var(--accent);cursor:pointer;" onclick="resetCustomMacros()">Reset to recommended</p>` : `<p class="text-xs text-dim mt-8">Based on ${getCurrentBodyweight() ? displayWeight(getCurrentBodyweight()) + weightLabel() + ' bodyweight' : 'estimated bodyweight'}. Protein ${(DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk']).proPerKg}g/kg, fat ${Math.round((DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk']).fatPct * 100)}% of calories, carbs from remainder.</p>`}
+      <button class="common-foods-toggle mt-8" onclick="toggleAccordion(this,'customMacrosOpen')">
+        <span style="font-size:11px;color:var(--text-3);">Custom Macros</span>
+        <span class="common-foods-arrow ${data._customMacrosOpen ? 'open' : ''}" style="font-size:10px;">▼</span>
+      </button>
+      <div class="common-foods-body ${data._customMacrosOpen ? 'open' : ''}">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;">
+          <div>
+            <label style="font-size:10px;color:var(--protein-ring);text-transform:uppercase;letter-spacing:0.04em;">Protein g</label>
+            <input type="number" class="custom-macro-input" inputmode="numeric" placeholder="${macros.recProtein}" value="${data.customProtein || ''}" onchange="setCustomMacro('protein',this.value)">
+          </div>
+          <div>
+            <label style="font-size:10px;color:#5ac8fa;text-transform:uppercase;letter-spacing:0.04em;">Carbs g</label>
+            <input type="number" class="custom-macro-input" inputmode="numeric" placeholder="${macros.recCarbs}" value="${data.customCarbs || ''}" onchange="setCustomMacro('carbs',this.value)">
+          </div>
+          <div>
+            <label style="font-size:10px;color:#ff9f0a;text-transform:uppercase;letter-spacing:0.04em;">Fats g</label>
+            <input type="number" class="custom-macro-input" inputmode="numeric" placeholder="${macros.recFats}" value="${data.customFats || ''}" onchange="setCustomMacro('fats',this.value)">
+          </div>
+        </div>
+        <p class="text-xs text-dim mt-8">Leave blank to use recommended values. Set any combination.</p>
+      </div>
       <button class="common-foods-toggle mt-8" onclick="toggleAccordion(this,'macroSourcesOpen')">
         <span style="font-size:11px;color:var(--text-3);">Sources</span>
         <span class="common-foods-arrow ${data._macroSourcesOpen ? 'open' : ''}" style="font-size:10px;">▼</span>
@@ -5333,6 +5503,64 @@ function logWeight() {
     autoAdjustCalories();
   }
 
+  save();
+  renderDietNoScroll();
+}
+
+function buildWeightGoalHtml(currentEntry) {
+  const goal = data.weightGoal;
+  const current = currentEntry ? currentEntry.weight : null;
+
+  if (!goal && !current) return '';
+
+  let progressHtml = '';
+  if (goal && current && data.weights.length >= 2) {
+    const startWeight = data.weights[0].weight;
+    const totalChange = Math.abs(goal - startWeight);
+    const currentChange = Math.abs(current - startWeight);
+    const remaining = Math.abs(goal - current);
+    const pct = totalChange > 0 ? Math.min(100, (currentChange / totalChange) * 100) : 0;
+    // Check direction is correct
+    const goingRight = (goal > startWeight && current >= startWeight) || (goal < startWeight && current <= startWeight);
+    const effectivePct = goingRight ? pct : 0;
+
+    progressHtml = `
+      <div style="margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+          <span style="font-size:11px;color:var(--text-3);">${displayWeight(startWeight)} ${weightLabel()}</span>
+          <span style="font-size:11px;font-weight:600;color:var(--accent);">${displayWeight(goal)} ${weightLabel()}</span>
+        </div>
+        <div class="macro-bar-track" style="height:10px;">
+          <div class="macro-bar-fill" style="width:${effectivePct.toFixed(0)}%;background:var(--accent);border-radius:5px;"></div>
+        </div>
+        <p class="text-xs text-dim mt-4">${displayWeight(remaining)} ${weightLabel()} to go</p>
+      </div>`;
+  }
+
+  return `
+    <div class="divider"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <span class="label">Goal Weight</span>
+      ${goal ? `<span style="font-size:10px;color:var(--accent);cursor:pointer;" onclick="clearWeightGoal()">Clear</span>` : ''}
+    </div>
+    <div class="weight-input-row mt-8">
+      <input type="number" id="weight-goal-input" inputmode="decimal" step="0.1" placeholder="${goal || 'Target'}" value="${goal || ''}">
+      <button onclick="setWeightGoal()">${goal ? 'Update' : 'Set'}</button>
+    </div>
+    ${progressHtml}`;
+}
+
+function setWeightGoal() {
+  const input = document.getElementById('weight-goal-input');
+  const val = parseFloat(input.value);
+  if (!val || val < 20 || val > 300) return;
+  data.weightGoal = val;
+  save();
+  renderDietNoScroll();
+}
+
+function clearWeightGoal() {
+  delete data.weightGoal;
   save();
   renderDietNoScroll();
 }
@@ -5483,17 +5711,26 @@ function addSuggestedFood(cal, pro, carb, fat, name) {
 
 /* Curated food database — verified macros, no duplicates, common serving sizes */
 const FOOD_DB = [
-  // Protein sources
-  { name: 'Chicken Breast', serv: '150g', cal: 248, pro: 46, carb: 0, fat: 5, cat: 'protein' },
-  { name: 'Chicken Thigh', serv: '150g', cal: 330, pro: 36, carb: 0, fat: 20, cat: 'protein' },
-  { name: 'Turkey Mince', serv: '150g', cal: 248, pro: 38, carb: 0, fat: 10, cat: 'protein' },
-  { name: 'Salmon Fillet', serv: '150g', cal: 312, pro: 34, carb: 0, fat: 19, cat: 'protein' },
+  // Protein sources — raw = weighed before cooking, cooked = weighed after
+  { name: 'Chicken Breast (raw)', serv: '150g', cal: 165, pro: 31, carb: 0, fat: 4, cat: 'protein' },
+  { name: 'Chicken Breast (cooked)', serv: '150g', cal: 248, pro: 46, carb: 0, fat: 5, cat: 'protein' },
+  { name: 'Chicken Thigh (raw)', serv: '150g', cal: 270, pro: 29, carb: 0, fat: 16, cat: 'protein' },
+  { name: 'Chicken Thigh (cooked)', serv: '150g', cal: 330, pro: 36, carb: 0, fat: 20, cat: 'protein' },
+  { name: 'Turkey Mince (raw)', serv: '150g', cal: 203, pro: 30, carb: 0, fat: 8, cat: 'protein' },
+  { name: 'Turkey Mince (cooked)', serv: '150g', cal: 248, pro: 38, carb: 0, fat: 10, cat: 'protein' },
+  { name: 'Salmon Fillet (raw)', serv: '150g', cal: 270, pro: 30, carb: 0, fat: 17, cat: 'protein' },
+  { name: 'Salmon Fillet (cooked)', serv: '150g', cal: 312, pro: 34, carb: 0, fat: 19, cat: 'protein' },
   { name: 'Tuna Tin', serv: '120g', cal: 132, pro: 30, carb: 0, fat: 1, cat: 'protein' },
-  { name: 'Cod Fillet', serv: '150g', cal: 126, pro: 28, carb: 0, fat: 1, cat: 'protein' },
-  { name: 'Prawns', serv: '150g', cal: 150, pro: 33, carb: 1, fat: 2, cat: 'protein' },
-  { name: 'Steak (Sirloin)', serv: '200g', cal: 412, pro: 50, carb: 0, fat: 22, cat: 'protein' },
-  { name: 'Lean Beef Mince', serv: '150g', cal: 322, pro: 32, carb: 0, fat: 21, cat: 'protein' },
-  { name: 'Pork Loin', serv: '150g', cal: 248, pro: 41, carb: 0, fat: 8, cat: 'protein' },
+  { name: 'Cod Fillet (raw)', serv: '150g', cal: 112, pro: 24, carb: 0, fat: 1, cat: 'protein' },
+  { name: 'Cod Fillet (cooked)', serv: '150g', cal: 126, pro: 28, carb: 0, fat: 1, cat: 'protein' },
+  { name: 'Prawns (raw)', serv: '150g', cal: 128, pro: 28, carb: 1, fat: 1, cat: 'protein' },
+  { name: 'Prawns (cooked)', serv: '150g', cal: 150, pro: 33, carb: 1, fat: 2, cat: 'protein' },
+  { name: 'Steak Sirloin (raw)', serv: '200g', cal: 340, pro: 42, carb: 0, fat: 18, cat: 'protein' },
+  { name: 'Steak Sirloin (cooked)', serv: '200g', cal: 412, pro: 50, carb: 0, fat: 22, cat: 'protein' },
+  { name: 'Lean Beef Mince (raw)', serv: '150g', cal: 255, pro: 31, carb: 0, fat: 14, cat: 'protein' },
+  { name: 'Lean Beef Mince (cooked)', serv: '150g', cal: 322, pro: 32, carb: 0, fat: 21, cat: 'protein' },
+  { name: 'Pork Loin (raw)', serv: '150g', cal: 206, pro: 34, carb: 0, fat: 7, cat: 'protein' },
+  { name: 'Pork Loin (cooked)', serv: '150g', cal: 248, pro: 41, carb: 0, fat: 8, cat: 'protein' },
   { name: 'Eggs', serv: '× 3', cal: 234, pro: 19, carb: 2, fat: 16, cat: 'protein' },
   { name: 'Egg Whites', serv: '× 4', cal: 68, pro: 14, carb: 1, fat: 0, cat: 'protein' },
   { name: 'Whey Protein Shake', serv: '1 scoop', cal: 120, pro: 24, carb: 3, fat: 1, cat: 'protein' },
@@ -5504,28 +5741,42 @@ const FOOD_DB = [
   { name: 'Whole Milk', serv: '250ml', cal: 160, pro: 8, carb: 12, fat: 9, cat: 'dairy' },
   { name: 'Skimmed Milk', serv: '250ml', cal: 88, pro: 9, carb: 13, fat: 0, cat: 'dairy' },
   { name: 'Cheddar Cheese', serv: '30g', cal: 122, pro: 8, carb: 0, fat: 10, cat: 'dairy' },
-  // Carb sources
-  { name: 'White Rice', serv: '200g cooked', cal: 260, pro: 5, carb: 57, fat: 1, cat: 'carbs' },
-  { name: 'Brown Rice', serv: '200g cooked', cal: 248, pro: 6, carb: 52, fat: 2, cat: 'carbs' },
-  { name: 'Pasta', serv: '200g cooked', cal: 262, pro: 9, carb: 50, fat: 2, cat: 'carbs' },
-  { name: 'Sweet Potato', serv: '200g', cal: 172, pro: 3, carb: 40, fat: 0, cat: 'carbs' },
-  { name: 'White Potato', serv: '200g', cal: 154, pro: 4, carb: 35, fat: 0, cat: 'carbs' },
-  { name: 'Oats', serv: '80g dry', cal: 303, pro: 11, carb: 51, fat: 6, cat: 'carbs' },
+  // Carb sources — dry = weighed before cooking, cooked = weighed after
+  { name: 'White Rice (dry)', serv: '75g', cal: 270, pro: 5, carb: 60, fat: 1, cat: 'carbs' },
+  { name: 'White Rice (cooked)', serv: '200g', cal: 260, pro: 5, carb: 57, fat: 1, cat: 'carbs' },
+  { name: 'Brown Rice (dry)', serv: '75g', cal: 268, pro: 6, carb: 56, fat: 2, cat: 'carbs' },
+  { name: 'Brown Rice (cooked)', serv: '200g', cal: 248, pro: 6, carb: 52, fat: 2, cat: 'carbs' },
+  { name: 'Pasta (dry)', serv: '75g', cal: 263, pro: 9, carb: 52, fat: 2, cat: 'carbs' },
+  { name: 'Pasta (cooked)', serv: '200g', cal: 262, pro: 9, carb: 50, fat: 2, cat: 'carbs' },
+  { name: 'Sweet Potato (raw)', serv: '200g', cal: 172, pro: 3, carb: 40, fat: 0, cat: 'carbs' },
+  { name: 'Sweet Potato (cooked)', serv: '200g', cal: 180, pro: 3, carb: 42, fat: 0, cat: 'carbs' },
+  { name: 'White Potato (raw)', serv: '200g', cal: 154, pro: 4, carb: 35, fat: 0, cat: 'carbs' },
+  { name: 'White Potato (cooked)', serv: '200g', cal: 172, pro: 4, carb: 40, fat: 0, cat: 'carbs' },
+  { name: 'Oats (dry)', serv: '80g', cal: 303, pro: 11, carb: 51, fat: 6, cat: 'carbs' },
+  { name: 'Oats (cooked)', serv: '250g', cal: 158, pro: 6, carb: 27, fat: 3, cat: 'carbs' },
   { name: 'Bread (2 slices)', serv: '80g', cal: 192, pro: 7, carb: 36, fat: 2, cat: 'carbs' },
   { name: 'Bagel', serv: '1 large', cal: 270, pro: 10, carb: 53, fat: 2, cat: 'carbs' },
   { name: 'Wrap / Tortilla', serv: '1 large', cal: 220, pro: 6, carb: 36, fat: 6, cat: 'carbs' },
-  { name: 'Couscous', serv: '200g cooked', cal: 232, pro: 8, carb: 46, fat: 1, cat: 'carbs' },
+  { name: 'Couscous (dry)', serv: '60g', cal: 219, pro: 8, carb: 43, fat: 1, cat: 'carbs' },
+  { name: 'Couscous (cooked)', serv: '200g', cal: 232, pro: 8, carb: 46, fat: 1, cat: 'carbs' },
+  { name: 'Quinoa (dry)', serv: '60g', cal: 222, pro: 8, carb: 36, fat: 4, cat: 'carbs' },
+  { name: 'Quinoa (cooked)', serv: '185g', cal: 222, pro: 8, carb: 36, fat: 4, cat: 'carbs' },
+  { name: 'Lentils (dry)', serv: '80g', cal: 272, pro: 20, carb: 48, fat: 1, cat: 'carbs' },
+  { name: 'Lentils (cooked)', serv: '200g', cal: 230, pro: 18, carb: 40, fat: 1, cat: 'carbs' },
   // Fruit
   { name: 'Banana', serv: '1 medium', cal: 105, pro: 1, carb: 27, fat: 0, cat: 'fruit' },
   { name: 'Apple', serv: '1 medium', cal: 95, pro: 0, carb: 25, fat: 0, cat: 'fruit' },
   { name: 'Blueberries', serv: '100g', cal: 57, pro: 1, carb: 14, fat: 0, cat: 'fruit' },
   { name: 'Strawberries', serv: '150g', cal: 48, pro: 1, carb: 12, fat: 0, cat: 'fruit' },
   { name: 'Orange', serv: '1 medium', cal: 62, pro: 1, carb: 15, fat: 0, cat: 'fruit' },
-  // Veg
-  { name: 'Broccoli', serv: '150g', cal: 51, pro: 4, carb: 7, fat: 1, cat: 'veg' },
-  { name: 'Spinach', serv: '100g', cal: 23, pro: 3, carb: 4, fat: 0, cat: 'veg' },
+  // Veg — raw vs cooked where relevant
+  { name: 'Broccoli (raw)', serv: '150g', cal: 51, pro: 4, carb: 10, fat: 1, cat: 'veg' },
+  { name: 'Broccoli (cooked)', serv: '150g', cal: 53, pro: 4, carb: 7, fat: 1, cat: 'veg' },
+  { name: 'Spinach (raw)', serv: '100g', cal: 23, pro: 3, carb: 4, fat: 0, cat: 'veg' },
+  { name: 'Spinach (cooked)', serv: '100g', cal: 23, pro: 3, carb: 4, fat: 0, cat: 'veg' },
   { name: 'Mixed Salad', serv: '100g', cal: 20, pro: 1, carb: 4, fat: 0, cat: 'veg' },
-  { name: 'Green Beans', serv: '150g', cal: 47, pro: 3, carb: 10, fat: 0, cat: 'veg' },
+  { name: 'Green Beans (raw)', serv: '150g', cal: 47, pro: 3, carb: 10, fat: 0, cat: 'veg' },
+  { name: 'Green Beans (cooked)', serv: '150g', cal: 53, pro: 3, carb: 10, fat: 0, cat: 'veg' },
   { name: 'Peppers', serv: '150g', cal: 46, pro: 1, carb: 9, fat: 0, cat: 'veg' },
   // Fats & nuts
   { name: 'Avocado', serv: 'half', cal: 161, pro: 2, carb: 9, fat: 15, cat: 'fats' },
@@ -5845,8 +6096,10 @@ function buildWeightGraph(points) {
   const gh = H - pad.top - pad.bottom;
 
   const weights = points.map(p => p.weight);
-  const minW = Math.min(...weights) - 0.3;
-  const maxW = Math.max(...weights) + 0.3;
+  const goalW = data.weightGoal || null;
+  const allWeights = goalW ? [...weights, goalW] : weights;
+  const minW = Math.min(...allWeights) - 0.3;
+  const maxW = Math.max(...allWeights) + 0.3;
   const rangeW = maxW - minW || 1;
 
   const dates = points.map(p => new Date(p.date + 'T12:00:00').getTime());
@@ -5879,6 +6132,7 @@ function buildWeightGraph(points) {
       <span class="weight-graph-y" style="top:${2}px">${maxW.toFixed(1)}</span>
       <span class="weight-graph-y" style="top:${60}px">${midW.toFixed(1)}</span>
       <span class="weight-graph-y" style="bottom:${6}px">${minW.toFixed(1)}</span>
+      ${goalW ? `<span class="weight-graph-y" style="top:${((1 - (goalW - minW) / rangeW) * 100 * 0.76 + 10).toFixed(0)}px;color:var(--accent);font-weight:600;">Goal</span>` : ''}
       <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
         <defs>
           <linearGradient id="graphGradient" x1="0" x2="0" y1="0" y2="1">
@@ -5891,6 +6145,7 @@ function buildWeightGraph(points) {
         <line x1="${pad.left}" y1="${yMax}" x2="${W - pad.right}" y2="${yMax}" class="weight-graph-gridline"/>
         <path d="${areaPath}" class="weight-graph-area"/>
         <path d="${linePath}" class="weight-graph-line"/>
+        ${goalW ? `<line x1="${pad.left}" y1="${(pad.top + gh - ((goalW - minW) / rangeW * gh)).toFixed(1)}" x2="${W - pad.right}" y2="${(pad.top + gh - ((goalW - minW) / rangeW * gh)).toFixed(1)}" stroke="var(--accent)" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.6"/>` : ''}
         ${dots}
       </svg>
     </div>
