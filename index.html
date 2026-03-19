@@ -3453,9 +3453,46 @@ function getExerciseLastSession(exerciseName) {
   return null;
 }
 
+/* Equipment type detection — keyword based */
+function getEquipmentType(name) {
+  const n = name.toLowerCase();
+  const barbellKeywords = ['squat', 'bench press', 'deadlift', 'overhead press', 'barbell row', 'rdl', 'hip thrust', 'barbell', 'ohp', 'power clean', 'snatch', 'clean and'];
+  const dumbbellKeywords = ['dumbbell', 'db '];
+  if (barbellKeywords.some(b => n.includes(b))) return 'barbell';
+  if (dumbbellKeywords.some(b => n.includes(b))) return 'dumbbell';
+  return null;
+}
+function isBarbell(name) { return getEquipmentType(name) === 'barbell'; }
+
+/* Bar weight options */
+function getBarWeightOptions() {
+  return data.weightUnit === 'lbs' ? [45, 35, 25, 15] : [20, 15, 10, 7];
+}
+function getBarWeight() {
+  const options = getBarWeightOptions();
+  const saved = data.barWeight;
+  return (saved && options.includes(saved)) ? saved : options[0];
+}
+function cycleBarWeight() {
+  const options = getBarWeightOptions();
+  const current = getBarWeight();
+  const idx = options.indexOf(current);
+  data.barWeight = options[(idx + 1) % options.length];
+  save();
+  // Update plate calc dynamically
+  if (workout) {
+    const ex = workout.exercises[workout.currentExerciseIndex];
+    const plateEl = document.getElementById('dynamic-plate-calc');
+    if (plateEl && isBarbell(ex.name)) {
+      const newHtml = buildPlateHtml(ex.currentWeight, 'centered');
+      if (newHtml) plateEl.outerHTML = newHtml;
+    }
+  }
+}
+
 /* Plate calculator — returns plates per side for a total weight */
 function calcPlates(totalWeight) {
-  const barWeight = data.weightUnit === 'lbs' ? 45 : 20;
+  const barWeight = getBarWeight();
   const plates = data.weightUnit === 'lbs'
     ? [45, 35, 25, 10, 5, 2.5]
     : [25, 20, 15, 10, 5, 2.5, 1.25];
@@ -3471,28 +3508,47 @@ function calcPlates(totalWeight) {
   return { bar: barWeight, perSide: result, remainder: Math.round(perSide * 100) / 100 };
 }
 
-/* Build plate calculator HTML for a given weight */
-function buildPlateHtml(weight, style) {
+/* Build weight info HTML — plate calc for barbells, per-dumbbell for dumbbells */
+function buildWeightInfoHtml(exerciseName, weight, style) {
   if (!weight || weight <= 0) return '';
-  const plateResult = calcPlates(weight);
-  if (plateResult.perSide.length === 0) return '';
-  const grouped = {};
-  plateResult.perSide.forEach(p => { grouped[p] = (grouped[p] || 0) + 1; });
-  const chips = Object.entries(grouped)
-    .map(([size, count]) => {
-      const cls = 'plate-' + String(size).replace('.', '-');
-      return `<span class="plate ${cls}">${count > 1 ? count + '\u00d7' : ''}${size}</span>`;
-    }).join('');
-  const barLabel = data.weightUnit === 'lbs' ? '45lb bar' : '20kg bar';
+  const eqType = getEquipmentType(exerciseName);
+  const unit = weightLabel();
   const s = style === 'centered' ? 'justify-content:center;padding:12px 0 0;border:none;' : '';
-  return `<div class="plate-calc" id="dynamic-plate-calc" style="${s}">${chips}<span class="plate-label">per side \u00b7 ${barLabel}</span></div>`;
+
+  if (eqType === 'dumbbell') {
+    const perDb = weight / 2;
+    const displayVal = perDb % 1 === 0 ? perDb : perDb.toFixed(1);
+    return `<div class="plate-calc" id="dynamic-plate-calc" style="${s}"><span class="plate-label">${displayVal}${unit} per dumbbell</span></div>`;
+  }
+
+  if (eqType === 'barbell') {
+    const plateResult = calcPlates(weight);
+    if (plateResult.perSide.length === 0) {
+      const bw = getBarWeight();
+      if (weight <= bw) {
+        return `<div class="plate-calc" id="dynamic-plate-calc" style="${s}"><span class="plate-label" onclick="cycleBarWeight()" style="cursor:pointer;">${bw}${unit} bar only \u270E</span></div>`;
+      }
+      return '';
+    }
+    const grouped = {};
+    plateResult.perSide.forEach(p => { grouped[p] = (grouped[p] || 0) + 1; });
+    const chips = Object.entries(grouped)
+      .map(([size, count]) => {
+        const cls = 'plate-' + String(size).replace('.', '-');
+        return `<span class="plate ${cls}">${count > 1 ? count + '\u00d7' : ''}${size}</span>`;
+      }).join('');
+    const bw = getBarWeight();
+    return `<div class="plate-calc" id="dynamic-plate-calc" style="${s}">${chips}<span class="plate-label">per side \u00b7 <span onclick="cycleBarWeight()" style="cursor:pointer;text-decoration:underline;text-decoration-style:dotted;">${bw}${unit} bar</span></span></div>`;
+  }
+
+  return '';
 }
 
-/* Check if exercise is a barbell compound lift (for plate calculator) */
-function isBarbell(name) {
-  const n = name.toLowerCase();
-  const barbell = ['squat', 'bench press', 'deadlift', 'overhead press', 'barbell row', 'rdl', 'hip thrust', 'barbell'];
-  return barbell.some(b => n.includes(b));
+/* Legacy wrapper */
+function buildPlateHtml(weight, style) {
+  if (!workout) return buildWeightInfoHtml('barbell', weight, style);
+  const ex = workout.exercises[workout.currentExerciseIndex];
+  return buildWeightInfoHtml(ex.name, weight, style);
 }
 
 /* Toggle progressive overload detail below a preview exercise row */
@@ -4353,7 +4409,7 @@ function showPreview() {
     const weightStr = w ? ` @ ${displayWeight(w)}${weightLabel()}` : '';
     const hasHistory = getExerciseLastSession(ex.name);
     const chevron = hasHistory ? `<span class="preview-chevron" onclick="togglePreviewDetail('${ex.name}', this)">&#9662;</span>` : '';
-    const plateHtml = (w && isBarbell(ex.name)) ? buildPlateHtml(w) : '';
+    const plateHtml = w ? buildWeightInfoHtml(ex.name, w) : '';
     return `
     <div class="preview-exercise fade-in stagger-${Math.min(i + 1, 5)}">
       <span class="name">${ex.name}</span>
@@ -4555,8 +4611,8 @@ function renderExercise() {
       prepWeightHtml = `<div class="prep-target">${ex.targetSets} × ${ex.targetReps} reps</div>`;
     }
 
-    // Plate calculator for barbell compound lifts
-    const prepPlateHtml = (!ex.isBodyweight && isBarbell(ex.name)) ? buildPlateHtml(ex.currentWeight, 'centered') : '';
+    // Weight info (plate calc for barbells, per-dumbbell for dumbbells)
+    const prepPlateHtml = !ex.isBodyweight ? buildWeightInfoHtml(ex.name, ex.currentWeight, 'centered') : '';
 
     bodyEl.innerHTML = `
       ${typeBadge}
@@ -4585,8 +4641,8 @@ function renderExercise() {
     notesHtml = `<div class="note-toggle" onclick="toggleWorkoutNotes()">\u{1F4DD} Add note <span class="note-chevron">\u25B8</span></div>`;
   }
 
-  // Plate calc for tracking screen
-  const trackPlateHtml = (!ex.isBodyweight && isBarbell(ex.name)) ? buildPlateHtml(ex.currentWeight, 'centered') : '';
+  // Weight info for tracking screen (plates or per-dumbbell)
+  const trackPlateHtml = !ex.isBodyweight ? buildWeightInfoHtml(ex.name, ex.currentWeight, 'centered') : '';
 
   bodyEl.innerHTML = `
     ${typeBadge}
@@ -4642,20 +4698,20 @@ function adjustWeight(delta) {
   const el = document.querySelector('.weight-display');
   if (el) el.textContent = displayWeight(ex.currentWeight);
 
-  // Update plate calculator dynamically
+  // Update weight info dynamically (plate calc or per-dumbbell)
   const plateEl = document.getElementById('dynamic-plate-calc');
-  if (isBarbell(ex.name)) {
-    const newPlateHtml = buildPlateHtml(ex.currentWeight, 'centered');
+  const eqType = getEquipmentType(ex.name);
+  if (eqType) {
+    const newHtml = buildWeightInfoHtml(ex.name, ex.currentWeight, 'centered');
     if (plateEl) {
-      if (newPlateHtml) {
-        plateEl.outerHTML = newPlateHtml;
+      if (newHtml) {
+        plateEl.outerHTML = newHtml;
       } else {
         plateEl.remove();
       }
-    } else if (newPlateHtml) {
-      // Insert after weight adjuster
+    } else if (newHtml) {
       const adjuster = document.querySelector('.weight-adjuster');
-      if (adjuster) adjuster.insertAdjacentHTML('afterend', newPlateHtml);
+      if (adjuster) adjuster.insertAdjacentHTML('afterend', newHtml);
     }
   }
 
