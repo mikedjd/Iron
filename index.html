@@ -2498,6 +2498,12 @@
       from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
     }
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: scale(0.8); }
+      30% { opacity: 1; transform: scale(1.05); }
+      70% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(0.95); }
+    }
     .stagger-1 { animation-delay: 0.05s; }
     .stagger-2 { animation-delay: 0.1s; }
     .stagger-3 { animation-delay: 0.15s; }
@@ -3116,11 +3122,24 @@ const PROGRAMS = {
   ]
 };
 
+function isCompound(name) {
+  const n = name.toLowerCase();
+  const compounds = ['squat', 'bench press', 'deadlift', 'overhead press', 'barbell row', 'rdl', 'hip thrust',
+    'power clean', 'snatch', 'clean and', 'pull up', 'pull-up', 'chin up', 'chin-up', 'dip',
+    'leg press', 'lunge', 'romanian', 'front squat', 'incline press', 'military press',
+    'pendlay row', 't-bar row', 'seated row', 'lat pulldown'];
+  return compounds.some(c => n.includes(c));
+}
+
 function getRestDuration() {
   // Per-exercise rest overrides global default
   if (workout) {
     const ex = workout.exercises[workout.currentExerciseIndex];
     if (ex && ex.restDuration) return ex.restDuration;
+    // Compound vs isolation rest
+    if (ex && data.restDurationIsolation) {
+      return isCompound(ex.name) ? (data.restDuration || 120) : data.restDurationIsolation;
+    }
   }
   return (data && data.restDuration) || 90;
 }
@@ -4716,7 +4735,7 @@ function renderExercise() {
       <div class="weight-adjuster">
         <button class="weight-adj-btn" onclick="adjustWeight(-1)">−</button>
         <div style="text-align:center">
-          <div class="weight-display">${displayWeight(ex.currentWeight)}</div>
+          <div class="weight-display" onclick="tapToEditWeight()" style="cursor:pointer;">${displayWeight(ex.currentWeight)}</div>
           <div class="weight-display-label">${weightLabel()}</div>
           ${progBadge}
         </div>
@@ -4778,6 +4797,11 @@ function renderExercise() {
   }
 
   // ── PREP SCREEN: show before first set of a new exercise ──
+  // Skip prep screen if user disabled it (but still set exerciseReady)
+  if (!workout.exerciseReady && currentSet === 1 && data.showPrepScreen === false) {
+    workout.exerciseReady = true;
+    saveWorkoutState();
+  }
   if (!workout.exerciseReady && currentSet === 1) {
     const prepNoteDisplay = ex.notes
       ? `<div class="prep-note">${ex.notes}</div>`
@@ -4847,7 +4871,7 @@ function renderExercise() {
     <div class="rep-adjuster">
       <button class="rep-btn" onclick="adjustReps(-1)">−</button>
       <div style="text-align:center">
-        <div class="rep-count">${ex.currentReps}</div>
+        <div class="rep-count" onclick="tapToEditReps()" style="cursor:pointer;">${ex.currentReps}</div>
         <div class="rep-label">reps</div>
       </div>
       <button class="rep-btn" onclick="adjustReps(1)">+</button>
@@ -4858,17 +4882,19 @@ function renderExercise() {
       <button class="skip-btn" onclick="skipSet()">Skip Set</button>
       <button class="add-set-btn" onclick="addSetDuringWorkout()">+ Set</button>
     </div>
+    ${workout.exercises.length > workout.currentExerciseIndex + 1 && ex.completedSets.length === 0 ? `<button class="skip-btn" onclick="showSwapExercise()" style="margin-top:8px;width:100%;font-size:12px;">↕ Swap Exercise</button>` : ''}
   `;
 
   // Up next
   const remaining = workout.exercises.slice(workout.currentExerciseIndex + 1, workout.currentExerciseIndex + 3);
   if (remaining.length > 0) {
     upnextEl.innerHTML = `
-      <div class="up-next-label">Up next</div>
-      ${remaining.map(e => {
+      <div class="up-next-label">Up next <span style="font-size:10px;color:var(--text-3);font-weight:400;text-transform:none;letter-spacing:0;">(tap to swap)</span></div>
+      ${remaining.map((e, ri) => {
         const wStr = e.currentWeight ? ` @ ${displayWeight(e.currentWeight)}` : '';
+        const swapIdx = workout.currentExerciseIndex + 1 + ri;
         return `
-        <div class="up-next-item">
+        <div class="up-next-item" onclick="swapExercise(${swapIdx})" style="cursor:pointer;"
           <span class="name">${e.name}</span>
           <span class="info">${e.targetSets} × ${e.targetReps}${wStr}</span>
         </div>`;
@@ -4878,6 +4904,32 @@ function renderExercise() {
   } else {
     upnextEl.innerHTML = `<div class="up-next-label" style="text-align:center;color:var(--accent);">Final exercise</div>`;
   }
+}
+
+function tapToEditWeight() {
+  if (!workout) return;
+  const ex = workout.exercises[workout.currentExerciseIndex];
+  const val = prompt('Enter weight:', ex.currentWeight || 0);
+  if (val === null) return;
+  const num = parseFloat(val);
+  if (isNaN(num) || num < 0) return;
+  const inc = weightIncrement();
+  ex.currentWeight = Math.round(num / inc) * inc;
+  ex.progressionBadge = null;
+  saveWorkoutState();
+  renderExercise();
+}
+
+function tapToEditReps() {
+  if (!workout) return;
+  const ex = workout.exercises[workout.currentExerciseIndex];
+  const val = prompt('Enter reps:', ex.currentReps || 1);
+  if (val === null) return;
+  const num = parseInt(val);
+  if (isNaN(num) || num < 1) return;
+  ex.currentReps = num;
+  saveWorkoutState();
+  renderExercise();
 }
 
 function adjustWeight(delta) {
@@ -5038,6 +5090,13 @@ function skipSet() {
   if (timerEl) timerEl.classList.remove('active');
   const ex = workout.exercises[workout.currentExerciseIndex];
 
+  // Show skip feedback overlay
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);pointer-events:none;';
+  overlay.innerHTML = '<div style="font-family:Teko,sans-serif;font-size:36px;font-weight:700;color:#ff9f0a;text-transform:uppercase;letter-spacing:0.1em;animation:fadeInOut 0.8s ease forwards;">Set Skipped</div>';
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.remove(), 800);
+
   // Log skipped set
   ex.completedSets.push({ reps: 0, weight: ex.currentWeight, skipped: true });
 
@@ -5076,6 +5135,41 @@ function skipSet() {
   } else {
     saveWorkoutState(); renderExercise();
   }
+}
+
+function swapExercise(targetIdx) {
+  if (!workout || targetIdx <= workout.currentExerciseIndex || targetIdx >= workout.exercises.length) return;
+  const currentIdx = workout.currentExerciseIndex;
+  const temp = workout.exercises[currentIdx];
+  workout.exercises[currentIdx] = workout.exercises[targetIdx];
+  workout.exercises[targetIdx] = temp;
+  workout.exerciseReady = false;
+  saveWorkoutState();
+  renderExercise();
+}
+
+function showSwapExercise() {
+  if (!workout) return;
+  const remaining = workout.exercises.slice(workout.currentExerciseIndex + 1);
+  if (remaining.length === 0) return;
+  const bodyEl = document.getElementById('workout-body');
+  const upnextEl = document.getElementById('workout-upnext');
+  bodyEl.innerHTML = `
+    <div class="exercise-label" style="color:var(--text-3);">Swap with...</div>
+    <div class="exercise-name" style="font-size:24px;">${workout.exercises[workout.currentExerciseIndex].name}</div>
+    <div style="margin-top:24px;">
+      ${remaining.map((e, i) => {
+        const idx = workout.currentExerciseIndex + 1 + i;
+        const wStr = e.currentWeight ? ` @ ${displayWeight(e.currentWeight)}` : '';
+        return `<button onclick="swapExercise(${idx})" style="display:flex;justify-content:space-between;align-items:center;width:100%;padding:14px 16px;margin-bottom:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;text-align:left;">
+          <span>${e.name}</span>
+          <span style="color:var(--text-3);font-size:13px;">${e.targetSets}×${e.targetReps}${wStr}</span>
+        </button>`;
+      }).join('')}
+    </div>
+    <button class="skip-btn" onclick="renderExercise()" style="margin-top:12px;">Cancel</button>
+  `;
+  upnextEl.style.display = 'none';
 }
 
 function adjustReps(delta) {
@@ -5253,11 +5347,41 @@ function startRestTimer(onComplete, duration) {
     if (remaining <= 0) {
       clearInterval(timerInterval);
       timerInterval = null;
+      // Audio + vibration alert
+      playRestDoneAlert();
       saveSetFeedback();
       timerScreen.classList.remove('active');
       if (window._timerCallback) window._timerCallback();
     }
   }, 100);
+}
+
+function playRestDoneAlert() {
+  // Vibration (3 short pulses)
+  if (navigator.vibrate) {
+    navigator.vibrate([200, 100, 200, 100, 200]);
+  }
+  // Audio beep using Web Audio API (no external files needed)
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const playBeep = (freq, startTime, duration) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.3, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+    const now = ctx.currentTime;
+    playBeep(880, now, 0.15);
+    playBeep(880, now + 0.2, 0.15);
+    playBeep(1100, now + 0.4, 0.25);
+    setTimeout(() => ctx.close(), 1000);
+  } catch (e) { /* audio not supported */ }
 }
 
 function saveSetFeedback() {
@@ -5307,6 +5431,7 @@ function adjustRest(seconds) {
     if (remaining <= 0) {
       clearInterval(timerInterval);
       timerInterval = null;
+      playRestDoneAlert();
       saveSetFeedback();
       document.getElementById('timer-screen').classList.remove('active');
       if (window._timerCallback) window._timerCallback();
@@ -7200,13 +7325,6 @@ function renderBuild() {
       </div>
       ${getRecoveryWarning()}
       <div class="divider"></div>
-      <span class="label">Rest Timer</span>
-      <div class="mt-8" style="display:flex;align-items:center;gap:12px;">
-        <button class="timer-adj-btn" onclick="changeRestDuration(-15)">−15s</button>
-        <span style="font-family:'Teko',sans-serif;font-size:22px;font-weight:600;color:var(--text);min-width:50px;text-align:center;" id="rest-duration-display">${data.restDuration || 90}s</span>
-        <button class="timer-adj-btn" onclick="changeRestDuration(15)">+15s</button>
-      </div>
-      <div class="divider"></div>
       <span class="label">This Week</span>
       <div class="week-row mt-8">
         ${buildWeeklyPreview()}
@@ -7307,12 +7425,20 @@ function toggleTrainingDay(day) {
   renderBuildSafe();
 }
 
-function changeRestDuration(delta) {
-  const current = data.restDuration || 90;
-  data.restDuration = Math.max(15, Math.min(300, current + delta));
-  save();
-  const display = document.getElementById('rest-duration-display');
-  if (display) display.textContent = data.restDuration + 's';
+function changeRestDuration(delta, type) {
+  if (type === 'isolation') {
+    const current = data.restDurationIsolation || 60;
+    data.restDurationIsolation = Math.max(15, Math.min(300, current + delta));
+    save();
+    const display = document.getElementById('rest-duration-isolation');
+    if (display) display.textContent = data.restDurationIsolation + 's';
+  } else {
+    const current = data.restDuration || 120;
+    data.restDuration = Math.max(15, Math.min(300, current + delta));
+    save();
+    const display = document.getElementById('rest-duration-display');
+    if (display) display.textContent = data.restDuration + 's';
+  }
 }
 
 function selectSplit(presetKey) {
@@ -7491,6 +7617,36 @@ function renderSettings() {
         ${getWarmupSteps().length < 5 ? `<button class="btn btn-ghost" onclick="addWarmupStep();renderSettings()" style="font-size:12px;">+ Add Set</button>` : ''}
         ${data.warmupSteps ? `<button class="btn btn-ghost" onclick="resetWarmupSteps();renderSettings()" style="font-size:12px;opacity:0.6;">Reset</button>` : ''}
       </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <span class="label">Rest Timer</span>
+      <p class="text-xs text-dim mt-8">Compounds (squat, bench, deadlift, etc.) typically need longer rest than isolation exercises.</p>
+      <div class="divider"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <span class="text-sm" style="color:var(--text-2);">Compound</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button class="timer-adj-btn" onclick="changeRestDuration(-15);renderSettings()">−15s</button>
+          <span style="font-family:'Teko',sans-serif;font-size:22px;font-weight:600;color:var(--text);min-width:50px;text-align:center;" id="rest-duration-display">${data.restDuration || 120}s</span>
+          <button class="timer-adj-btn" onclick="changeRestDuration(15);renderSettings()">+15s</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="text-sm" style="color:var(--text-2);">Isolation</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button class="timer-adj-btn" onclick="changeRestDuration(-15,'isolation');renderSettings()">−15s</button>
+          <span style="font-family:'Teko',sans-serif;font-size:22px;font-weight:600;color:var(--text);min-width:50px;text-align:center;" id="rest-duration-isolation">${data.restDurationIsolation || 60}s</span>
+          <button class="timer-adj-btn" onclick="changeRestDuration(15,'isolation');renderSettings()">+15s</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div class="toggle-row" style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="text-sm">Show prep screen</span>
+        <button class="toggle ${data.showPrepScreen !== false ? 'on' : ''}" onclick="data.showPrepScreen=!(data.showPrepScreen!==false);save();renderSettings()"></button>
+      </div>
+      <p class="text-xs text-dim mt-8">Show exercise details before each new exercise. Turn off to jump straight into sets.</p>
     </div>
 
     ${notifSupported ? `
