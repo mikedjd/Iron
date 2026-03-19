@@ -3471,6 +3471,23 @@ function calcPlates(totalWeight) {
   return { bar: barWeight, perSide: result, remainder: Math.round(perSide * 100) / 100 };
 }
 
+/* Build plate calculator HTML for a given weight */
+function buildPlateHtml(weight, style) {
+  if (!weight || weight <= 0) return '';
+  const plateResult = calcPlates(weight);
+  if (plateResult.perSide.length === 0) return '';
+  const grouped = {};
+  plateResult.perSide.forEach(p => { grouped[p] = (grouped[p] || 0) + 1; });
+  const chips = Object.entries(grouped)
+    .map(([size, count]) => {
+      const cls = 'plate-' + String(size).replace('.', '-');
+      return `<span class="plate ${cls}">${count > 1 ? count + '\u00d7' : ''}${size}</span>`;
+    }).join('');
+  const barLabel = data.weightUnit === 'lbs' ? '45lb bar' : '20kg bar';
+  const s = style === 'centered' ? 'justify-content:center;padding:12px 0 0;border:none;' : '';
+  return `<div class="plate-calc" id="dynamic-plate-calc" style="${s}">${chips}<span class="plate-label">per side \u00b7 ${barLabel}</span></div>`;
+}
+
 /* Check if exercise is a barbell compound lift (for plate calculator) */
 function isBarbell(name) {
   const n = name.toLowerCase();
@@ -4336,21 +4353,7 @@ function showPreview() {
     const weightStr = w ? ` @ ${displayWeight(w)}${weightLabel()}` : '';
     const hasHistory = getExerciseLastSession(ex.name);
     const chevron = hasHistory ? `<span class="preview-chevron" onclick="togglePreviewDetail('${ex.name}', this)">&#9662;</span>` : '';
-    let plateHtml = '';
-    if (w && isBarbell(ex.name)) {
-      const result = calcPlates(w);
-      const unit = weightLabel();
-      if (result.perSide.length > 0) {
-        const grouped = {};
-        result.perSide.forEach(p => { grouped[p] = (grouped[p] || 0) + 1; });
-        const chips = Object.entries(grouped)
-          .map(([size, count]) => {
-            const cls = 'plate-' + String(size).replace('.', '-');
-            return `<span class="plate ${cls}">${count > 1 ? count + '×' : ''}${size}</span>`;
-          }).join('');
-        plateHtml = `<div class="plate-calc">${chips}<span class="plate-label">per side</span></div>`;
-      }
-    }
+    const plateHtml = (w && isBarbell(ex.name)) ? buildPlateHtml(w) : '';
     return `
     <div class="preview-exercise fade-in stagger-${Math.min(i + 1, 5)}">
       <span class="name">${ex.name}</span>
@@ -4553,21 +4556,7 @@ function renderExercise() {
     }
 
     // Plate calculator for barbell compound lifts
-    let prepPlateHtml = '';
-    if (!ex.isBodyweight && ex.currentWeight && isBarbell(ex.name)) {
-      const plateResult = calcPlates(ex.currentWeight);
-      if (plateResult.perSide.length > 0) {
-        const grouped = {};
-        plateResult.perSide.forEach(p => { grouped[p] = (grouped[p] || 0) + 1; });
-        const chips = Object.entries(grouped)
-          .map(([size, count]) => {
-            const cls = 'plate-' + String(size).replace('.', '-');
-            return `<span class="plate ${cls}">${count > 1 ? count + '×' : ''}${size}</span>`;
-          }).join('');
-        const barLabel = data.weightUnit === 'lbs' ? '45lb bar' : '20kg bar';
-        prepPlateHtml = `<div class="plate-calc" style="justify-content:center;padding:12px 0 0;border:none;">${chips}<span class="plate-label">per side · ${barLabel}</span></div>`;
-      }
-    }
+    const prepPlateHtml = (!ex.isBodyweight && isBarbell(ex.name)) ? buildPlateHtml(ex.currentWeight, 'centered') : '';
 
     bodyEl.innerHTML = `
       ${typeBadge}
@@ -4596,12 +4585,16 @@ function renderExercise() {
     notesHtml = `<div class="note-toggle" onclick="toggleWorkoutNotes()">\u{1F4DD} Add note <span class="note-chevron">\u25B8</span></div>`;
   }
 
+  // Plate calc for tracking screen
+  const trackPlateHtml = (!ex.isBodyweight && isBarbell(ex.name)) ? buildPlateHtml(ex.currentWeight, 'centered') : '';
+
   bodyEl.innerHTML = `
     ${typeBadge}
     <div class="exercise-label">Exercise ${workout.currentExerciseIndex + 1} of ${totalExercises}</div>
     <div class="exercise-name">${ex.name}</div>
     ${notesHtml}
     ${weightHtml}
+    ${trackPlateHtml}
     <div class="set-indicator">${setLabel}</div>
     <div class="rep-adjuster">
       <button class="rep-btn" onclick="adjustReps(-1)">−</button>
@@ -4648,6 +4641,23 @@ function adjustWeight(delta) {
   saveWorkoutState();
   const el = document.querySelector('.weight-display');
   if (el) el.textContent = displayWeight(ex.currentWeight);
+
+  // Update plate calculator dynamically
+  const plateEl = document.getElementById('dynamic-plate-calc');
+  if (isBarbell(ex.name)) {
+    const newPlateHtml = buildPlateHtml(ex.currentWeight, 'centered');
+    if (plateEl) {
+      if (newPlateHtml) {
+        plateEl.outerHTML = newPlateHtml;
+      } else {
+        plateEl.remove();
+      }
+    } else if (newPlateHtml) {
+      // Insert after weight adjuster
+      const adjuster = document.querySelector('.weight-adjuster');
+      if (adjuster) adjuster.insertAdjacentHTML('afterend', newPlateHtml);
+    }
+  }
 
   // Warning if weight increased >10% above session start
   if (ex.startWeight && ex.startWeight > 0) {
