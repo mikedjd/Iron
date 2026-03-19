@@ -6961,7 +6961,7 @@ function renderBuild() {
           const isPreviewing = data['_splitPreview_' + key];
           const previewRows = isPreviewing ? Object.entries(preset.programs).map(([type, exercises]) => {
             const label = getTypeLabel(type);
-            return `<div style="margin-top:10px;padding:14px 16px;background:rgba(0,0,0,0.3);border-radius:12px;">
+            return `<div style="margin-top:10px;padding:14px 16px;background:rgba(0,0,0,0.3);border-radius:12px;width:100%;box-sizing:border-box;">
               <div style="font-family:'Teko',sans-serif;font-size:17px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);margin-bottom:8px;">${label}</div>
               ${exercises.map(ex => {
                 const eqType = getEquipmentType(ex.name);
