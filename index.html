@@ -4542,13 +4542,52 @@ function exerciseReady() {
   renderExercise();
 }
 
+function getWarmupRec(exName, workingWeight, setNum) {
+  const eqType = getEquipmentType(exName);
+  const barWeight = getBarWeight();
+  const inc = data.weightUnit === 'lbs' ? 5 : 2.5;
+
+  if (eqType === 'barbell') {
+    // Barbell: 1st = empty bar, 2nd = 50%, 3rd = 75%
+    const recs = [
+      { weight: barWeight, reps: 12, label: 'Empty bar' },
+      { weight: Math.round(workingWeight * 0.5 / inc) * inc, reps: 8, label: '~50% working weight' },
+      { weight: Math.round(workingWeight * 0.75 / inc) * inc, reps: 5, label: '~75% working weight' },
+    ];
+    if (setNum < recs.length) return recs[setNum];
+    return { weight: Math.round(workingWeight * 0.85 / inc) * inc, reps: 3, label: '~85% working weight' };
+  }
+
+  if (eqType === 'dumbbell') {
+    // Dumbbell: 1st = ~30%, 2nd = ~50%, 3rd = ~75%
+    const recs = [
+      { weight: Math.max(inc, Math.round(workingWeight * 0.3 / inc) * inc), reps: 12, label: 'Light weight' },
+      { weight: Math.round(workingWeight * 0.5 / inc) * inc, reps: 8, label: '~50% working weight' },
+      { weight: Math.round(workingWeight * 0.75 / inc) * inc, reps: 5, label: '~75% working weight' },
+    ];
+    if (setNum < recs.length) return recs[setNum];
+    return { weight: Math.round(workingWeight * 0.85 / inc) * inc, reps: 3, label: '~85% working weight' };
+  }
+
+  // Machine / cable / other: 1st = ~30%, 2nd = ~60%, 3rd = ~80%
+  const recs = [
+    { weight: Math.max(inc, Math.round(workingWeight * 0.3 / inc) * inc), reps: 12, label: 'Light weight' },
+    { weight: Math.round(workingWeight * 0.6 / inc) * inc, reps: 8, label: '~60% working weight' },
+    { weight: Math.round(workingWeight * 0.8 / inc) * inc, reps: 5, label: '~80% working weight' },
+  ];
+  if (setNum < recs.length) return recs[setNum];
+  return { weight: Math.round(workingWeight * 0.9 / inc) * inc, reps: 3, label: '~90% working weight' };
+}
+
 function startWarmup() {
   if (!workout) return;
   const ex = workout.exercises[workout.currentExerciseIndex];
   ex.warmingUp = true;
-  const suggestedWeight = ex.currentWeight ? Math.round(ex.currentWeight * (ex.warmupSets.length === 0 ? 0.4 : 0.6) * 2) / 2 : 0;
-  ex._warmupWeight = suggestedWeight;
-  ex._warmupReps = Math.min(ex.targetReps, 8);
+  const setNum = ex.warmupSets.length;
+  const rec = ex.currentWeight ? getWarmupRec(ex.name, ex.currentWeight, setNum) : null;
+  ex._warmupWeight = rec ? rec.weight : 0;
+  ex._warmupReps = rec ? rec.reps : 8;
+  ex._warmupLabel = rec ? rec.label : '';
   saveWorkoutState();
   renderExercise();
 }
@@ -4657,11 +4696,11 @@ function renderExercise() {
   // ── WARM-UP SCREEN: log warm-up sets ──
   if (ex.warmingUp) {
     const warmupNum = ex.warmupSets.length + 1;
-    const suggestedWeight = ex.currentWeight ? Math.round(ex.currentWeight * (warmupNum === 1 ? 0.4 : 0.6) * 2) / 2 : 0;
-    const warmupWeight = ex._warmupWeight !== undefined ? ex._warmupWeight : suggestedWeight;
-    ex._warmupWeight = warmupWeight;
+    const warmupWeight = ex._warmupWeight || 0;
+    const warmupReps = ex._warmupReps || 8;
+    const warmupLabel = ex._warmupLabel || '';
 
-    const warmupPlateHtml = !ex.isBodyweight ? buildWeightInfoHtml(ex.name, warmupWeight, 'centered') : '';
+    const warmupPlateHtml = warmupWeight && !ex.isBodyweight ? buildWeightInfoHtml(ex.name, warmupWeight, 'centered') : '';
 
     let warmupPrevHtml = '';
     if (ex.warmupSets.length > 0) {
@@ -4670,10 +4709,17 @@ function renderExercise() {
       </div>`;
     }
 
+    // Recommendation label
+    const recHtml = warmupLabel ? `<div style="margin-top:8px;font-size:12px;color:var(--accent);font-weight:500;text-align:center;">${warmupLabel}</div>` : '';
+    // Working weight context
+    const contextHtml = ex.currentWeight ? `<div style="margin-top:4px;font-size:11px;color:var(--text-3);text-align:center;">Working: ${displayWeight(ex.currentWeight)}${weightLabel()}</div>` : '';
+
     bodyEl.innerHTML = `
       <div class="exercise-label" style="color:var(--text-3);">Warm-up set ${warmupNum}</div>
       <div class="exercise-name">${ex.name}</div>
       ${warmupPrevHtml}
+      ${recHtml}
+      ${contextHtml}
       <div class="weight-adjuster">
         <button class="weight-adj-btn" onclick="adjustWarmupWeight(-2.5)">−</button>
         <div style="text-align:center">
@@ -4686,7 +4732,7 @@ function renderExercise() {
       <div class="rep-adjuster">
         <button class="rep-btn" onclick="adjustWarmupReps(-1)">−</button>
         <div style="text-align:center">
-          <div class="rep-count" id="warmup-reps">${ex._warmupReps || Math.min(ex.targetReps, 8)}</div>
+          <div class="rep-count" id="warmup-reps">${warmupReps}</div>
           <div class="rep-label">reps</div>
         </div>
         <button class="rep-btn" onclick="adjustWarmupReps(1)">+</button>
