@@ -471,7 +471,7 @@
       line-height: 1;
       text-transform: uppercase;
       letter-spacing: 0.02em;
-      margin-bottom: 32px;
+      margin-bottom: 8px;
     }
     .prep-note {
       font-size: 17px;
@@ -593,7 +593,7 @@
       color: var(--text-2);
       letter-spacing: 0.06em;
       text-transform: uppercase;
-      margin-bottom: 24px;
+      margin-bottom: 12px;
     }
 
     /* Rep adjuster */
@@ -601,7 +601,7 @@
       display: flex;
       align-items: center;
       gap: 24px;
-      margin-bottom: 40px;
+      margin-bottom: 24px;
     }
     .rep-btn {
       width: 52px;
@@ -4905,10 +4905,10 @@ function renderExercise() {
     ${typeBadge}
     <div class="exercise-label">Exercise ${workout.currentExerciseIndex + 1} of ${totalExercises}</div>
     <div class="exercise-name">${ex.name}</div>
+    <div class="set-indicator">${setLabel}</div>
     ${notesHtml}
     ${weightHtml}
-    ${trackPlateHtml ? `<div style="margin:8px 0 20px">${trackPlateHtml}</div>` : ''}
-    <div class="set-indicator">${setLabel}</div>
+    ${trackPlateHtml ? `<div style="margin:4px 0 12px">${trackPlateHtml}</div>` : ''}
     <div class="rep-adjuster">
       <button class="rep-btn" onclick="adjustReps(-1)">−</button>
       <div style="text-align:center">
