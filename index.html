@@ -4474,6 +4474,8 @@ function startWorkout() {
         targetSets: ex.sets,
         targetReps: ex.reps,
         completedSets: [],
+        warmupSets: [],
+        warmingUp: false,
         currentReps: ex.reps,
         currentWeight: w,
         previousWeight,
@@ -4531,7 +4533,55 @@ function exitWorkout() {
 
 function exerciseReady() {
   if (!workout) return;
+  const ex = workout.exercises[workout.currentExerciseIndex];
+  ex.warmingUp = false;
+  delete ex._warmupWeight;
+  delete ex._warmupReps;
   workout.exerciseReady = true;
+  saveWorkoutState();
+  renderExercise();
+}
+
+function startWarmup() {
+  if (!workout) return;
+  const ex = workout.exercises[workout.currentExerciseIndex];
+  ex.warmingUp = true;
+  const suggestedWeight = ex.currentWeight ? Math.round(ex.currentWeight * (ex.warmupSets.length === 0 ? 0.4 : 0.6) * 2) / 2 : 0;
+  ex._warmupWeight = suggestedWeight;
+  ex._warmupReps = Math.min(ex.targetReps, 8);
+  saveWorkoutState();
+  renderExercise();
+}
+
+function adjustWarmupWeight(delta) {
+  if (!workout) return;
+  const ex = workout.exercises[workout.currentExerciseIndex];
+  const increment = data.weightUnit === 'lbs' ? 5 : 2.5;
+  const step = delta > 0 ? increment : -increment;
+  ex._warmupWeight = Math.max(0, (ex._warmupWeight || 0) + step);
+  saveWorkoutState();
+  renderExercise();
+}
+
+function adjustWarmupReps(delta) {
+  if (!workout) return;
+  const ex = workout.exercises[workout.currentExerciseIndex];
+  ex._warmupReps = Math.max(1, (ex._warmupReps || 5) + delta);
+  saveWorkoutState();
+  renderExercise();
+}
+
+function logWarmupSet() {
+  if (!workout) return;
+  const ex = workout.exercises[workout.currentExerciseIndex];
+  ex.warmupSets.push({
+    weight: ex._warmupWeight || 0,
+    reps: ex._warmupReps || 5
+  });
+  ex.warmingUp = false;
+  delete ex._warmupWeight;
+  delete ex._warmupReps;
+  workout.exerciseReady = false;
   saveWorkoutState();
   renderExercise();
 }
@@ -4604,6 +4654,49 @@ function renderExercise() {
   const bodyEl = document.getElementById('workout-body');
   const upnextEl = document.getElementById('workout-upnext');
 
+  // ── WARM-UP SCREEN: log warm-up sets ──
+  if (ex.warmingUp) {
+    const warmupNum = ex.warmupSets.length + 1;
+    const suggestedWeight = ex.currentWeight ? Math.round(ex.currentWeight * (warmupNum === 1 ? 0.4 : 0.6) * 2) / 2 : 0;
+    const warmupWeight = ex._warmupWeight !== undefined ? ex._warmupWeight : suggestedWeight;
+    ex._warmupWeight = warmupWeight;
+
+    const warmupPlateHtml = !ex.isBodyweight ? buildWeightInfoHtml(ex.name, warmupWeight, 'centered') : '';
+
+    let warmupPrevHtml = '';
+    if (ex.warmupSets.length > 0) {
+      warmupPrevHtml = `<div style="margin-top:12px;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:8px;font-size:12px;color:var(--text-3);">
+        ${ex.warmupSets.map((ws, i) => `<span>${ws.weight ? displayWeight(ws.weight) + ' × ' : ''}${ws.reps} reps</span>`).join(' · ')}
+      </div>`;
+    }
+
+    bodyEl.innerHTML = `
+      <div class="exercise-label" style="color:var(--text-3);">Warm-up set ${warmupNum}</div>
+      <div class="exercise-name">${ex.name}</div>
+      ${warmupPrevHtml}
+      <div class="weight-adjuster">
+        <button class="weight-adj-btn" onclick="adjustWarmupWeight(-2.5)">−</button>
+        <div style="text-align:center">
+          <div class="weight-display">${displayWeight(warmupWeight)}</div>
+          <div class="weight-display-label">${weightLabel()}</div>
+        </div>
+        <button class="weight-adj-btn" onclick="adjustWarmupWeight(2.5)">+</button>
+      </div>
+      ${warmupPlateHtml}
+      <div class="rep-adjuster">
+        <button class="rep-btn" onclick="adjustWarmupReps(-1)">−</button>
+        <div style="text-align:center">
+          <div class="rep-count" id="warmup-reps">${ex._warmupReps || Math.min(ex.targetReps, 8)}</div>
+          <div class="rep-label">reps</div>
+        </div>
+        <button class="rep-btn" onclick="adjustWarmupReps(1)">+</button>
+      </div>
+      <button class="done-btn" onclick="logWarmupSet()">Log Warm-up</button>
+    `;
+    upnextEl.style.display = 'none';
+    return;
+  }
+
   // ── PREP SCREEN: show before first set of a new exercise ──
   if (!workout.exerciseReady && currentSet === 1) {
     const prepNoteDisplay = ex.notes
@@ -4623,6 +4716,13 @@ function renderExercise() {
     // Weight info (plate calc for barbells, per-dumbbell for dumbbells)
     const prepPlateHtml = !ex.isBodyweight ? buildWeightInfoHtml(ex.name, ex.currentWeight, 'centered') : '';
 
+    // Warm-up logged summary
+    const warmupLogHtml = ex.warmupSets.length > 0 ? `
+      <div style="margin-top:16px;padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:10px;">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);margin-bottom:6px;">Warm-up sets</div>
+        ${ex.warmupSets.map((ws, i) => `<div style="font-size:13px;color:var(--text-2);padding:2px 0;">${i+1}. ${ws.weight ? displayWeight(ws.weight) + ' × ' : ''}${ws.reps} reps</div>`).join('')}
+      </div>` : '';
+
     bodyEl.innerHTML = `
       ${typeBadge}
       <div class="exercise-label">Exercise ${workout.currentExerciseIndex + 1} of ${totalExercises}</div>
@@ -4630,12 +4730,15 @@ function renderExercise() {
       ${prepNoteDisplay}
       ${prepWeightHtml}
       ${prepPlateHtml}
-      <button class="done-btn" onclick="exerciseReady()" style="margin-top:32px;">Let's Go</button>
+      ${warmupLogHtml}
+      ${!ex.isBodyweight ? `<button class="done-btn" onclick="startWarmup()" style="margin-top:32px;background:var(--surface-2);color:var(--text);">Warm Up</button>` : ''}
+      <button class="done-btn" onclick="exerciseReady()" style="margin-top:${ex.isBodyweight ? '32' : '12'}px;">Working Sets</button>
       <button class="skip-btn mt-8" onclick="workout.exerciseReady=true;skipExercise()" style="margin-top:12px;">Skip Exercise</button>
     `;
     upnextEl.style.display = 'none';
     return;
   }
+
 
   // ── TRACKING SCREEN: log sets ──
   // Notes (collapsible toggle)
