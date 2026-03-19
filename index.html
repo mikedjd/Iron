@@ -6961,12 +6961,12 @@ function renderBuild() {
           const isPreviewing = data['_splitPreview_' + key];
           const previewRows = isPreviewing ? Object.entries(preset.programs).map(([type, exercises]) => {
             const label = getTypeLabel(type);
-            return `<div style="margin-top:10px;padding:10px 12px;background:rgba(0,0,0,0.15);border-radius:10px;">
-              <div style="font-family:'Teko',sans-serif;font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);margin-bottom:6px;">${label}</div>
+            return `<div style="margin-top:10px;padding:14px 16px;background:rgba(0,0,0,0.3);border-radius:12px;">
+              <div style="font-family:'Teko',sans-serif;font-size:17px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);margin-bottom:8px;">${label}</div>
               ${exercises.map(ex => {
                 const eqType = getEquipmentType(ex.name);
                 const eqIcon = eqType === 'barbell' ? ' \u{1F3CB}' : eqType === 'dumbbell' ? ' \u{1F4AA}' : '';
-                return `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;"><span style="color:var(--text-2);">${ex.name}${eqIcon}</span><span style="color:var(--text-3);">${ex.sets}\u00d7${ex.reps}</span></div>`;
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04);gap:12px;"><span style="color:var(--text-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ex.name}${eqIcon}</span><span style="color:var(--text-3);font-variant-numeric:tabular-nums;letter-spacing:0.04em;flex-shrink:0;">${ex.sets} × ${ex.reps}</span></div>`;
               }).join('')}
             </div>`;
           }).join('') : '';
@@ -7056,6 +7056,9 @@ function renderBuild() {
 function getRecoveryWarning() {
   const days = data.schedule.trainingDays.length;
   const preset = data.splitPreset || 'custom';
+  const warnings = [];
+
+  // Too many days for the split
   const thresholds = {
     'upper-lower': 4,
     'full-body': 4,
@@ -7063,18 +7066,48 @@ function getRecoveryWarning() {
     'bro-split': 5
   };
   const limit = thresholds[preset];
-  if (!limit || days <= limit) return '';
-  const messages = [
-    'Muscles grow during rest, not in the gym.',
-    'More sessions doesn\'t always mean more gains.',
-    'Recovery is where the magic happens.',
-    'Overtraining kills progress. Rest is productive.',
-    'Your CNS needs recovery days to perform.',
-  ];
-  const msg = messages[Math.floor(Math.random() * messages.length)];
-  return `<div style="margin-top:10px;padding:10px 14px;background:rgba(255,159,10,0.08);border:1px solid rgba(255,159,10,0.2);border-radius:10px;font-size:12px;color:#ff9f0a;">
-    <strong>${days} days/week</strong> is a lot for ${SPLIT_PRESETS[preset]?.label || 'this split'}. ${msg} Consider ${limit} days or fewer.
-  </div>`;
+  if (limit && days > limit) {
+    const messages = [
+      'Muscles grow during rest, not in the gym.',
+      'More sessions doesn\'t always mean more gains.',
+      'Recovery is where the magic happens.',
+      'Overtraining kills progress. Rest is productive.',
+      'Your CNS needs recovery days to perform.',
+    ];
+    const msg = messages[Math.floor(Math.random() * messages.length)];
+    warnings.push(`<strong>${days} days/week</strong> is a lot for ${SPLIT_PRESETS[preset]?.label || 'this split'}. ${msg} Consider ${limit} days or fewer.`);
+  }
+
+  // Consecutive days warning for full body / upper-lower
+  if ((preset === 'full-body' || preset === 'upper-lower') && days >= 2) {
+    const sorted = [...data.schedule.trainingDays].sort((a, b) => a - b);
+    const consecutive = [];
+    for (let i = 0; i < sorted.length - 1; i++) {
+      if (sorted[i + 1] - sorted[i] === 1) {
+        consecutive.push(sorted[i]);
+      }
+    }
+    // Also check wrap-around (Sat→Sun)
+    if (sorted.includes(0) && sorted.includes(6)) consecutive.push(6);
+
+    if (consecutive.length > 0 && preset === 'full-body') {
+      warnings.push('You have back-to-back full body sessions. Try spacing them out with a rest day between each \u2014 your muscles need 48\u201372 hours to recover and grow.');
+    } else if (consecutive.length > 0 && preset === 'upper-lower') {
+      // For UL, consecutive is fine if alternating, but 3+ in a row is risky
+      let maxStreak = 1, streak = 1;
+      for (let i = 0; i < sorted.length - 1; i++) {
+        if (sorted[i + 1] - sorted[i] === 1) { streak++; maxStreak = Math.max(maxStreak, streak); }
+        else streak = 1;
+      }
+      if (sorted.includes(0) && sorted.includes(6)) maxStreak = Math.max(maxStreak, streak + 1);
+      if (maxStreak >= 3) {
+        warnings.push('3+ consecutive training days can tax your recovery. Try adding a rest day every 2 sessions \u2014 e.g. Mon/Tue/Thu/Fri.');
+      }
+    }
+  }
+
+  if (warnings.length === 0) return '';
+  return warnings.map(w => `<div style="margin-top:10px;padding:10px 14px;background:rgba(255,159,10,0.08);border:1px solid rgba(255,159,10,0.2);border-radius:10px;font-size:12px;color:#ff9f0a;">${w}</div>`).join('');
 }
 
 function toggleTrainingDay(day) {
