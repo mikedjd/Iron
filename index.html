@@ -1055,42 +1055,63 @@
     .chart-recent-data { color: var(--text); font-weight: 500; }
 
     /* PR Celebrations */
-    .pr-card {
+    /* PR Trophy Celebration */
+    .pr-hero { position: relative; z-index: 2; text-align: center; }
+    .pr-trophy {
+      font-size: 64px; line-height: 1;
+      animation: trophy-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      margin-bottom: 8px;
+    }
+    @keyframes trophy-bounce {
+      0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+      60% { transform: scale(1.2) rotate(5deg); }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    .pr-hero-title {
+      font-family: 'Teko', sans-serif; font-size: 42px; font-weight: 700;
+      color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em; line-height: 1;
+    }
+    .pr-hero-sub {
+      font-size: 13px; color: var(--text-2); margin-top: 4px;
+    }
+    .pr-sparkle-container {
+      position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+    }
+    .pr-sparkle {
+      position: absolute; width: 4px; height: 4px; border-radius: 50%;
+      background: var(--accent); opacity: 0;
+      animation: sparkle-float 2s ease-out forwards;
+    }
+    @keyframes sparkle-float {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-60px) scale(0); }
+    }
+    .pr-list { padding: 0 0 4px; }
+    .pr-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px; margin-bottom: 8px;
       background: rgba(163, 184, 108, 0.08);
-      border: 1px solid rgba(163, 184, 108, 0.25);
-      border-radius: 18px;
-      padding: 16px 20px;
-      margin-bottom: 12px;
-      animation: pr-glow 2s ease-in-out;
+      border: 1px solid rgba(163, 184, 108, 0.20);
+      border-radius: 14px;
+      animation: pr-slide-up 0.4s ease-out both;
     }
-    .pr-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 6px 0;
+    .pr-item:nth-child(1) { animation-delay: 0.3s; }
+    .pr-item:nth-child(2) { animation-delay: 0.45s; }
+    .pr-item:nth-child(3) { animation-delay: 0.6s; }
+    .pr-item:nth-child(4) { animation-delay: 0.75s; }
+    .pr-item-left { display: flex; flex-direction: column; }
+    .pr-item-name { font-weight: 600; font-size: 15px; }
+    .pr-item-prev { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+    .pr-item-weight {
+      font-family: 'Teko', sans-serif; font-size: 36px; font-weight: 700;
+      color: var(--accent); line-height: 1;
     }
-    .pr-row + .pr-row { border-top: 1px solid var(--divider); }
-    .pr-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 3px 8px;
-      border-radius: 6px;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      background: var(--accent);
-      color: #1c1c1c;
-      white-space: nowrap;
+    .pr-item-delta {
+      font-size: 11px; color: var(--accent); font-weight: 600; margin-top: 2px; text-align: right;
     }
-    .pr-exercise { flex: 1; font-weight: 500; font-size: 14px; }
-    .pr-weight {
-      font-family: 'Teko', sans-serif;
-      font-weight: 600;
-      font-size: 24px;
-      color: var(--accent);
-      line-height: 1;
+    @keyframes pr-slide-up {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
     }
     .pr-inline-badge {
       display: inline-flex;
@@ -1104,11 +1125,6 @@
       color: var(--accent);
       vertical-align: middle;
       margin-left: 4px;
-    }
-    @keyframes pr-glow {
-      0% { box-shadow: 0 0 0 0 rgba(163, 184, 108, 0.4); }
-      50% { box-shadow: 0 0 20px 4px rgba(163, 184, 108, 0.15); }
-      100% { box-shadow: 0 0 0 0 rgba(163, 184, 108, 0); }
     }
 
     /* ═══════════════════════════════════════════════
@@ -3127,14 +3143,7 @@
 
   <!-- ═══════════ DONE SCREEN OVERLAY ═══════════ -->
   <div id="done-screen">
-    <div class="done-header">
-      <div class="done-check">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="20 6 9 17 4 12"/>
-        </svg>
-      </div>
-      <div class="display display-lg">Session Complete</div>
-    </div>
+    <div class="done-header" id="done-header"></div>
     <div class="done-body" id="done-body"></div>
     <div class="done-footer">
       <button class="btn btn-primary" onclick="saveWorkout()">Save & Finish</button>
@@ -5593,11 +5602,33 @@ function adjustRest(seconds) {
 function showDoneScreen() {
   hideWorkoutScreen();
   const doneScreen = document.getElementById('done-screen');
+  const headerEl = document.getElementById('done-header');
   const bodyEl = document.getElementById('done-body');
   const duration = Date.now() - workout.startTime;
   const totalSets = workout.exercises.reduce((s, e) => s + e.completedSets.filter(set => !normalizeSet(set).skipped).length, 0);
   const typeLabel = getTypeLabel(workout.type);
   const prs = detectPRs();
+  const unit = weightLabel();
+  const hasPRs = prs.length > 0;
+
+  // Render header: trophy celebration for PRs, checkmark for no PRs
+  if (hasPRs) {
+    headerEl.innerHTML = `
+      <div class="pr-hero">
+        <div class="pr-sparkle-container" id="pr-sparkles"></div>
+        <div class="pr-trophy">🏆</div>
+        <div class="pr-hero-title">${prs.length === 1 ? 'New Record!' : 'New Records!'}</div>
+        <div class="pr-hero-sub">${prs.length} personal record${prs.length > 1 ? 's' : ''} this session</div>
+      </div>`;
+  } else {
+    headerEl.innerHTML = `
+      <div class="done-check">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <div class="display display-lg">Session Complete</div>`;
+  }
 
   let exerciseSummary = workout.exercises.map((ex, i) => {
     let setsDisplay = ex.completedSets.map(s => {
@@ -5607,7 +5638,7 @@ function showDoneScreen() {
       return ns.reps;
     }).join(', ');
     const w = ex.currentWeight;
-    const weightStr = w ? ` @ ${displayWeight(w)}${weightLabel()}` : '';
+    const weightStr = w ? ` @ ${displayWeight(w)}${unit}` : '';
     const badge = ex.restPause ? ' <span class="type-badge rp">RP</span>' : (ex.supersetNext ? ' <span class="type-badge ss">SS</span>' : '');
     const isPR = prs.some(pr => pr.name === ex.name);
     const prTag = isPR ? ' <span class="pr-inline-badge">PR</span>' : '';
@@ -5618,14 +5649,22 @@ function showDoneScreen() {
       </div>`;
   }).join('');
 
-  const prSection = prs.length > 0 ? `
-    <div class="pr-card fade-in stagger-2">
-      ${prs.map(pr => `
-        <div class="pr-row">
-          <span class="pr-badge">NEW PR</span>
-          <span class="pr-exercise">${pr.name}</span>
-          <span class="pr-weight">${displayWeight(pr.weight)}${weightLabel()}</span>
-        </div>`).join('')}
+  const prSection = hasPRs ? `
+    <div class="pr-list fade-in stagger-2">
+      ${prs.map(pr => {
+        const delta = pr.weight - pr.previous;
+        const deltaStr = displayWeight(delta);
+        return `<div class="pr-item">
+          <div class="pr-item-left">
+            <div class="pr-item-name">${pr.name}</div>
+            <div class="pr-item-prev">Previous: ${displayWeight(pr.previous)}${unit}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="pr-item-weight">${displayWeight(pr.weight)}${unit}</div>
+            <div class="pr-item-delta">+${deltaStr}${unit} ↑</div>
+          </div>
+        </div>`;
+      }).join('')}
     </div>` : '';
 
   // Project streak: session hasn't been saved yet, so simulate
@@ -5637,14 +5676,14 @@ function showDoneScreen() {
   const projectedStreak = currentStreak.current + (isTodayTrainingDay && !alreadyHasSession ? 1 : 0);
   const milestone = getStreakMilestone(projectedStreak);
   const milestoneHtml = milestone ? `
-    <div class="milestone-card fade-in stagger-${prs.length > 0 ? 3 : 2}">
+    <div class="milestone-card fade-in stagger-${hasPRs ? 3 : 2}">
       <div class="milestone-flame">🔥</div>
       <div class="display display-lg milestone-count">${milestone}</div>
       <div class="milestone-text">Day Streak!</div>
       <p class="text-xs text-dim" style="margin-top:8px;">${getMilestoneMessage(milestone)}</p>
     </div>` : '';
 
-  let stagger = prs.length > 0 ? 3 : 2;
+  let stagger = hasPRs ? 3 : 2;
   if (milestone) stagger++;
 
   bodyEl.innerHTML = `
@@ -5686,6 +5725,24 @@ function showDoneScreen() {
   `;
 
   doneScreen.classList.add('active');
+
+  // Spawn sparkle particles for PR celebration
+  if (hasPRs) {
+    const sparkleContainer = document.getElementById('pr-sparkles');
+    if (sparkleContainer) {
+      for (let i = 0; i < 20; i++) {
+        const s = document.createElement('div');
+        s.className = 'pr-sparkle';
+        s.style.left = Math.random() * 100 + '%';
+        s.style.top = (40 + Math.random() * 60) + '%';
+        s.style.animationDelay = (Math.random() * 1.5) + 's';
+        const size = (2 + Math.random() * 4) + 'px';
+        s.style.width = size;
+        s.style.height = size;
+        sparkleContainer.appendChild(s);
+      }
+    }
+  }
 }
 
 let sessionRating = null;
