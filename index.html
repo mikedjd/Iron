@@ -5423,26 +5423,37 @@ function playRestDoneAlert() {
   if (navigator.vibrate) {
     navigator.vibrate([200, 100, 200, 100, 200]);
   }
-  // Audio beep using Web Audio API (no external files needed)
+  // Boxing bell sound using Web Audio API
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const playBeep = (freq, startTime, duration) => {
+    ctx.resume();
+    const now = ctx.currentTime;
+    // Layer frequencies for metallic bell ring
+    [800, 1200, 1600, 2400].forEach(freq => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.frequency.value = freq;
       osc.type = 'sine';
-      gain.gain.setValueAtTime(0.3, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
-      osc.start(startTime);
-      osc.stop(startTime + duration);
-    };
-    const now = ctx.currentTime;
-    playBeep(880, now, 0.15);
-    playBeep(880, now + 0.2, 0.15);
-    playBeep(1100, now + 0.4, 0.25);
-    setTimeout(() => ctx.close(), 1000);
+      gain.gain.setValueAtTime(freq === 800 ? 0.25 : 0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+      osc.start(now);
+      osc.stop(now + 1.2);
+    });
+    // Noise burst for attack transient
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.02, ctx.sampleRate);
+    const samples = buf.getChannelData(0);
+    for (let i = 0; i < samples.length; i++) samples[i] = (Math.random() * 2 - 1) * 0.3;
+    const noiseSrc = ctx.createBufferSource();
+    const noiseGain = ctx.createGain();
+    noiseSrc.buffer = buf;
+    noiseSrc.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noiseGain.gain.setValueAtTime(0.4, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    noiseSrc.start(now);
+    setTimeout(() => ctx.close(), 2000);
   } catch (e) { /* audio not supported */ }
 }
 
