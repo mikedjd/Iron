@@ -5034,8 +5034,7 @@ function tapToEditWeight() {
   if (val === null) return;
   const num = parseFloat(val);
   if (isNaN(num) || num < 0) return;
-  const inc = weightIncrement(ex.name);
-  ex.currentWeight = Math.round(num / inc) * inc;
+  ex.currentWeight = Math.round(num * 100) / 100; // accept any value, no snapping
   ex.progressionBadge = null;
   saveWorkoutState();
   renderExercise();
