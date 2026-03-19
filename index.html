@@ -5041,11 +5041,32 @@ function saveWorkout() {
    ═══════════════════════════════════════════════════════════ */
 /* Preserve input values across a Diet re-render */
 function renderDietSafe() {
+  renderDietNoScroll();
+}
+
+function toggleAccordion(btn, stateKey) {
+  const arrow = btn.querySelector('.common-foods-arrow');
+  const body = btn.nextElementSibling;
+  if (!body) return;
+  const isOpen = body.classList.toggle('open');
+  if (arrow) arrow.classList.toggle('open', isOpen);
+  // Persist state so re-renders preserve it
+  if (stateKey) data['_' + stateKey] = isOpen;
+}
+
+function renderDietNoScroll() {
+  const container = document.getElementById('diet-content');
+  const scrollY = container ? container.parentElement.scrollTop || window.scrollY : 0;
   const ids = ['food-cal-input', 'food-pro-input', 'food-carb-input', 'food-fat-input', 'weight-input', 'cal-override', 'custom-food-name', 'cf-cal', 'cf-pro', 'cf-carb', 'cf-fat'];
   const saved = {};
   ids.forEach(id => { const el = document.getElementById(id); if (el) saved[id] = el.value; });
   renderDiet();
   ids.forEach(id => { const el = document.getElementById(id); if (el && saved[id]) el.value = saved[id]; });
+  // Restore scroll position
+  requestAnimationFrame(() => {
+    if (container && container.parentElement.scrollTop !== undefined) container.parentElement.scrollTop = scrollY;
+    window.scrollTo(0, scrollY);
+  });
   // Restore search focus
   const searchEl = document.getElementById('food-search');
   if (searchEl && foodSearchQuery) { searchEl.focus(); searchEl.setSelectionRange(foodSearchQuery.length, foodSearchQuery.length); }
@@ -5203,7 +5224,7 @@ function renderDiet() {
         <button onclick="addFood()">ADD</button>
       </div>
       <div style="margin-top:12px;">
-        <button class="common-foods-toggle" onclick="data._extraMileOpen=!data._extraMileOpen;renderDiet();">
+        <button class="common-foods-toggle" onclick="toggleAccordion(this,'extraMileOpen')">
           <span class="label">Go The Extra Mile</span>
           <span class="common-foods-arrow ${data._extraMileOpen ? 'open' : ''}">▼</span>
         </button>
@@ -5255,7 +5276,7 @@ function renderDiet() {
         </div>
       </div>
       <p class="text-xs text-dim mt-8">Based on ${getCurrentBodyweight() ? displayWeight(getCurrentBodyweight()) + weightLabel() + ' bodyweight' : 'estimated bodyweight'}. Protein ${(DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk']).proPerKg}g/kg, fat ${Math.round((DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk']).fatPct * 100)}% of calories, carbs from remainder.</p>
-      <button class="common-foods-toggle mt-8" onclick="data._macroSourcesOpen=!data._macroSourcesOpen;renderDiet();">
+      <button class="common-foods-toggle mt-8" onclick="toggleAccordion(this,'macroSourcesOpen')">
         <span style="font-size:11px;color:var(--text-3);">Sources</span>
         <span class="common-foods-arrow ${data._macroSourcesOpen ? 'open' : ''}" style="font-size:10px;">▼</span>
       </button>
@@ -5313,13 +5334,13 @@ function logWeight() {
   }
 
   save();
-  renderDiet();
+  renderDietNoScroll();
 }
 
 function toggleAutoAdjust() {
   data.autoAdjust = !data.autoAdjust;
   save();
-  renderDietSafe();
+  renderDietNoScroll();
 }
 
 function setManualCalories() {
@@ -5329,7 +5350,7 @@ function setManualCalories() {
   data.targetCalories = val;
   data.autoAdjust = false;
   save();
-  renderDiet();
+  renderDietNoScroll();
 }
 
 function calculateTrend(periodDays) {
@@ -5433,19 +5454,23 @@ function addFood() {
   const proInput = document.getElementById('food-pro-input');
   const carbInput = document.getElementById('food-carb-input');
   const fatInput = document.getElementById('food-fat-input');
-  const cal = parseInt(calInput.value);
-  const pro = parseInt(proInput.value);
-  const carb = parseInt(carbInput?.value);
-  const fat = parseInt(fatInput?.value);
-  if (!cal || cal < 1 || cal > 9999) return;
-  const protein = (pro && pro >= 0 && pro <= 999) ? pro : 0;
-  const carbs = (carb && carb >= 0 && carb <= 999) ? carb : 0;
-  const fats = (fat && fat >= 0 && fat <= 999) ? fat : 0;
+  const cal = parseInt(calInput?.value) || 0;
+  const pro = parseInt(proInput?.value) || 0;
+  const carb = parseInt(carbInput?.value) || 0;
+  const fat = parseInt(fatInput?.value) || 0;
+  // At least one field must have a value
+  if (cal <= 0 && pro <= 0 && carb <= 0 && fat <= 0) return;
+  // Auto-estimate calories from macros if not provided
+  const calories = cal > 0 ? cal : (pro * 4) + (carb * 4) + (fat * 9);
   const now = new Date();
   const time = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-  data.foodLog.push({ id: Date.now(), date: today(), calories: cal, protein: protein, carbs: carbs, fats: fats, time: time });
+  data.foodLog.push({ id: Date.now(), date: today(), calories: calories, protein: pro, carbs: carb, fats: fat, time: time });
+  if (calInput) calInput.value = '';
+  if (proInput) proInput.value = '';
+  if (carbInput) carbInput.value = '';
+  if (fatInput) fatInput.value = '';
   save();
-  renderDiet();
+  renderDietNoScroll();
 }
 
 function addSuggestedFood(cal, pro, carb, fat, name) {
@@ -5453,7 +5478,7 @@ function addSuggestedFood(cal, pro, carb, fat, name) {
   const time = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
   data.foodLog.push({ id: Date.now(), date: today(), calories: cal, protein: pro, carbs: carb, fats: fat, time: time, name: name });
   save();
-  renderDiet();
+  renderDietNoScroll();
 }
 
 /* Curated food database — verified macros, no duplicates, common serving sizes */
@@ -5555,7 +5580,7 @@ function buildFoodSearchHtml() {
   const commonFoods = FOOD_DB.filter(f => ['protein','carbs','dairy'].includes(f.cat)).slice(0, 12);
   const commonHtml = `
     <div style="margin-top:16px;">
-      <button class="common-foods-toggle" onclick="data._commonFoodsOpen=!data._commonFoodsOpen;renderDiet();">
+      <button class="common-foods-toggle" onclick="toggleAccordion(this,'commonFoodsOpen')">
         <span class="label">Common Foods</span>
         <span class="common-foods-arrow ${isOpen ? 'open' : ''}">▼</span>
       </button>
@@ -5575,7 +5600,7 @@ function buildFoodSearchHtml() {
   const customOpen = data._customFoodOpen;
   const customInputHtml = `
     <div style="margin-top:12px;">
-      <button class="common-foods-toggle" onclick="data._customFoodOpen=!data._customFoodOpen;renderDiet();">
+      <button class="common-foods-toggle" onclick="toggleAccordion(this,'customFoodOpen')">
         <span class="label">Custom Food</span>
         <span class="common-foods-arrow ${customOpen ? 'open' : ''}">▼</span>
       </button>
@@ -5610,7 +5635,7 @@ function buildFoodSearchHtml() {
       <span class="label">Search Foods</span>
       <div class="food-search-wrap">
         <span class="food-search-icon">🔍</span>
-        <input type="text" class="food-search-input" id="food-search" placeholder="Search foods..." value="${foodSearchQuery}" oninput="foodSearchQuery=this.value;renderDiet();" autocomplete="off">
+        <input type="text" class="food-search-input" id="food-search" placeholder="Search foods..." value="${foodSearchQuery}" oninput="foodSearchQuery=this.value;renderDietNoScroll();" autocomplete="off">
       </div>
       ${resultsHtml}
       ${commonHtml}
@@ -5628,14 +5653,14 @@ function saveCustomFood() {
   if (!data.customFoods) data.customFoods = [];
   data.customFoods.push({ name, cal, pro, carb, fat, cat: 'custom' });
   save();
-  renderDiet();
+  renderDietNoScroll();
 }
 
 function deleteCustomFood(index) {
   if (!data.customFoods) return;
   data.customFoods.splice(index, 1);
   save();
-  renderDiet();
+  renderDietNoScroll();
 }
 
 function deleteFood(id) {
@@ -5941,7 +5966,7 @@ function setDietGoal(goal) {
   data.dietGoal = goal;
   data.calorieRecommendation = null;
   save();
-  renderDietSafe();
+  renderDietNoScroll();
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -7716,7 +7741,7 @@ function getTodayCardioCalories() {
 function toggleActivityCalories() {
   data.addActivityCalories = !data.addActivityCalories;
   save();
-  renderDietSafe();
+  renderDietNoScroll();
 }
 
 function setCardioType(type) {
