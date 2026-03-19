@@ -531,22 +531,43 @@
     }
     .timer-feedback {
       margin: 16px auto 0;
-      max-width: 280px;
+      max-width: 300px;
     }
-    .timer-feedback input {
-      width: 100%;
-      padding: 10px 14px;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 14px;
-      color: var(--text);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 13px;
-      outline: none;
+    .rpe-pills {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+    }
+    .rpe-pill {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid var(--border-light);
+      background: var(--surface);
+      color: var(--text-2);
+      font-family: 'Teko', sans-serif;
+      font-weight: 600;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .rpe-pill:active { transform: scale(0.93); }
+    .rpe-pill.selected {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+    .rpe-desc {
+      font-size: 11px;
+      color: var(--text-3);
       text-align: center;
+      margin-top: 6px;
+      min-height: 14px;
     }
-    .timer-feedback input::placeholder { color: var(--text-3); }
-    .timer-feedback input:focus { border-color: var(--accent); }
     .timer-feedback-label {
       font-size: 11px;
       color: var(--text-3);
@@ -4740,16 +4761,11 @@ function renderExercise() {
   let setLabel = `Set ${currentSet} of ${ex.targetSets}`;
   // Last set motivational message
   const lastSetMessages = [
-    'Last set \u2014 make it count.',
     'Final set. Dig deep.',
-    'One more. Leave nothing behind.',
-    'Last set \u2014 this is where you grow.',
-    "Final push. You've got this.",
     'Last one. Empty the tank.',
-    'Finish strong. Last set.',
-    'This is the set that matters most.',
-    'One set left. No regrets.',
-    'Last set \u2014 be better than yesterday.'
+    'Last set. Get after it.',
+    'Last set. Finish strong.',
+    'Final set. Focus.'
   ];
   if (currentSet === ex.targetSets && ex.targetSets > 1) {
     const msgIdx = Math.floor(Math.random() * lastSetMessages.length);
@@ -5366,10 +5382,14 @@ function startRestTimer(onComplete, duration) {
   if (workout) {
     const ex = workout.exercises[workout.currentExerciseIndex];
     const noteHtml = ex.notes ? `<div class="timer-note">${ex.notes}</div>` : '';
+    const lastRpe = ex.completedSets.length > 0 ? (ex.completedSets[ex.completedSets.length - 1].rpe || 0) : 0;
     const feedbackHtml = `
       <div class="timer-feedback">
-        <div class="timer-feedback-label">How was that?</div>
-        <input type="text" id="set-feedback" placeholder="e.g., felt heavy, good form" autocomplete="off">
+        <div class="timer-feedback-label">RPE</div>
+        <div class="rpe-pills">
+          ${[6,7,8,9,10].map(v => `<div class="rpe-pill${lastRpe === v ? ' selected' : ''}" onclick="selectRpe(${v})" data-rpe="${v}">${v}</div>`).join('')}
+        </div>
+        <div class="rpe-desc" id="rpe-desc">${lastRpe ? getRpeDesc(lastRpe) : ''}</div>
       </div>`;
     contextEl.innerHTML += noteHtml + feedbackHtml;
   }
@@ -5426,14 +5446,27 @@ function playRestDoneAlert() {
   } catch (e) { /* audio not supported */ }
 }
 
-function saveSetFeedback() {
-  const input = document.getElementById('set-feedback');
-  if (!input || !input.value.trim() || !workout) return;
+function getRpeDesc(rpe) {
+  const descs = { 6: 'Could do 4+ more', 7: 'Could do 3 more', 8: 'Could do 2 more', 9: 'Could do 1 more', 10: 'Max effort' };
+  return descs[rpe] || '';
+}
+function selectRpe(value) {
+  if (!workout) return;
   const ex = workout.exercises[workout.currentExerciseIndex];
   if (ex.completedSets.length > 0) {
-    ex.completedSets[ex.completedSets.length - 1].feedback = input.value.trim();
+    const set = ex.completedSets[ex.completedSets.length - 1];
+    set.rpe = set.rpe === value ? 0 : value; // tap again to deselect
     saveWorkoutState();
+    // Update UI
+    document.querySelectorAll('.rpe-pill').forEach(p => {
+      p.classList.toggle('selected', parseInt(p.dataset.rpe) === set.rpe);
+    });
+    const desc = document.getElementById('rpe-desc');
+    if (desc) desc.textContent = set.rpe ? getRpeDesc(set.rpe) : '';
   }
+}
+function saveSetFeedback() {
+  // RPE is saved immediately on tap via selectRpe(), this is a no-op kept for compatibility
 }
 
 function skipRest() {
