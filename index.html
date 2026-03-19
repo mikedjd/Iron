@@ -6961,7 +6961,7 @@ function renderBuild() {
           const isPreviewing = data['_splitPreview_' + key];
           const previewRows = isPreviewing ? Object.entries(preset.programs).map(([type, exercises]) => {
             const label = getTypeLabel(type);
-            return `<div style="margin-top:10px;padding:10px 12px;background:var(--surface-2);border-radius:10px;">
+            return `<div style="margin-top:10px;padding:10px 12px;background:rgba(0,0,0,0.15);border-radius:10px;">
               <div style="font-family:'Teko',sans-serif;font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);margin-bottom:6px;">${label}</div>
               ${exercises.map(ex => {
                 const eqType = getEquipmentType(ex.name);
@@ -6971,16 +6971,16 @@ function renderBuild() {
             </div>`;
           }).join('') : '';
           return `
-          <div class="split-template-btn ${currentPreset === key ? 'active' : ''}">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;cursor:pointer;" onclick="selectSplit('${key}')">
-              <div style="flex:1;min-width:0;padding-right:8px;">
+          <button class="split-template-btn ${currentPreset === key ? 'active' : ''}" onclick="selectSplit('${key}')">
+            <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+              <div>
                 <span class="split-tmpl-name">${preset.label}</span>
                 <span class="split-tmpl-desc">${preset.desc}</span>
               </div>
+              <span onclick="event.stopPropagation();data['_splitPreview_${key}']=!data['_splitPreview_${key}'];renderBuild();" style="color:var(--text-3);font-size:16px;padding:4px 8px;flex-shrink:0;">${isPreviewing ? '\u25B2' : '\u25BC'}</span>
             </div>
-            <button onclick="event.stopPropagation();data['_splitPreview_${key}']=!data['_splitPreview_${key}'];renderBuild();" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--text-3);font-size:11px;cursor:pointer;padding:4px 10px;margin-top:8px;font-family:'DM Sans',sans-serif;">${isPreviewing ? '\u25B2 Hide' : '\u25BC Preview'}</button>
             ${previewRows}
-          </div>`;
+          </button>`;
         }).join('')}
         <button class="split-template-btn ${currentPreset === 'custom' ? 'active' : ''}" onclick="selectSplit('custom')">
           <span class="split-tmpl-name">Custom</span>
