@@ -1375,6 +1375,30 @@
       color: var(--text-3);
       margin-top: 2px;
     }
+    .macro-rec-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 6px;
+    }
+    .macro-rec-item {
+      text-align: center;
+      padding: 8px 0;
+      background: var(--surface-3);
+      border-radius: 10px;
+    }
+    .macro-rec-val {
+      display: block;
+      font-family: 'Teko', sans-serif;
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1;
+    }
+    .macro-rec-lbl {
+      font-size: 9px;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
     .activity-cal-warning {
       margin-top: 10px;
       padding: 10px 12px;
@@ -3008,12 +3032,47 @@ const STRENGTH_STANDARDS = {
 };
 
 const DIET_GOALS = {
-  'cut-aggressive': { label: 'Aggressive Cut', target: [-0.75, -0.5], step: 200, desc: 'Lose 0.5–0.75 kg/week' },
-  'cut':            { label: 'Cut',            target: [-0.5, -0.25], step: 150, desc: 'Lose 0.25–0.5 kg/week' },
-  'recomp':         { label: 'Recomp',         target: [-0.1, 0.1],  step: 100, desc: 'Maintain weight ±0.1 kg/week' },
-  'lean-bulk':      { label: 'Lean Bulk',      target: [0.1, 0.4],   step: 100, desc: 'Gain 0.1–0.4 kg/week' },
-  'bulk':           { label: 'Bulk',           target: [0.4, 0.75],  step: 150, desc: 'Gain 0.4–0.75 kg/week' },
+  'cut-aggressive': { label: 'Aggressive Cut', target: [-0.75, -0.5], step: 200, desc: 'Lose 0.5–0.75 kg/week', proPerKg: 2.6, fatPct: 0.25 },
+  'cut':            { label: 'Cut',            target: [-0.5, -0.25], step: 150, desc: 'Lose 0.25–0.5 kg/week', proPerKg: 2.3, fatPct: 0.25 },
+  'recomp':         { label: 'Recomp',         target: [-0.1, 0.1],  step: 100, desc: 'Maintain weight ±0.1 kg/week', proPerKg: 2.0, fatPct: 0.28 },
+  'lean-bulk':      { label: 'Lean Bulk',      target: [0.1, 0.4],   step: 100, desc: 'Gain 0.1–0.4 kg/week', proPerKg: 1.8, fatPct: 0.28 },
+  'bulk':           { label: 'Bulk',           target: [0.4, 0.75],  step: 150, desc: 'Gain 0.4–0.75 kg/week', proPerKg: 1.6, fatPct: 0.30 },
 };
+
+/*
+  Macro targets — evidence-based recommendations:
+
+  Protein: 1.6–2.6 g/kg bodyweight depending on goal
+    - Cutting: 2.3–3.1 g/kg FFM ≈ 2.3–2.6 g/kg BW (Helms et al., 2014, JISSN)
+    - Bulking/maintenance: 1.6–2.2 g/kg BW (Morton et al., 2018, BJSM)
+
+  Fat: 20–30% of total calories (minimum 0.5 g/kg for hormonal health)
+    - Iraki et al., 2019, JISSN — "Natural Bodybuilding Contest Preparation"
+    - ISSN Position Stand on Diets & Body Composition, 2017
+
+  Carbs: Remaining calories after protein & fat
+    - Typically 3–7 g/kg for resistance-trained athletes
+    - Slater & Phillips, 2011, JISSN
+*/
+function getMacroTargets() {
+  const bw = getCurrentBodyweight() || (data.bodyweight || 80);
+  const goal = DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk'];
+  const cal = data.targetCalories || 2500;
+
+  // Protein: g/kg based on goal (higher when cutting to preserve muscle)
+  const proGrams = Math.round(bw * goal.proPerKg);
+  const proCals = proGrams * 4;
+
+  // Fat: % of total calories (minimum 0.5g/kg for hormonal health)
+  const fatCals = Math.round(cal * goal.fatPct);
+  const fatGrams = Math.max(Math.round(bw * 0.5), Math.round(fatCals / 9));
+
+  // Carbs: remaining calories
+  const carbCals = Math.max(0, cal - proCals - (fatGrams * 9));
+  const carbGrams = Math.round(carbCals / 4);
+
+  return { protein: proGrams, carbs: carbGrams, fats: fatGrams, calories: cal };
+}
 
 /* ═══════════════════════════════════════════════════════════
    STATE
@@ -4994,13 +5053,16 @@ function renderDietSafe() {
 
 function renderDiet() {
   const el = document.getElementById('diet-content');
-  const proteinGrams = Math.round((data.targetCalories * 0.30) / 4);
+  const macros = getMacroTargets();
+  const proteinGrams = macros.protein;
+  const carbGrams = macros.carbs;
+  const fatGrams = macros.fats;
   const todayTotals = getTodayTotals();
   const todayFood = getTodayFood();
   const calPct = data.targetCalories > 0 ? (todayTotals.calories / data.targetCalories) * 100 : 0;
   const proPct = proteinGrams > 0 ? (todayTotals.protein / proteinGrams) * 100 : 0;
-  const calBarClass = calPct > 120 ? 'way-over' : calPct > 100 ? 'over' : '';
-  const proBarClass = proPct > 120 ? 'way-over' : proPct > 100 ? 'over' : '';
+  const carbPct = carbGrams > 0 ? (todayTotals.carbs / carbGrams) * 100 : 0;
+  const fatPct = fatGrams > 0 ? (todayTotals.fats / fatGrams) * 100 : 0;
   const todayWeight = data.weights.find(w => w.date === today());
   const lastWeight = data.weights.length > 0 ? data.weights[data.weights.length - 1] : null;
   const trend = calculateTrend();
@@ -5081,68 +5143,77 @@ function renderDiet() {
   const activityCals = data.addActivityCalories ? getTodayCardioCalories() : 0;
   const effectiveCalTarget = data.targetCalories + activityCals;
   const calRemaining = Math.max(0, effectiveCalTarget - todayTotals.calories);
-  const proRemaining = Math.max(0, proteinGrams - todayTotals.protein);
   const effCalPct = effectiveCalTarget > 0 ? (todayTotals.calories / effectiveCalTarget) * 100 : 0;
-  const effCalBarClass = effCalPct > 120 ? 'way-over' : effCalPct > 100 ? 'over' : '';
 
-  const outerR = 52, innerR = 38;
-  const outerC = 2 * Math.PI * outerR;
-  const innerC = 2 * Math.PI * innerR;
-  const calPctClamped = Math.min(effCalPct, 100);
-  const proPctClamped = Math.min(proPct, 100);
-  const calOffset = outerC - (calPctClamped / 100) * outerC;
-  const proOffset = innerC - (proPctClamped / 100) * innerC;
-  const calRingColor = effCalPct > 120 ? 'var(--danger)' : effCalPct > 100 ? 'var(--warning)' : 'var(--accent)';
-  const proRingColor = proPct > 120 ? 'var(--danger)' : proPct > 100 ? 'var(--warning)' : 'var(--protein-ring)';
+  // Ring calculations — 4 concentric rings
+  const rings = [
+    { r: 56, w: 7, pct: effCalPct, color: 'var(--accent)', label: 'Cal' },
+    { r: 46, w: 6, pct: proPct, color: 'var(--protein-ring)', label: 'Pro' },
+    { r: 36, w: 5, pct: carbPct, color: '#5ac8fa', label: 'Carb' },
+    { r: 26, w: 5, pct: fatPct, color: '#ff9f0a', label: 'Fat' },
+  ];
+  const ringsSvg = rings.map(ring => {
+    const c = 2 * Math.PI * ring.r;
+    const clamped = Math.min(ring.pct, 100);
+    const offset = c - (clamped / 100) * c;
+    const strokeColor = ring.pct > 120 ? 'var(--danger)' : ring.pct > 100 ? 'var(--warning)' : ring.color;
+    return `<circle cx="65" cy="65" r="${ring.r}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="${ring.w}"/>
+      <circle cx="65" cy="65" r="${ring.r}" fill="none" stroke="${strokeColor}" stroke-width="${ring.w}"
+        stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${offset.toFixed(1)}"
+        stroke-linecap="round" transform="rotate(-90 65 65)" style="transition:stroke-dashoffset 0.5s ease;"/>`;
+  }).join('');
 
   el.innerHTML = `
     <div class="card fade-in" style="padding-bottom:16px;">
-      <div style="display:flex;align-items:center;gap:24px;">
+      <div style="display:flex;align-items:center;gap:20px;">
         <div style="flex-shrink:0;">
           <svg width="130" height="130" viewBox="0 0 130 130">
-            <circle cx="65" cy="65" r="${outerR}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
-            <circle cx="65" cy="65" r="${outerR}" fill="none" stroke="${calRingColor}" stroke-width="8"
-              stroke-dasharray="${outerC}" stroke-dashoffset="${calOffset}"
-              stroke-linecap="round" transform="rotate(-90 65 65)" style="transition:stroke-dashoffset 0.5s ease;"/>
-            <circle cx="65" cy="65" r="${innerR}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
-            <circle cx="65" cy="65" r="${innerR}" fill="none" stroke="${proRingColor}" stroke-width="7"
-              stroke-dasharray="${innerC}" stroke-dashoffset="${proOffset}"
-              stroke-linecap="round" transform="rotate(-90 65 65)" style="transition:stroke-dashoffset 0.5s ease;"/>
-            <text x="65" y="60" text-anchor="middle" fill="var(--text)" font-family="'Teko',sans-serif" font-size="28" font-weight="600">${calRemaining.toLocaleString()}</text>
-            <text x="65" y="78" text-anchor="middle" fill="var(--text-2)" font-size="10" font-weight="500" letter-spacing="0.06em">CAL LEFT</text>
+            ${ringsSvg}
+            <text x="65" y="60" text-anchor="middle" fill="var(--text)" font-family="'Teko',sans-serif" font-size="26" font-weight="600">${calRemaining.toLocaleString()}</text>
+            <text x="65" y="76" text-anchor="middle" fill="var(--text-2)" font-size="9" font-weight="500" letter-spacing="0.06em">CAL LEFT</text>
           </svg>
         </div>
-        <div style="flex:1;display:flex;flex-direction:column;gap:12px;">
-          <div>
-            <div style="font-size:12px;color:var(--label-color);font-weight:600;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Calories</div>
-            <div style="font-size:15px;font-weight:600;">${todayTotals.calories.toLocaleString()} <span style="color:var(--text-3);font-weight:400;">/ ${effectiveCalTarget.toLocaleString()}</span></div>
-            ${activityCals > 0 ? `<div style="font-size:11px;color:var(--accent);margin-top:2px;">+${activityCals} activity</div>` : ''}
+        <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;">
+            <span style="font-size:11px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Calories</span>
+            <span style="font-size:14px;font-weight:600;">${todayTotals.calories.toLocaleString()} <span style="color:var(--text-3);font-weight:400;">/ ${effectiveCalTarget.toLocaleString()}</span></span>
           </div>
-          <div>
-            <div style="font-size:12px;color:var(--label-color);font-weight:600;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Protein</div>
-            <div style="font-size:15px;font-weight:600;">${todayTotals.protein}g <span style="color:var(--text-3);font-weight:400;">/ ${proteinGrams}g</span></div>
+          ${activityCals > 0 ? `<div style="font-size:10px;color:var(--accent);margin-top:-6px;">+${activityCals} activity</div>` : ''}
+          <div style="display:flex;justify-content:space-between;align-items:baseline;">
+            <span style="font-size:11px;color:var(--protein-ring);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Protein</span>
+            <span style="font-size:14px;font-weight:600;">${todayTotals.protein}g <span style="color:var(--text-3);font-weight:400;">/ ${proteinGrams}g</span></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;">
+            <span style="font-size:11px;color:#5ac8fa;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Carbs</span>
+            <span style="font-size:14px;font-weight:600;">${todayTotals.carbs}g <span style="color:var(--text-3);font-weight:400;">/ ${carbGrams}g</span></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;">
+            <span style="font-size:11px;color:#ff9f0a;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Fats</span>
+            <span style="font-size:14px;font-weight:600;">${todayTotals.fats}g <span style="color:var(--text-3);font-weight:400;">/ ${fatGrams}g</span></span>
           </div>
         </div>
       </div>
     </div>
 
     <div class="card fade-in stagger-1">
-      <span class="label">Quick Add</span>
+      <span class="label">The Essentials</span>
       <div class="food-add-row mt-12">
         <input type="number" id="food-cal-input" inputmode="numeric" placeholder="kcal">
         <input type="number" id="food-pro-input" inputmode="numeric" placeholder="protein g">
         <button onclick="addFood()">ADD</button>
       </div>
-      <div class="food-add-row mt-8">
-        <input type="number" id="food-carb-input" inputmode="numeric" placeholder="carbs g">
-        <input type="number" id="food-fat-input" inputmode="numeric" placeholder="fats g">
-        <span style="width:52px;"></span>
-      </div>
-      <div class="macro-summary mt-12">
-        <div class="macro-pill"><span class="macro-dot" style="background:var(--accent)"></span>Cal ${todayTotals.calories}</div>
-        <div class="macro-pill"><span class="macro-dot" style="background:var(--protein-ring)"></span>P ${todayTotals.protein}g</div>
-        <div class="macro-pill"><span class="macro-dot" style="background:#5ac8fa"></span>C ${todayTotals.carbs}g</div>
-        <div class="macro-pill"><span class="macro-dot" style="background:#ff9f0a"></span>F ${todayTotals.fats}g</div>
+      <div style="margin-top:12px;">
+        <button class="common-foods-toggle" onclick="data._extraMileOpen=!data._extraMileOpen;renderDiet();">
+          <span class="label">Go The Extra Mile</span>
+          <span class="common-foods-arrow ${data._extraMileOpen ? 'open' : ''}">▼</span>
+        </button>
+        <div class="common-foods-body ${data._extraMileOpen ? 'open' : ''}">
+          <div class="food-add-row mt-8">
+            <input type="number" id="food-carb-input" inputmode="numeric" placeholder="carbs g">
+            <input type="number" id="food-fat-input" inputmode="numeric" placeholder="fats g">
+            <span style="width:52px;"></span>
+          </div>
+        </div>
       </div>
     </div>
     ${buildFoodSearchHtml()}
@@ -5164,11 +5235,43 @@ function renderDiet() {
       </div>
       <div class="diet-goal-desc">${(DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk']).desc}</div>
       <div class="divider"></div>
+      <span class="label">Recommended Macros</span>
+      <div class="macro-rec-grid mt-8">
+        <div class="macro-rec-item">
+          <span class="macro-rec-val" style="color:var(--accent)">${effectiveCalTarget}</span>
+          <span class="macro-rec-lbl">kcal</span>
+        </div>
+        <div class="macro-rec-item">
+          <span class="macro-rec-val" style="color:var(--protein-ring)">${proteinGrams}g</span>
+          <span class="macro-rec-lbl">protein</span>
+        </div>
+        <div class="macro-rec-item">
+          <span class="macro-rec-val" style="color:#5ac8fa">${carbGrams}g</span>
+          <span class="macro-rec-lbl">carbs</span>
+        </div>
+        <div class="macro-rec-item">
+          <span class="macro-rec-val" style="color:#ff9f0a">${fatGrams}g</span>
+          <span class="macro-rec-lbl">fats</span>
+        </div>
+      </div>
+      <p class="text-xs text-dim mt-8">Based on ${getCurrentBodyweight() ? displayWeight(getCurrentBodyweight()) + weightLabel() + ' bodyweight' : 'estimated bodyweight'}. Protein ${(DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk']).proPerKg}g/kg, fat ${Math.round((DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk']).fatPct * 100)}% of calories, carbs from remainder.</p>
+      <button class="common-foods-toggle mt-8" onclick="data._macroSourcesOpen=!data._macroSourcesOpen;renderDiet();">
+        <span style="font-size:11px;color:var(--text-3);">Sources</span>
+        <span class="common-foods-arrow ${data._macroSourcesOpen ? 'open' : ''}" style="font-size:10px;">▼</span>
+      </button>
+      <div class="common-foods-body ${data._macroSourcesOpen ? 'open' : ''}">
+        <div style="font-size:10px;color:var(--text-3);line-height:1.6;padding:4px 0;">
+          <strong>Protein:</strong> Morton et al. (2018) <em>British Journal of Sports Medicine</em> — meta-analysis: 1.6–2.2 g/kg for muscle gain. Helms et al. (2014) <em>JISSN</em> — 2.3–3.1 g/kg FFM during caloric deficit.<br>
+          <strong>Fat:</strong> Iraki et al. (2019) <em>JISSN</em> — 20–30% of calories; minimum 0.5 g/kg for hormonal health. ISSN Position Stand (2017).<br>
+          <strong>Carbs:</strong> Remaining calories after protein and fat. Slater & Phillips (2011) <em>JISSN</em> — 3–7 g/kg for strength athletes.
+        </div>
+      </div>
+      <div class="divider"></div>
       <div class="toggle-row">
         <span class="toggle-label">Auto-adjust calories</span>
         <button class="toggle ${data.autoAdjust ? 'on' : ''}" onclick="toggleAutoAdjust()"></button>
       </div>
-      <p class="text-xs text-dim">Analyses your weight trend and proportionally adjusts calories to keep you in the ${(DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk']).label.toLowerCase()} range. Uses 14-day trend when available.</p>
+      <p class="text-xs text-dim">Analyses your weight trend and adjusts calories to keep you in the ${(DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk']).label.toLowerCase()} range.</p>
       ${!data.autoAdjust ? `
         <div class="divider"></div>
         <span class="label">Manual Calorie Target</span>
