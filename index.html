@@ -3517,10 +3517,24 @@ function parseWeightInput(val) {
 }
 
 function weightIncrement(exName) {
-  if (exName && getEquipmentType(exName) === 'dumbbell') {
-    return data.weightUnit === 'lbs' ? (5 / KG_TO_LBS) : 2; // 5lbs or 2kg (1kg per dumbbell)
+  const eqType = exName ? getEquipmentType(exName) : null;
+  if (eqType === 'dumbbell') {
+    return data.weightUnit === 'lbs' ? (5 / KG_TO_LBS) : (data.dumbbellIncrement || 2);
   }
-  return data.weightUnit === 'lbs' ? (5 / KG_TO_LBS) : 2.5; // 5lbs or 2.5kg
+  if (eqType === 'barbell') {
+    return data.weightUnit === 'lbs' ? (5 / KG_TO_LBS) : (data.barbellIncrement || 2.5);
+  }
+  // Machine / cable / unknown
+  return data.weightUnit === 'lbs' ? (5 / KG_TO_LBS) : (data.machineIncrement || 2.5);
+}
+
+function changeIncrement(type, delta) {
+  const key = type + 'Increment';
+  const defaults = { barbellIncrement: 2.5, dumbbellIncrement: 2, machineIncrement: 2.5 };
+  const current = data[key] || defaults[key];
+  data[key] = Math.max(0.5, Math.round((current + delta) * 10) / 10);
+  save();
+  renderSettings();
 }
 
 /* Look up last weight used for an exercise from session history */
@@ -4039,7 +4053,16 @@ function getStrengthLevel(exerciseName, liftWeight, bodyweight) {
 /* Auto-progression recommendation */
 function getProgressionRec(exerciseName, currentWeight, bodyweight) {
   const level = getStrengthLevel(exerciseName, currentWeight, bodyweight);
-  const inc = isUpperExercise(exerciseName) ? 2.5 : 5; // kg
+  const eqType = getEquipmentType(exerciseName);
+  let inc;
+  if (eqType === 'dumbbell') {
+    inc = data.weightUnit === 'lbs' ? 5 : (data.dumbbellIncrement || 2);
+  } else if (eqType === 'barbell') {
+    const barbellInc = data.weightUnit === 'lbs' ? 5 : (data.barbellIncrement || 2.5);
+    inc = isUpperExercise(exerciseName) ? barbellInc : barbellInc * 2;
+  } else {
+    inc = data.weightUnit === 'lbs' ? 5 : (data.machineIncrement || 2.5);
+  }
   if (!level || level === 'beginner' || level === 'novice') {
     return { suggestedWeight: currentWeight + inc, strategy: 'weight', badge: `+${displayWeight(inc)}` };
   }
@@ -7763,6 +7786,36 @@ function renderSettings() {
           <button class="timer-adj-btn" onclick="changeRestDuration(-15,'isolation');renderSettings()">−15s</button>
           <span style="font-family:'Teko',sans-serif;font-size:22px;font-weight:600;color:var(--text);min-width:50px;text-align:center;" id="rest-duration-isolation">${data.restDurationIsolation || 60}s</span>
           <button class="timer-adj-btn" onclick="changeRestDuration(15,'isolation');renderSettings()">+15s</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <span class="label">Weight Increments</span>
+      <p class="text-xs text-dim mt-8">How much weight to add per tap. Also used for auto-progression suggestions.</p>
+      <div class="divider"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <span class="text-sm" style="color:var(--text-2);">Barbell</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button class="timer-adj-btn" onclick="changeIncrement('barbell',-0.5)">−</button>
+          <span style="font-family:'Teko',sans-serif;font-size:22px;font-weight:600;color:var(--text);min-width:50px;text-align:center;" id="inc-barbell">${data.weightUnit === 'lbs' ? '5lbs' : (data.barbellIncrement || 2.5) + 'kg'}</span>
+          <button class="timer-adj-btn" onclick="changeIncrement('barbell',0.5)">+</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <span class="text-sm" style="color:var(--text-2);">Dumbbell</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button class="timer-adj-btn" onclick="changeIncrement('dumbbell',-0.5)">−</button>
+          <span style="font-family:'Teko',sans-serif;font-size:22px;font-weight:600;color:var(--text);min-width:50px;text-align:center;" id="inc-dumbbell">${data.weightUnit === 'lbs' ? '5lbs' : (data.dumbbellIncrement || 2) + 'kg'}</span>
+          <button class="timer-adj-btn" onclick="changeIncrement('dumbbell',0.5)">+</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="text-sm" style="color:var(--text-2);">Machine / Cable</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button class="timer-adj-btn" onclick="changeIncrement('machine',-0.5)">−</button>
+          <span style="font-family:'Teko',sans-serif;font-size:22px;font-weight:600;color:var(--text);min-width:50px;text-align:center;" id="inc-machine">${data.weightUnit === 'lbs' ? '5lbs' : (data.machineIncrement || 2.5) + 'kg'}</span>
+          <button class="timer-adj-btn" onclick="changeIncrement('machine',0.5)">+</button>
         </div>
       </div>
     </div>
