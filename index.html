@@ -4590,7 +4590,6 @@ function adjustWarmupStep(index, field, delta) {
     step.reps = Math.max(1, Math.min(20, step.reps + delta));
   }
   save();
-  renderBuildSafe();
 }
 
 function addWarmupStep() {
@@ -4600,7 +4599,6 @@ function addWarmupStep() {
   const newPct = Math.min(95, (last?.pct || 50) + 10);
   data.warmupSteps.push({ pct: newPct, reps: 3 });
   save();
-  renderBuildSafe();
 }
 
 function removeWarmupStep(index) {
@@ -4608,13 +4606,11 @@ function removeWarmupStep(index) {
   if (data.warmupSteps.length <= 1) return;
   data.warmupSteps.splice(index, 1);
   save();
-  renderBuildSafe();
 }
 
 function resetWarmupSteps() {
   delete data.warmupSteps;
   save();
-  renderBuildSafe();
 }
 
 function startWarmup() {
@@ -7211,27 +7207,6 @@ function renderBuild() {
         <button class="timer-adj-btn" onclick="changeRestDuration(15)">+15s</button>
       </div>
       <div class="divider"></div>
-      <span class="label">Warm-up Protocol</span>
-      <div class="mt-8" style="font-size:11px;color:var(--text-3);margin-bottom:10px;">Recommended % of working weight per warm-up set. Set 1 at 0% = empty bar (barbell) or lightest weight.</div>
-      ${getWarmupSteps().map((step, i) => `
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
-          <span style="font-size:12px;color:var(--text-3);min-width:32px;">Set ${i+1}</span>
-          <button class="timer-adj-btn" onclick="adjustWarmupStep(${i},'pct',-5)" style="padding:4px 8px;font-size:11px;">−5</button>
-          <span style="font-family:'Teko',sans-serif;font-size:18px;font-weight:600;color:var(--text);min-width:36px;text-align:center;">${step.pct === 0 ? 'Bar' : step.pct + '%'}</span>
-          <button class="timer-adj-btn" onclick="adjustWarmupStep(${i},'pct',5)" style="padding:4px 8px;font-size:11px;">+5</button>
-          <span style="color:var(--text-3);font-size:11px;">×</span>
-          <button class="timer-adj-btn" onclick="adjustWarmupStep(${i},'reps',-1)" style="padding:4px 8px;font-size:11px;">−</button>
-          <span style="font-family:'Teko',sans-serif;font-size:18px;font-weight:600;color:var(--text);min-width:20px;text-align:center;">${step.reps}</span>
-          <button class="timer-adj-btn" onclick="adjustWarmupStep(${i},'reps',1)" style="padding:4px 8px;font-size:11px;">+</button>
-          <span style="font-size:11px;color:var(--text-3);">reps</span>
-          ${getWarmupSteps().length > 1 ? `<button onclick="removeWarmupStep(${i})" style="margin-left:auto;background:none;border:none;color:var(--text-3);font-size:16px;cursor:pointer;padding:2px 6px;">×</button>` : ''}
-        </div>
-      `).join('')}
-      <div style="display:flex;gap:8px;margin-top:4px;">
-        ${getWarmupSteps().length < 5 ? `<button class="btn btn-secondary" onclick="addWarmupStep()" style="font-size:12px;padding:6px 14px;">+ Add Set</button>` : ''}
-        ${data.warmupSteps ? `<button class="btn btn-secondary" onclick="resetWarmupSteps()" style="font-size:12px;padding:6px 14px;opacity:0.6;">Reset</button>` : ''}
-      </div>
-      <div class="divider"></div>
       <span class="label">This Week</span>
       <div class="week-row mt-8">
         ${buildWeeklyPreview()}
@@ -7492,6 +7467,30 @@ function renderSettings() {
         </div>
       `).join('')}
       ${data.setTargets ? `<button class="btn btn-ghost mt-8" onclick="resetSetTargets()" style="width:100%;font-size:12px;">Reset to Defaults</button>` : ''}
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <span class="label">Warm-up Protocol</span>
+      <p class="text-xs text-dim mt-8">Recommended % of working weight per warm-up set. Set 1 at 0% = empty bar (barbell) or lightest weight.</p>
+      <div class="divider"></div>
+      ${getWarmupSteps().map((step, i) => `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+          <span style="font-size:12px;color:var(--text-3);min-width:32px;">Set ${i+1}</span>
+          <button class="timer-adj-btn" onclick="adjustWarmupStep(${i},'pct',-5);renderSettings()" style="padding:4px 8px;font-size:11px;">−5</button>
+          <span style="font-family:'Teko',sans-serif;font-size:18px;font-weight:600;color:var(--text);min-width:36px;text-align:center;">${step.pct === 0 ? 'Bar' : step.pct + '%'}</span>
+          <button class="timer-adj-btn" onclick="adjustWarmupStep(${i},'pct',5);renderSettings()" style="padding:4px 8px;font-size:11px;">+5</button>
+          <span style="color:var(--text-3);font-size:11px;">×</span>
+          <button class="timer-adj-btn" onclick="adjustWarmupStep(${i},'reps',-1);renderSettings()" style="padding:4px 8px;font-size:11px;">−</button>
+          <span style="font-family:'Teko',sans-serif;font-size:18px;font-weight:600;color:var(--text);min-width:20px;text-align:center;">${step.reps}</span>
+          <button class="timer-adj-btn" onclick="adjustWarmupStep(${i},'reps',1);renderSettings()" style="padding:4px 8px;font-size:11px;">+</button>
+          <span style="font-size:11px;color:var(--text-3);">reps</span>
+          ${getWarmupSteps().length > 1 ? `<button onclick="removeWarmupStep(${i});renderSettings()" style="margin-left:auto;background:none;border:none;color:var(--text-3);font-size:16px;cursor:pointer;padding:2px 6px;">×</button>` : ''}
+        </div>
+      `).join('')}
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        ${getWarmupSteps().length < 5 ? `<button class="btn btn-ghost" onclick="addWarmupStep();renderSettings()" style="font-size:12px;">+ Add Set</button>` : ''}
+        ${data.warmupSteps ? `<button class="btn btn-ghost" onclick="resetWarmupSteps();renderSettings()" style="font-size:12px;opacity:0.6;">Reset</button>` : ''}
+      </div>
     </div>
 
     ${notifSupported ? `
