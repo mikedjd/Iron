@@ -4874,7 +4874,7 @@ function renderExercise() {
     <div class="exercise-name">${ex.name}</div>
     ${notesHtml}
     ${weightHtml}
-    ${trackPlateHtml}
+    ${trackPlateHtml ? `<div style="margin-bottom:16px">${trackPlateHtml}</div>` : ''}
     <div class="set-indicator">${setLabel}</div>
     <div class="rep-adjuster">
       <button class="rep-btn" onclick="adjustReps(-1)">−</button>
