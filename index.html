@@ -3779,7 +3779,7 @@ const SPLIT_PRESETS = {
   },
   'full-body': {
     label: 'Full Body',
-    desc: '3 days/week. Hits everything each session.',
+    desc: '1\u20136 days/week. Hits everything each session.',
     pattern: ['full'],
     programs: {
       full: [
@@ -6957,12 +6957,31 @@ function renderBuild() {
     <div class="card fade-in" style="margin-bottom:16px;">
       <span class="label">Split Template</span>
       <div class="split-templates mt-12">
-        ${Object.entries(SPLIT_PRESETS).map(([key, preset]) => `
-          <button class="split-template-btn ${currentPreset === key ? 'active' : ''}" onclick="selectSplit('${key}')">
-            <span class="split-tmpl-name">${preset.label}</span>
-            <span class="split-tmpl-desc">${preset.desc}</span>
-          </button>
-        `).join('')}
+        ${Object.entries(SPLIT_PRESETS).map(([key, preset]) => {
+          const isPreviewing = data['_splitPreview_' + key];
+          const previewRows = isPreviewing ? Object.entries(preset.programs).map(([type, exercises]) => {
+            const label = getTypeLabel(type);
+            return `<div style="margin-top:10px;padding:10px 12px;background:var(--surface-2);border-radius:10px;">
+              <div style="font-family:'Teko',sans-serif;font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);margin-bottom:6px;">${label}</div>
+              ${exercises.map(ex => {
+                const eqType = getEquipmentType(ex.name);
+                const eqIcon = eqType === 'barbell' ? ' \u{1F3CB}' : eqType === 'dumbbell' ? ' \u{1F4AA}' : '';
+                return `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;"><span style="color:var(--text-2);">${ex.name}${eqIcon}</span><span style="color:var(--text-3);">${ex.sets}\u00d7${ex.reps}</span></div>`;
+              }).join('')}
+            </div>`;
+          }).join('') : '';
+          return `
+          <div class="split-template-btn ${currentPreset === key ? 'active' : ''}">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;cursor:pointer;" onclick="selectSplit('${key}')">
+              <div style="flex:1;min-width:0;padding-right:8px;">
+                <span class="split-tmpl-name">${preset.label}</span>
+                <span class="split-tmpl-desc">${preset.desc}</span>
+              </div>
+            </div>
+            <button onclick="event.stopPropagation();data['_splitPreview_${key}']=!data['_splitPreview_${key}'];renderBuild();" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--text-3);font-size:11px;cursor:pointer;padding:4px 10px;margin-top:8px;font-family:'DM Sans',sans-serif;">${isPreviewing ? '\u25B2 Hide' : '\u25BC Preview'}</button>
+            ${previewRows}
+          </div>`;
+        }).join('')}
         <button class="split-template-btn ${currentPreset === 'custom' ? 'active' : ''}" onclick="selectSplit('custom')">
           <span class="split-tmpl-name">Custom</span>
           <span class="split-tmpl-desc">Build your own split.</span>
@@ -6994,6 +7013,7 @@ function renderBuild() {
           <button class="day-toggle ${data.schedule.trainingDays.includes(i) ? 'active' : ''}" onclick="toggleTrainingDay(${i})">${d}</button>
         `).join('')}
       </div>
+      ${getRecoveryWarning()}
       <div class="divider"></div>
       <span class="label">Rest Timer</span>
       <div class="mt-8" style="display:flex;align-items:center;gap:12px;">
@@ -7031,6 +7051,30 @@ function renderBuild() {
       <button class="btn btn-ghost mt-8 fade-in" onclick="resetPrograms()" style="color:var(--danger);">Reset to Defaults</button>
     ` : ''}
   `;
+}
+
+function getRecoveryWarning() {
+  const days = data.schedule.trainingDays.length;
+  const preset = data.splitPreset || 'custom';
+  const thresholds = {
+    'upper-lower': 4,
+    'full-body': 4,
+    'ppl': 6,
+    'bro-split': 5
+  };
+  const limit = thresholds[preset];
+  if (!limit || days <= limit) return '';
+  const messages = [
+    'Muscles grow during rest, not in the gym.',
+    'More sessions doesn\'t always mean more gains.',
+    'Recovery is where the magic happens.',
+    'Overtraining kills progress. Rest is productive.',
+    'Your CNS needs recovery days to perform.',
+  ];
+  const msg = messages[Math.floor(Math.random() * messages.length)];
+  return `<div style="margin-top:10px;padding:10px 14px;background:rgba(255,159,10,0.08);border:1px solid rgba(255,159,10,0.2);border-radius:10px;font-size:12px;color:#ff9f0a;">
+    <strong>${days} days/week</strong> is a lot for ${SPLIT_PRESETS[preset]?.label || 'this split'}. ${msg} Consider ${limit} days or fewer.
+  </div>`;
 }
 
 function toggleTrainingDay(day) {
@@ -7336,43 +7380,16 @@ function renderBuildProgram(type, exercises) {
   // Estimated duration
   const estMins = Math.round(exercises.reduce((sum, ex) => {
     const restSec = ex.restDuration || (data.restDuration || 90);
-    return sum + (ex.sets * (40 + restSec)); // ~40s per set + rest
+    return sum + (ex.sets * (40 + restSec));
   }, 0) / 60);
-
-  // Rest timer info per exercise
-  const restInfo = exercises.some(ex => ex.restDuration) ? exercises.filter(ex => ex.restDuration).map(ex => `${ex.name}: ${ex.restDuration}s`).join(', ') : '';
-
-  const isPreview = data['_preview_' + type];
-  const previewHtml = isPreview ? `
-    <div class="build-preview">
-      ${exercises.map((ex, i) => {
-        const w = ex.weight || getLastWeight(ex.name);
-        const weightStr = w ? ` @ ${displayWeight(w)}${weightLabel()}` : '';
-        const eqType = getEquipmentType(ex.name);
-        const eqLabel = eqType === 'barbell' ? ' \u{1F3CB}' : eqType === 'dumbbell' ? ' \u{1F4AA}' : '';
-        const restLabel = ex.restDuration ? ` \u00b7 ${ex.restDuration}s rest` : '';
-        let badge = '';
-        if (ex.supersetNext) badge = '<span class="type-badge ss" style="font-size:8px;padding:2px 6px;">SS</span> ';
-        if (ex.restPause) badge = '<span class="type-badge rp" style="font-size:8px;padding:2px 6px;">RP</span> ';
-        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;">
-          <span style="color:var(--text-2);">${badge}${ex.name}${eqLabel}</span>
-          <span style="color:var(--text-3);font-variant-numeric:tabular-nums;">${ex.sets}\u00d7${ex.reps}${weightStr}${restLabel}</span>
-        </div>`;
-      }).join('')}
-      <div style="margin-top:8px;font-size:12px;color:var(--text-3);">Est. ${estMins} min${restInfo ? ' \u00b7 Custom rest: ' + restInfo : ''}</div>
-    </div>` : '';
 
   return `
     <div class="card build-program fade-in">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div class="display display-sm" style="margin-bottom:4px;">${label}</div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <button class="build-icon-btn" onclick="data['_preview_${type}']=!data['_preview_${type}'];renderBuild();" title="Preview" style="font-size:14px;">${isPreview ? '\u25B2' : '\u25BC'}</button>
-          ${data.splitPreset === 'custom' && data.schedule.pattern.length > 1 ? `<button class="build-icon-btn delete" onclick="removeCustomType(${data.schedule.pattern.indexOf(type)})" title="Remove" style="width:24px;height:24px;font-size:12px;">×</button>` : ''}
-        </div>
+        ${data.splitPreset === 'custom' && data.schedule.pattern.length > 1 ? `<button class="build-icon-btn delete" onclick="removeCustomType(${data.schedule.pattern.indexOf(type)})" title="Remove" style="width:24px;height:24px;font-size:12px;">×</button>` : ''}
       </div>
       <span class="text-sm text-dim">${exercises.length} exercises \u00b7 ${totalSets} sets \u00b7 ~${estMins} min</span>
-      ${previewHtml}
       <div class="divider"></div>
       ${rows}
       ${buildAdding !== type ? `
