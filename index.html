@@ -432,9 +432,15 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: safe center;
       padding: 20px;
       text-align: center;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      min-height: 0;
+    }
+    @supports not (justify-content: safe center) {
+      .workout-body { justify-content: flex-start; padding-top: 40px; }
     }
     .exercise-label {
       font-size: 13px;
@@ -654,10 +660,11 @@
 
     /* Up next */
     .up-next {
-      padding: 16px 20px;
-      padding-bottom: calc(16px + var(--safe-bottom));
+      padding: 12px 20px;
+      padding-bottom: calc(12px + var(--safe-bottom));
       background: var(--surface);
       border-top: 1px solid var(--divider);
+      flex-shrink: 0;
     }
     .up-next-label {
       font-size: 10px;
@@ -2614,7 +2621,21 @@
       justify-content: center;
     }
     .workout-actions .skip-btn,
-    .workout-actions .add-set-btn { margin-top: 0; }
+    .workout-actions .add-set-btn,
+    .workout-actions .back-btn { margin-top: 0; }
+    .back-btn {
+      padding: 10px 24px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text-3);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .back-btn:active { border-color: var(--text-2); color: var(--text-2); }
     .add-set-btn {
       padding: 10px 24px;
       border: 1px solid var(--border);
@@ -4591,6 +4612,7 @@ function renderExercise() {
     </div>
     <button class="done-btn" onclick="completeSet(this)">Done</button>
     <div class="workout-actions">
+      ${(workout.currentExerciseIndex > 0 || ex.completedSets.length > 0) ? '<button class="back-btn" onclick="goBackSet()">Back</button>' : ''}
       <button class="skip-btn" onclick="skipSet()">Skip Set</button>
       <button class="add-set-btn" onclick="addSetDuringWorkout()">+ Set</button>
     </div>
@@ -4703,6 +4725,34 @@ function addSetDuringWorkout() {
   // Update the set indicator display
   const setEl = document.querySelector('.set-indicator');
   if (setEl) setEl.textContent = `Set ${ex.completedSets.length + 1} of ${ex.targetSets}`;
+}
+
+function goBackSet() {
+  if (!workout) return;
+  const ex = workout.exercises[workout.currentExerciseIndex];
+
+  if (ex.completedSets.length > 0) {
+    // Undo last set on current exercise
+    const lastSet = ex.completedSets.pop();
+    // Restore the reps/weight from that set for editing
+    ex.currentReps = getSetReps(lastSet);
+    if (!ex.isBodyweight) ex.currentWeight = getSetWeight(lastSet) || ex.currentWeight;
+    saveWorkoutState();
+    renderExercise();
+  } else if (workout.currentExerciseIndex > 0) {
+    // Go back to previous exercise
+    workout.currentExerciseIndex--;
+    workout.exerciseReady = true; // skip prep, go straight to tracking
+    const prevEx = workout.exercises[workout.currentExerciseIndex];
+    // Undo last completed set of previous exercise so user can redo it
+    if (prevEx.completedSets.length > 0) {
+      const lastSet = prevEx.completedSets.pop();
+      prevEx.currentReps = getSetReps(lastSet);
+      if (!prevEx.isBodyweight) prevEx.currentWeight = getSetWeight(lastSet) || prevEx.currentWeight;
+    }
+    saveWorkoutState();
+    renderExercise();
+  }
 }
 
 function skipExercise() {
