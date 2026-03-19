@@ -3114,7 +3114,14 @@ const PROGRAMS = {
   ]
 };
 
-function getRestDuration() { return (data && data.restDuration) || 90; }
+function getRestDuration() {
+  // Per-exercise rest overrides global default
+  if (workout) {
+    const ex = workout.exercises[workout.currentExerciseIndex];
+    if (ex && ex.restDuration) return ex.restDuration;
+  }
+  return (data && data.restDuration) || 90;
+}
 const CIRCUMFERENCE = 2 * Math.PI * 90; // 565.49
 const KG_TO_LBS = 2.20462;
 
@@ -3716,7 +3723,7 @@ const DEFAULT_SET_TARGETS = {
 const SPLIT_PRESETS = {
   'upper-lower': {
     label: 'Upper / Lower',
-    desc: '4 days/week. Alternates upper and lower body.',
+    desc: '2\u20136 days/week. Alternates upper and lower body.',
     pattern: ['upper', 'lower'],
     programs: {
       upper: [
@@ -7326,13 +7333,46 @@ function renderBuildProgram(type, exercises) {
     rows += renderBuildEditForm(type, -1, { name: '', sets: 3, reps: 10 });
   }
 
+  // Estimated duration
+  const estMins = Math.round(exercises.reduce((sum, ex) => {
+    const restSec = ex.restDuration || (data.restDuration || 90);
+    return sum + (ex.sets * (40 + restSec)); // ~40s per set + rest
+  }, 0) / 60);
+
+  // Rest timer info per exercise
+  const restInfo = exercises.some(ex => ex.restDuration) ? exercises.filter(ex => ex.restDuration).map(ex => `${ex.name}: ${ex.restDuration}s`).join(', ') : '';
+
+  const isPreview = data['_preview_' + type];
+  const previewHtml = isPreview ? `
+    <div class="build-preview">
+      ${exercises.map((ex, i) => {
+        const w = ex.weight || getLastWeight(ex.name);
+        const weightStr = w ? ` @ ${displayWeight(w)}${weightLabel()}` : '';
+        const eqType = getEquipmentType(ex.name);
+        const eqLabel = eqType === 'barbell' ? ' \u{1F3CB}' : eqType === 'dumbbell' ? ' \u{1F4AA}' : '';
+        const restLabel = ex.restDuration ? ` \u00b7 ${ex.restDuration}s rest` : '';
+        let badge = '';
+        if (ex.supersetNext) badge = '<span class="type-badge ss" style="font-size:8px;padding:2px 6px;">SS</span> ';
+        if (ex.restPause) badge = '<span class="type-badge rp" style="font-size:8px;padding:2px 6px;">RP</span> ';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;">
+          <span style="color:var(--text-2);">${badge}${ex.name}${eqLabel}</span>
+          <span style="color:var(--text-3);font-variant-numeric:tabular-nums;">${ex.sets}\u00d7${ex.reps}${weightStr}${restLabel}</span>
+        </div>`;
+      }).join('')}
+      <div style="margin-top:8px;font-size:12px;color:var(--text-3);">Est. ${estMins} min${restInfo ? ' \u00b7 Custom rest: ' + restInfo : ''}</div>
+    </div>` : '';
+
   return `
     <div class="card build-program fade-in">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div class="display display-sm" style="margin-bottom:4px;">${label}</div>
-        ${data.splitPreset === 'custom' && data.schedule.pattern.length > 1 ? `<button class="build-icon-btn delete" onclick="removeCustomType(${data.schedule.pattern.indexOf(type)})" title="Remove" style="width:24px;height:24px;font-size:12px;">×</button>` : ''}
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="build-icon-btn" onclick="data['_preview_${type}']=!data['_preview_${type}'];renderBuild();" title="Preview" style="font-size:14px;">${isPreview ? '\u25B2' : '\u25BC'}</button>
+          ${data.splitPreset === 'custom' && data.schedule.pattern.length > 1 ? `<button class="build-icon-btn delete" onclick="removeCustomType(${data.schedule.pattern.indexOf(type)})" title="Remove" style="width:24px;height:24px;font-size:12px;">×</button>` : ''}
+        </div>
       </div>
-      <span class="text-sm text-dim">${exercises.length} exercises · ${totalSets} sets</span>
+      <span class="text-sm text-dim">${exercises.length} exercises \u00b7 ${totalSets} sets \u00b7 ~${estMins} min</span>
+      ${previewHtml}
       <div class="divider"></div>
       ${rows}
       ${buildAdding !== type ? `
@@ -7393,6 +7433,13 @@ function renderBuildEditForm(type, index, ex) {
         <div class="label" style="margin-bottom:4px;">Notes</div>
         <textarea id="edit-notes" placeholder="e.g., use narrow grip, pause at bottom">${ex.notes || ''}</textarea>
       </div>
+      <div style="margin-bottom:8px;">
+        <div class="label" style="margin-bottom:4px;">Rest Timer</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="number" id="edit-rest" value="${ex.restDuration || ''}" min="0" max="600" step="15" inputmode="numeric" placeholder="${data.restDuration || 90}" style="width:80px;">
+          <span class="text-xs text-dim">seconds (blank = default ${data.restDuration || 90}s)</span>
+        </div>
+      </div>
       <div class="form-actions">
         <button class="cancel-btn" onclick="cancelBuildEdit()">Cancel</button>
         <button class="save-btn" onclick="saveBuildEdit('${type}', ${index})">${isNew ? 'Add' : 'Save'}</button>
@@ -7407,6 +7454,7 @@ function setBuildType(t) {
   const reps = document.getElementById('edit-reps')?.value;
   const weight = document.getElementById('edit-weight')?.value;
   const notes = document.getElementById('edit-notes')?.value;
+  const rest = document.getElementById('edit-rest')?.value;
   const mg = document.getElementById('edit-muscle-group')?.value;
   buildEditType = t;
   renderBuild();
@@ -7417,6 +7465,7 @@ function setBuildType(t) {
     const r = document.getElementById('edit-reps'); if (r) r.value = reps;
     const w = document.getElementById('edit-weight'); if (w) w.value = weight;
     const nt = document.getElementById('edit-notes'); if (nt) nt.value = notes;
+    const rt = document.getElementById('edit-rest'); if (rt) rt.value = rest;
     if (mg) { const m = document.getElementById('edit-muscle-group'); if (m) m.value = mg; }
     // Re-show muscle group row if needed
     if (name && name.trim() && !EXERCISE_DB[name.trim().toLowerCase()]) {
@@ -7461,11 +7510,13 @@ function saveBuildEdit(type, index) {
 
   ensureCustomPrograms();
 
+  const restVal = document.getElementById('edit-rest')?.value;
   const exercise = { name, sets, reps };
   if (weightVal) {
     exercise.weight = parseWeightInput(weightVal);
   }
   if (notes) exercise.notes = notes;
+  if (restVal && parseInt(restVal) > 0) exercise.restDuration = parseInt(restVal);
   if (buildEditType === 'superset') exercise.supersetNext = true;
   if (buildEditType === 'rest-pause') exercise.restPause = true;
 
