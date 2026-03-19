@@ -359,35 +359,48 @@
       color: var(--text-2);
     }
     .preview-detail-row .label { font-size: 10px; }
-    /* Plate Calculator */
+    /* Plate Calculator — Visual Barbell */
+    .barbell-visual {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; padding: 8px 0;
+    }
+    .bar-plates { display: flex; align-items: center; gap: 2px; }
+    .bar-plates.left { flex-direction: row-reverse; }
+    .bar-plate {
+      width: 22px; border-radius: 3px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 700; min-height: 18px;
+    }
+    /* kg plate heights + colors */
+    .bp-25   { height: 52px; background: rgba(255,59,48,0.25); color: #ff6b6b; }
+    .bp-20   { height: 46px; background: rgba(48,120,209,0.25); color: #6ba3ff; }
+    .bp-15   { height: 40px; background: rgba(255,214,0,0.25); color: #ffd700; }
+    .bp-10   { height: 34px; background: rgba(48,209,88,0.25); color: #30d158; }
+    .bp-5    { height: 26px; background: rgba(255,255,255,0.10); color: #ccc; }
+    .bp-2-5  { height: 20px; background: rgba(255,255,255,0.06); color: #999; }
+    .bp-1-25 { height: 18px; background: rgba(255,255,255,0.04); color: #888; }
+    /* lbs plate heights + colors */
+    .bp-45   { height: 52px; background: rgba(255,59,48,0.25); color: #ff6b6b; }
+    .bp-35   { height: 46px; background: rgba(255,214,0,0.25); color: #ffd700; }
+    .bp-25lbs { height: 40px; background: rgba(48,120,209,0.25); color: #6ba3ff; }
+    .bar-collar { width: 6px; height: 18px; background: #555; border-radius: 1px; }
+    .bar-end-cap { width: 4px; height: 14px; background: #555; border-radius: 1px; }
+    .bar-shaft {
+      width: 70px; height: 10px; background: #666; border-radius: 2px;
+      position: relative; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .bar-shaft-label {
+      position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+      font-size: 11px; font-weight: 700; color: var(--accent);
+      white-space: nowrap;
+    }
+    /* Dumbbell text fallback */
     .plate-calc {
-      padding: 4px 0 8px 16px;
-      border-bottom: 1px solid var(--divider);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      flex-wrap: wrap;
+      padding: 4px 0 8px;
+      display: flex; align-items: center; justify-content: center;
+      gap: 4px; flex-wrap: wrap;
     }
-    .plate {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 3px 8px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
-      font-variant-numeric: tabular-nums;
-      min-width: 32px;
-    }
-    .plate-25   { background: rgba(255, 59, 48, 0.20); color: #ff6b6b; }
-    .plate-20   { background: rgba(48, 120, 209, 0.20); color: #6ba3ff; }
-    .plate-15   { background: rgba(255, 214, 0, 0.20); color: #ffd700; }
-    .plate-10   { background: rgba(48, 209, 88, 0.20); color: var(--good); }
-    .plate-5    { background: var(--surface-3); color: var(--text); }
-    .plate-2-5  { background: var(--surface-2); color: var(--text-2); }
-    .plate-1-25 { background: var(--surface); color: var(--text-3); }
-    .plate-45   { background: rgba(255, 59, 48, 0.20); color: #ff6b6b; }
-    .plate-35   { background: rgba(255, 214, 0, 0.20); color: #ffd700; }
     .plate-label { font-size: 10px; color: var(--text-3); font-weight: 500; margin-left: 2px; }
 
     /* ═══════════════════════════════════════════════
@@ -3560,22 +3573,42 @@ function buildWeightInfoHtml(exerciseName, weight, style) {
 
   if (eqType === 'barbell') {
     const plateResult = calcPlates(weight);
-    if (plateResult.perSide.length === 0) {
-      const bw = getBarWeight();
-      if (weight <= bw) {
-        return `<div class="plate-calc" id="dynamic-plate-calc" style="${s}"><span class="plate-label" onclick="cycleBarWeight()" style="cursor:pointer;">${bw}${unit} bar only \u270E</span></div>`;
-      }
-      return '';
-    }
-    const grouped = {};
-    plateResult.perSide.forEach(p => { grouped[p] = (grouped[p] || 0) + 1; });
-    const chips = Object.entries(grouped)
-      .map(([size, count]) => {
-        const cls = 'plate-' + String(size).replace('.', '-');
-        return `<span class="plate ${cls}">${count > 1 ? count + '\u00d7' : ''}${size}</span>`;
-      }).join('');
     const bw = getBarWeight();
-    return `<div class="plate-calc" id="dynamic-plate-calc" style="${s}">${chips}<span class="plate-label">per side \u00b7 <span onclick="cycleBarWeight()" style="cursor:pointer;text-decoration:underline;text-decoration-style:dotted;">${bw}${unit} bar</span></span></div>`;
+    const isLbs = data.weightUnit === 'lbs';
+
+    // Build plate divs from perSide array
+    const makePlateDiv = (size) => {
+      let cls = 'bp-' + String(size).replace('.', '-');
+      // 25lbs needs special class to distinguish from 25kg
+      if (isLbs && size === 25) cls = 'bp-25lbs';
+      return `<div class="bar-plate ${cls}">${size}</div>`;
+    };
+
+    // perSide is ordered largest→smallest from calcPlates
+    const rightPlates = plateResult.perSide.map(makePlateDiv).join('');
+    const leftPlates = plateResult.perSide.map(makePlateDiv).join('');
+
+    const barOnly = plateResult.perSide.length === 0;
+    const shaft = `<div class="bar-shaft" onclick="cycleBarWeight()"><span class="bar-shaft-label">${bw}${unit}</span></div>`;
+
+    if (barOnly && weight <= bw) {
+      return `<div class="barbell-visual" id="dynamic-plate-calc">
+        <div class="bar-end-cap"></div><div class="bar-collar"></div>
+        ${shaft}
+        <div class="bar-collar"></div><div class="bar-end-cap"></div>
+      </div>`;
+    }
+    if (barOnly) return '';
+
+    return `<div class="barbell-visual" id="dynamic-plate-calc">
+      <div class="bar-end-cap"></div>
+      <div class="bar-plates left">${leftPlates}</div>
+      <div class="bar-collar"></div>
+      ${shaft}
+      <div class="bar-collar"></div>
+      <div class="bar-plates">${rightPlates}</div>
+      <div class="bar-end-cap"></div>
+    </div>`;
   }
 
   return '';
@@ -4874,7 +4907,7 @@ function renderExercise() {
     <div class="exercise-name">${ex.name}</div>
     ${notesHtml}
     ${weightHtml}
-    ${trackPlateHtml ? `<div style="margin-bottom:16px">${trackPlateHtml}</div>` : ''}
+    ${trackPlateHtml ? `<div style="margin:8px 0 20px">${trackPlateHtml}</div>` : ''}
     <div class="set-indicator">${setLabel}</div>
     <div class="rep-adjuster">
       <button class="rep-btn" onclick="adjustReps(-1)">−</button>
