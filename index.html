@@ -3880,14 +3880,37 @@ const EXERCISE_DB = {
 const EXERCISE_NAMES = Object.keys(EXERCISE_DB).sort();
 
 /* Default recommended sets per muscle per week (Schoenfeld et al.) */
-const DEFAULT_SET_TARGETS = {
-  "Chest": { min: 10, max: 20 }, "Lats": { min: 10, max: 20 },
-  "Quads": { min: 10, max: 20 }, "Hams/Glutes": { min: 10, max: 20 },
-  "Front Delts": { min: 8, max: 16 }, "Side/Rear Delts": { min: 8, max: 16 },
-  "Upper Back": { min: 8, max: 16 },
-  "Biceps": { min: 6, max: 14 }, "Triceps": { min: 6, max: 14 },
-  "Calves": { min: 6, max: 14 }, "Forearms": { min: 6, max: 14 }, "Core": { min: 6, max: 14 }
+/* Weekly set targets scaled by training style.
+   Volume: higher volume, further from failure (Schoenfeld ranges).
+   Balanced: moderate — the default for most programs.
+   Intensity: fewer sets, closer to failure — each set carries more stimulus. */
+const SET_TARGETS_BY_STYLE = {
+  volume: {
+    "Chest": { min: 12, max: 20 }, "Lats": { min: 12, max: 20 },
+    "Quads": { min: 12, max: 20 }, "Hams/Glutes": { min: 12, max: 20 },
+    "Front Delts": { min: 10, max: 16 }, "Side/Rear Delts": { min: 10, max: 16 },
+    "Upper Back": { min: 10, max: 16 },
+    "Biceps": { min: 8, max: 14 }, "Triceps": { min: 8, max: 14 },
+    "Calves": { min: 8, max: 14 }, "Forearms": { min: 6, max: 12 }, "Core": { min: 6, max: 12 }
+  },
+  balanced: {
+    "Chest": { min: 10, max: 16 }, "Lats": { min: 10, max: 16 },
+    "Quads": { min: 10, max: 16 }, "Hams/Glutes": { min: 10, max: 16 },
+    "Front Delts": { min: 8, max: 14 }, "Side/Rear Delts": { min: 8, max: 14 },
+    "Upper Back": { min: 8, max: 14 },
+    "Biceps": { min: 6, max: 12 }, "Triceps": { min: 6, max: 12 },
+    "Calves": { min: 6, max: 12 }, "Forearms": { min: 4, max: 10 }, "Core": { min: 4, max: 10 }
+  },
+  intensity: {
+    "Chest": { min: 6, max: 12 }, "Lats": { min: 6, max: 12 },
+    "Quads": { min: 6, max: 12 }, "Hams/Glutes": { min: 6, max: 12 },
+    "Front Delts": { min: 4, max: 10 }, "Side/Rear Delts": { min: 4, max: 10 },
+    "Upper Back": { min: 4, max: 10 },
+    "Biceps": { min: 3, max: 8 }, "Triceps": { min: 3, max: 8 },
+    "Calves": { min: 3, max: 8 }, "Forearms": { min: 2, max: 6 }, "Core": { min: 2, max: 6 }
+  }
 };
+const DEFAULT_SET_TARGETS = SET_TARGETS_BY_STYLE.balanced;
 
 const SPLIT_PRESETS = {
   'upper-lower': {
@@ -4036,7 +4059,8 @@ function titleCaseExercise(str) {
 }
 
 function getSetTargets() {
-  return data.setTargets || DEFAULT_SET_TARGETS;
+  if (data.setTargets) return data.setTargets;
+  return SET_TARGETS_BY_STYLE[data.trainingStyle] || DEFAULT_SET_TARGETS;
 }
 
 function getBarColorClass(group, sets) {
@@ -8106,6 +8130,7 @@ function setDeloadMode(mode) {
 
 function setTrainingStyle(style) {
   data.trainingStyle = style;
+  data.setTargets = null; // reset to style-appropriate defaults
   save();
   renderSettings();
 }
@@ -8389,7 +8414,7 @@ function showBPVInfo() { document.getElementById('bpv-info-popup').classList.add
 function hideBPVInfo() { document.getElementById('bpv-info-popup').classList.remove('active'); }
 
 function updateSetTarget(group, field, value) {
-  if (!data.setTargets) data.setTargets = JSON.parse(JSON.stringify(DEFAULT_SET_TARGETS));
+  if (!data.setTargets) data.setTargets = JSON.parse(JSON.stringify(getSetTargets()));
   const v = parseInt(value);
   if (isNaN(v) || v < 0) return;
   data.setTargets[group][field] = v;
