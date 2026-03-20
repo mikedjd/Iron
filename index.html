@@ -8592,8 +8592,8 @@ let syncTimer = null;
 
 // --- Onboarding / Auth UI ---
 let onboardingStep = 1;
-const ONBOARDING_TOTAL = 4;
-let onboardingData = { weightUnit: 'kg', bodyWeight: '', trainingDays: [1,3,5], split: 'upper-lower' };
+const ONBOARDING_TOTAL = 5;
+let onboardingData = { weightUnit: 'kg', bodyWeight: '', trainingDays: [1,3,5], split: 'upper-lower', trainingStyle: 'balanced' };
 
 function renderOnboardingDots(step) {
   const dots = document.getElementById('onboarding-dots');
@@ -8692,6 +8692,42 @@ function renderOnboardingStep(step) {
         </div>
       </div>`;
   } else if (step === 4) {
+    // Training style
+    title.textContent = 'HOW YOU TRAIN';
+    title.style.fontSize = '36px';
+    const styles = [
+      { key: 'volume', name: 'Volume', rpe: 'RPE 7-8', rir: '2-3 reps in reserve',
+        desc: 'More sets, further from failure. Build up work capacity and accumulate volume before adding weight.',
+        who: 'Hypertrophy blocks, RP-style training' },
+      { key: 'balanced', name: 'Balanced', rpe: 'RPE 8-9', rir: '1-2 reps in reserve',
+        desc: 'Hard enough to drive adaptation, manageable enough to recover from. The default for most programs.',
+        who: 'Most lifters, most of the time' },
+      { key: 'intensity', name: 'Intensity', rpe: 'RPE 9-10', rir: '0-1 reps in reserve',
+        desc: 'Fewer sets, closer to failure. Maximise stimulus per set with lower total volume.',
+        who: 'HIT, rest-pause, strength peaking' }
+    ];
+    el.innerHTML = `
+      <div class="onboarding-step">
+        <p style="color:var(--text-2);font-size:14px;text-align:center;margin-bottom:20px;">IRON uses RPE (Rate of Perceived Exertion) to auto-regulate your training. Pick the style that matches how you like to train.</p>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+          ${styles.map(s => `
+            <div class="split-card ${onboardingData.trainingStyle === s.key ? 'selected' : ''}" onclick="onboardingData.trainingStyle='${s.key}';renderOnboardingStep(4);">
+              <h3>${s.name} <span style="font-weight:400;font-size:12px;color:var(--text-3);">${s.rpe} · ${s.rir}</span></h3>
+              <p>${s.desc}</p>
+              <p style="font-size:11px;color:var(--accent);margin-top:4px;">${s.who}</p>
+            </div>
+          `).join('')}
+        </div>
+        <div style="padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:10px;margin-bottom:20px;">
+          <p style="font-size:12px;color:var(--text-3);margin:0;"><strong style="color:var(--text-2);">How it works</strong><br>After each set you can log your RPE. IRON compares this to your target range — if effort creeps above it for 3+ sessions, it flags fatigue and suggests a deload. When you hit your target reps, it suggests adding weight next session.</p>
+          <p style="font-size:12px;color:var(--text-3);margin:8px 0 0;"><strong style="color:var(--text-2);">Everyone is different</strong><br>There is no single correct approach — research supports all three (Helms et al., Zourdos et al.). Experiment and let your data guide you. One common mistake is combining high intensity with high volume. Pick one to emphasise per block.</p>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-secondary" onclick="renderOnboardingStep(3)" style="flex:0.4;">Back</button>
+          <button class="btn btn-primary" onclick="renderOnboardingStep(5)" style="flex:1;">Next</button>
+        </div>
+      </div>`;
+  } else if (step === 5) {
     // Account
     title.textContent = 'YOUR ACCOUNT';
     title.style.fontSize = '36px';
@@ -8711,7 +8747,7 @@ function renderOnboardingStep(step) {
             Already have an account? <a href="#" onclick="showLoginScreen();return false;" style="color:var(--accent);">Log in</a>
           </p>
           <div style="display:flex;gap:10px;margin-top:4px;">
-            <button class="btn btn-secondary" onclick="renderOnboardingStep(3)" style="flex:0.4;">Back</button>
+            <button class="btn btn-secondary" onclick="renderOnboardingStep(4)" style="flex:0.4;">Back</button>
             <button class="btn btn-ghost" onclick="finishOnboarding('skip')" style="flex:1;border:1px solid var(--border);">Continue without account</button>
           </div>
         </div>
@@ -8734,6 +8770,7 @@ function toggleOnboardingDay(day) {
 
 function applyOnboardingSettings() {
   data.weightUnit = onboardingData.weightUnit;
+  data.trainingStyle = onboardingData.trainingStyle;
   data.schedule.trainingDays = onboardingData.trainingDays;
   if (onboardingData.bodyWeight) {
     const w = parseFloat(onboardingData.bodyWeight);
