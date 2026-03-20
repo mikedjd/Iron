@@ -584,6 +584,9 @@
       cursor: pointer;
       transition: all 0.15s;
       -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
     }
     .rpe-pill:active { transform: scale(0.93); }
     .rpe-pill.selected {
@@ -939,11 +942,15 @@
       background: none;
       color: var(--text-2);
       font-family: 'Teko', sans-serif;
-      font-size: 16px;
-      font-weight: 500;
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.2;
       cursor: pointer;
       transition: all 0.15s;
       -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
     }
     .done-rpe-btn.selected {
       border-color: var(--accent);
@@ -5479,7 +5486,7 @@ function startRestTimer(onComplete, duration) {
       <div class="timer-feedback">
         <div class="timer-feedback-label">RPE</div>
         <div class="rpe-pills">
-          ${[6,7,8,9,10].map(v => `<div class="rpe-pill${lastRpe === v ? ' selected' : ''}" onclick="selectRpe(${v})" data-rpe="${v}">${v}</div>`).join('')}
+          ${[6,7,8,9,10].map(v => `<button class="rpe-pill${lastRpe === v ? ' selected' : ''}" onclick="selectRpe(${v})" data-rpe="${v}" type="button">${v}</button>`).join('')}
         </div>
         <div class="rpe-desc" id="rpe-desc">${lastRpe ? getRpeDesc(lastRpe) : ''}</div>
       </div>`;
@@ -5733,11 +5740,11 @@ function showDoneScreen() {
     <div class="card fade-in stagger-${stagger + 1}">
       <span class="label">Session Rating</span>
       <div class="done-rpe-row">
-        <button class="done-rpe-btn" onclick="selectSessionRating(1, this)">1<br><span style="font-size:11px;font-family:Inter,sans-serif;">Easy</span></button>
-        <button class="done-rpe-btn" onclick="selectSessionRating(2, this)">2</button>
-        <button class="done-rpe-btn" onclick="selectSessionRating(3, this)">3<br><span style="font-size:11px;font-family:Inter,sans-serif;">Moderate</span></button>
-        <button class="done-rpe-btn" onclick="selectSessionRating(4, this)">4</button>
-        <button class="done-rpe-btn" onclick="selectSessionRating(5, this)">5<br><span style="font-size:11px;font-family:Inter,sans-serif;">Brutal</span></button>
+        <button class="done-rpe-btn" onclick="selectSessionRating(1, this)" type="button">1<div style="font-size:10px;font-weight:400;color:var(--text-3);margin-top:2px;">Easy</div></button>
+        <button class="done-rpe-btn" onclick="selectSessionRating(2, this)" type="button">2</button>
+        <button class="done-rpe-btn" onclick="selectSessionRating(3, this)" type="button">3<div style="font-size:10px;font-weight:400;color:var(--text-3);margin-top:2px;">Medium</div></button>
+        <button class="done-rpe-btn" onclick="selectSessionRating(4, this)" type="button">4</button>
+        <button class="done-rpe-btn" onclick="selectSessionRating(5, this)" type="button">5<div style="font-size:10px;font-weight:400;color:var(--text-3);margin-top:2px;">Brutal</div></button>
       </div>
       <div class="divider"></div>
       <span class="label">Notes</span>
