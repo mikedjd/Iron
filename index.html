@@ -5296,16 +5296,8 @@ function renderExercise() {
         ${ex.warmupSets.map((ws, i) => `<div style="font-size:13px;color:var(--text-2);padding:2px 0;">${i+1}. ${ws.weight ? displayWeight(ws.weight) + ' × ' : ''}${ws.reps} reps</div>`).join('')}
       </div>` : '';
 
-    // First-time swap tip (shown once, dismissed permanently)
-    const swapTipHtml = !data.swapTipDismissed ? `
-      <div class="swap-tip" id="swap-tip" style="margin-bottom:16px;padding:12px 14px;background:rgba(163,184,108,0.08);border:1px solid rgba(163,184,108,0.15);border-radius:10px;font-size:12px;color:var(--text-2);line-height:1.5;position:relative;">
-        <button onclick="data.swapTipDismissed=true;save();document.getElementById('swap-tip').remove();" style="position:absolute;top:6px;right:10px;background:none;border:none;color:var(--text-3);font-size:16px;cursor:pointer;padding:0;">×</button>
-        <strong style="color:var(--accent);">Tip:</strong> These exercises are just suggestions. Use <strong>Swap</strong> below to switch any exercise for your preferred variant — e.g. barbell squat for leg press, or dumbbell press for bench press.
-      </div>` : '';
-
     bodyEl.innerHTML = `
       ${typeBadge}
-      ${swapTipHtml}
       <div class="exercise-label">Exercise ${workout.currentExerciseIndex + 1} of ${totalExercises}</div>
       <div class="exercise-name">${ex.name}</div>
       ${prepNoteDisplay}
@@ -7960,9 +7952,16 @@ function renderBuild() {
     }
   }
 
+  const swapTipHtml = !data.swapTipDismissed ? `
+    <div class="swap-tip" id="swap-tip" style="margin-bottom:16px;padding:12px 14px;background:rgba(163,184,108,0.08);border:1px solid rgba(163,184,108,0.15);border-radius:10px;font-size:12px;color:var(--text-2);line-height:1.5;position:relative;">
+      <button onclick="data.swapTipDismissed=true;save();document.getElementById('swap-tip').remove();" style="position:absolute;top:6px;right:10px;background:none;border:none;color:var(--text-3);font-size:16px;cursor:pointer;padding:0;">×</button>
+      <strong style="color:var(--accent);">Tip:</strong> These exercises are just suggestions. Swap any exercise for your preferred variant — e.g. barbell squat for leg press, or dumbbell press for bench press. You can also swap during a workout.
+    </div>` : '';
+
   el.innerHTML = `
     ${splitTemplateHtml}
     ${scheduleHtml}
+    ${swapTipHtml}
     ${programCards}
     ${data.programs ? `
       <button class="btn btn-ghost mt-8 fade-in" onclick="resetPrograms()" style="color:var(--danger);">Reset to Defaults</button>
