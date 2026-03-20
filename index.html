@@ -3281,12 +3281,25 @@ const STRENGTH_STANDARDS = {
 };
 
 const DIET_GOALS = {
-  'cut-aggressive': { label: 'Aggressive Cut', target: [-0.75, -0.5], step: 200, desc: 'Lose 0.5–0.75 kg/week', proPerKg: 2.6, fatPct: 0.25 },
-  'cut':            { label: 'Cut',            target: [-0.5, -0.25], step: 150, desc: 'Lose 0.25–0.5 kg/week', proPerKg: 2.3, fatPct: 0.25 },
-  'recomp':         { label: 'Recomp',         target: [-0.1, 0.1],  step: 100, desc: 'Maintain weight ±0.1 kg/week', proPerKg: 2.0, fatPct: 0.28 },
-  'lean-bulk':      { label: 'Lean Bulk',      target: [0.1, 0.4],   step: 100, desc: 'Gain 0.1–0.4 kg/week', proPerKg: 1.8, fatPct: 0.28 },
-  'bulk':           { label: 'Bulk',           target: [0.4, 0.75],  step: 150, desc: 'Gain 0.4–0.75 kg/week', proPerKg: 1.6, fatPct: 0.30 },
+  'cut-aggressive': { label: 'Fat Loss (Faster)', labelF: 'Fat Loss (Faster)', target: [-0.75, -0.5], step: 200, desc: 'Lose 0.5–0.75 kg/week', proPerKg: 2.6, fatPct: 0.25 },
+  'cut':            { label: 'Fat Loss',           labelF: 'Fat Loss',           target: [-0.5, -0.25], step: 150, desc: 'Lose 0.25–0.5 kg/week', proPerKg: 2.3, fatPct: 0.25 },
+  'recomp':         { label: 'Recomp',             labelF: 'Tone',               target: [-0.1, 0.1],  step: 100, desc: 'Maintain weight ±0.1 kg/week', descF: 'Build lean muscle while reducing body fat', proPerKg: 2.0, fatPct: 0.28 },
+  'lean-bulk':      { label: 'Lean Muscle Gain',   labelF: 'Shape & Build',      target: [0.1, 0.4],   step: 100, desc: 'Gain 0.1–0.4 kg/week', descF: 'Build muscle and reshape — slow, controlled gain', proPerKg: 1.8, fatPct: 0.28 },
+  'bulk':           { label: 'Muscle Gain',        labelF: 'Muscle Gain',        target: [0.4, 0.75],  step: 150, desc: 'Gain 0.4–0.75 kg/week', proPerKg: 1.6, fatPct: 0.30 },
 };
+
+function getDietGoalLabel(key) {
+  const goal = DIET_GOALS[key];
+  if (!goal) return key;
+  if (data.sex === 'female' && goal.labelF) return goal.labelF;
+  return goal.label;
+}
+function getDietGoalDesc(key) {
+  const goal = DIET_GOALS[key];
+  if (!goal) return '';
+  if (data.sex === 'female' && goal.descF) return goal.descF;
+  return goal.desc;
+}
 
 /*
   Macro targets — evidence-based recommendations:
@@ -4060,6 +4073,38 @@ const SPLIT_PRESETS = {
         { name: 'Tricep Pushdown', sets: 3, reps: 12 },
         { name: 'Preacher Curl', sets: 3, reps: 12 },
         { name: 'Overhead Tricep Extension', sets: 3, reps: 12 }
+      ]
+    }
+  },
+  'lower-focus': {
+    label: 'Lower Body Focus',
+    desc: '3–4 days/week. Glutes & legs priority with balanced upper body.',
+    femaleOnly: true,
+    pattern: ['lower-a', 'upper', 'lower-b'],
+    programs: {
+      'lower-a': [
+        { name: 'Hip Thrust', sets: 4, reps: 10 },
+        { name: 'Goblet Squat', sets: 3, reps: 12 },
+        { name: 'Dumbbell Romanian Deadlift', sets: 3, reps: 10 },
+        { name: 'Walking Lunge', sets: 3, reps: 12 },
+        { name: 'Cable Kickback', sets: 3, reps: 15 },
+        { name: 'Lying Leg Curl', sets: 3, reps: 12 }
+      ],
+      upper: [
+        { name: 'Dumbbell Bench Press', sets: 3, reps: 10 },
+        { name: 'Lat Pulldown', sets: 3, reps: 10 },
+        { name: 'Dumbbell Shoulder Press', sets: 3, reps: 12 },
+        { name: 'Seated Cable Row', sets: 3, reps: 12 },
+        { name: 'Lateral Raise', sets: 3, reps: 15 },
+        { name: 'Face Pull', sets: 3, reps: 15 }
+      ],
+      'lower-b': [
+        { name: 'Leg Press', sets: 4, reps: 10 },
+        { name: 'Sumo Deadlift', sets: 3, reps: 8 },
+        { name: 'Bulgarian Split Squat', sets: 3, reps: 10 },
+        { name: 'Hip Abduction', sets: 3, reps: 15 },
+        { name: 'Leg Extension', sets: 3, reps: 12 },
+        { name: 'Standing Calf Raise', sets: 3, reps: 15 }
       ]
     }
   }
@@ -5251,8 +5296,16 @@ function renderExercise() {
         ${ex.warmupSets.map((ws, i) => `<div style="font-size:13px;color:var(--text-2);padding:2px 0;">${i+1}. ${ws.weight ? displayWeight(ws.weight) + ' × ' : ''}${ws.reps} reps</div>`).join('')}
       </div>` : '';
 
+    // First-time swap tip (shown once, dismissed permanently)
+    const swapTipHtml = !data.swapTipDismissed ? `
+      <div class="swap-tip" id="swap-tip" style="margin-bottom:16px;padding:12px 14px;background:rgba(163,184,108,0.08);border:1px solid rgba(163,184,108,0.15);border-radius:10px;font-size:12px;color:var(--text-2);line-height:1.5;position:relative;">
+        <button onclick="data.swapTipDismissed=true;save();document.getElementById('swap-tip').remove();" style="position:absolute;top:6px;right:10px;background:none;border:none;color:var(--text-3);font-size:16px;cursor:pointer;padding:0;">×</button>
+        <strong style="color:var(--accent);">Tip:</strong> These exercises are just suggestions. Use <strong>Swap</strong> below to switch any exercise for your preferred variant — e.g. barbell squat for leg press, or dumbbell press for bench press.
+      </div>` : '';
+
     bodyEl.innerHTML = `
       ${typeBadge}
+      ${swapTipHtml}
       <div class="exercise-label">Exercise ${workout.currentExerciseIndex + 1} of ${totalExercises}</div>
       <div class="exercise-name">${ex.name}</div>
       ${prepNoteDisplay}
@@ -6361,9 +6414,9 @@ function renderDiet() {
     <div class="card fade-in stagger-4">
       <span class="label">Goal</span>
       <div class="diet-goal-selector">
-        ${Object.entries(DIET_GOALS).map(([key, g]) => `<button class="diet-goal-btn ${key} ${data.dietGoal === key ? 'active' : ''}" onclick="setDietGoal('${key}')">${g.label}</button>`).join('')}
+        ${Object.entries(DIET_GOALS).map(([key, g]) => `<button class="diet-goal-btn ${key} ${data.dietGoal === key ? 'active' : ''}" onclick="setDietGoal('${key}')">${getDietGoalLabel(key)}</button>`).join('')}
       </div>
-      <div class="diet-goal-desc">${(DIET_GOALS[data.dietGoal] || DIET_GOALS['lean-bulk']).desc}</div>
+      <div class="diet-goal-desc">${getDietGoalDesc(data.dietGoal) || getDietGoalDesc('lean-bulk')}</div>
       <div class="divider"></div>
       <span class="label">${hasCustomMacros ? 'Your Macros' : 'Recommended Macros'}</span>
       <div class="macro-rec-grid mt-8">
@@ -7141,7 +7194,7 @@ function autoAdjustCalories() {
   if (trend.weeklyRate >= lo && trend.weeklyRate <= hi) {
     // On target
     status = 'good';
-    text = `Your ${periodLabel} trend shows ${rateStr} kg/week. On track for ${goal.label.toLowerCase()} (${rangeStr} kg/week). No adjustment needed.`;
+    text = `Your ${periodLabel} trend shows ${rateStr} kg/week. On track for ${getDietGoalLabel(data.dietGoal).toLowerCase()} (${rangeStr} kg/week). No adjustment needed.`;
   } else if (trend.weeklyRate > hi) {
     // Above range — reduce
     const overshoot = trend.weeklyRate - hi;
@@ -7149,7 +7202,7 @@ function autoAdjustCalories() {
     adj = Math.round(adj / 50) * 50; // round to nearest 50
     if (Math.abs(adj) < 100) adj = -100; // minimum 100 kcal
     status = 'warning';
-    text = `Your ${periodLabel} trend shows ${rateStr} kg/week. For ${goal.label.toLowerCase()} (${rangeStr} kg/week), reducing by ${Math.abs(adj)} kcal.`;
+    text = `Your ${periodLabel} trend shows ${rateStr} kg/week. For ${getDietGoalLabel(data.dietGoal).toLowerCase()} (${rangeStr} kg/week), reducing by ${Math.abs(adj)} kcal.`;
   } else {
     // Below range — increase
     const undershoot = lo - trend.weeklyRate;
@@ -7157,7 +7210,7 @@ function autoAdjustCalories() {
     adj = Math.round(adj / 50) * 50; // round to nearest 50
     if (adj < 100) adj = 100; // minimum 100 kcal
     status = 'warning';
-    text = `Your ${periodLabel} trend shows ${rateStr} kg/week. For ${goal.label.toLowerCase()} (${rangeStr} kg/week), increasing by ${adj} kcal.`;
+    text = `Your ${periodLabel} trend shows ${rateStr} kg/week. For ${getDietGoalLabel(data.dietGoal).toLowerCase()} (${rangeStr} kg/week), increasing by ${adj} kcal.`;
   }
 
   if (adj !== 0) {
@@ -7828,7 +7881,7 @@ function renderBuild() {
     <div class="card fade-in" style="margin-bottom:16px;">
       <span class="label">Split Template</span>
       <div class="split-templates mt-12">
-        ${Object.entries(SPLIT_PRESETS).map(([key, preset]) => {
+        ${Object.entries(SPLIT_PRESETS).filter(([_, p]) => !p.femaleOnly || data.sex === 'female').map(([key, preset]) => {
           const isPreviewing = data['_splitPreview_' + key];
           const previewRows = isPreviewing ? Object.entries(preset.programs).map(([type, exercises]) => {
             const label = getTypeLabel(type);
@@ -8936,6 +8989,7 @@ function renderOnboardingStep(step) {
       { key: 'upper-lower', name: 'Upper / Lower', desc: '4 sessions per week, balanced push & pull', tags: ['Upper','Lower','Upper','Lower'] },
       { key: 'ppl', name: 'Push / Pull / Legs', desc: '3–6 sessions, high volume per muscle', tags: ['Push','Pull','Legs'] },
       { key: 'full-body', name: 'Full Body', desc: '3 sessions, hit everything each time', tags: ['Full','Full','Full'] },
+      ...(onboardingData.sex === 'female' ? [{ key: 'lower-focus', name: 'Lower Body Focus', desc: 'Glutes & legs priority with balanced upper body. Great for building shape.', tags: ['Lower A','Upper','Lower B'] }] : []),
       { key: 'bro-split', name: 'Bro Split', desc: '5 sessions, one muscle group per day', tags: ['Chest','Back','Shoulders','Arms','Legs'] }
     ];
     el.innerHTML = `
