@@ -210,6 +210,11 @@
       color: var(--text-2);
       margin-top: 4px;
     }
+    .stat-sub {
+      font-size: 10px;
+      color: var(--text-3);
+      margin-top: 2px;
+    }
 
     /* ═══════════════════════════════════════════════
        BUTTONS
@@ -4272,11 +4277,16 @@ function calculateStreak() {
 }
 
 function calculateDietStreak() {
-  if (!data.foodLog || data.foodLog.length === 0) {
+  if (!data.foodLog || typeof data.foodLog !== 'object') {
     data.dietStreak.current = 0;
     return data.dietStreak;
   }
-  const loggedDates = new Set(data.foodLog.map(f => f.date));
+  // foodLog is an object keyed by date — get dates that have at least one item
+  const loggedDates = new Set(
+    Object.entries(data.foodLog)
+      .filter(([_, v]) => v && v.items && v.items.length > 0)
+      .map(([date]) => date)
+  );
   let streak = 0;
   const todayStr = today();
   let checkDate = new Date(todayStr + 'T12:00:00');
@@ -7360,10 +7370,12 @@ function renderHistory() {
             <div class="stat-box">
               <div class="stat-value" style="color:var(--warning)">🔥 ${trainStreak.current}</div>
               <div class="stat-label">Training Streak</div>
+              ${trainStreak.longest > trainStreak.current ? `<div class="stat-sub">Best: ${trainStreak.longest}</div>` : ''}
             </div>
             <div class="stat-box">
               <div class="stat-value" style="color:var(--success)">🥗 ${dietStreak.current}</div>
               <div class="stat-label">Diet Streak</div>
+              ${dietStreak.longest > dietStreak.current ? `<div class="stat-sub">Best: ${dietStreak.longest}</div>` : ''}
             </div>
           </div>
         </div>`;
