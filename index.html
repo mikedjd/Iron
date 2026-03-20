@@ -4238,6 +4238,23 @@ function getCurrentBodyweight() {
   return data.weights[data.weights.length - 1].weight;
 }
 
+/* Estimate TDEE using Mifflin-St Jeor + moderate activity multiplier.
+   Uses body weight (kg), sex, and assumes age 30, height 170cm/163cm.
+   Returns a rounded calorie estimate, or fallback if no body weight. */
+function estimateTDEE() {
+  const bw = getCurrentBodyweight();
+  if (!bw) return data.sex === 'female' ? 2000 : 2500;
+  const sex = data.sex || 'male';
+  // Mifflin-St Jeor: BMR = 10*kg + 6.25*cm - 5*age + s (s = +5 male, -161 female)
+  const height = sex === 'female' ? 163 : 170; // reasonable defaults
+  const age = 30;
+  const s = sex === 'female' ? -161 : 5;
+  const bmr = 10 * bw + 6.25 * height - 5 * age + s;
+  // Moderate activity (resistance training 3-5x/week)
+  const tdee = Math.round(bmr * 1.55 / 50) * 50; // round to nearest 50
+  return Math.max(1400, Math.min(4500, tdee));
+}
+
 /* Get next training day info */
 function getNextTrainingDay() {
   const todayDow = new Date().getDay();
@@ -8108,8 +8125,8 @@ function renderSettings() {
       <span class="label">Biological Sex</span>
       <p class="text-xs text-dim mt-4">Used for calorie estimates and strength benchmarks.</p>
       <div class="type-selector mt-8">
-        <button class="type-opt ${data.sex === 'male' ? 'active' : ''}" onclick="data.sex='male';data.targetCalories=data.targetCalories||2500;save();renderSettings();">Male</button>
-        <button class="type-opt ${data.sex === 'female' ? 'active' : ''}" onclick="data.sex='female';save();renderSettings();">Female</button>
+        <button class="type-opt ${data.sex === 'male' ? 'active' : ''}" onclick="data.sex='male';data.targetCalories=estimateTDEE();save();renderSettings();">Male</button>
+        <button class="type-opt ${data.sex === 'female' ? 'active' : ''}" onclick="data.sex='female';data.targetCalories=estimateTDEE();save();renderSettings();">Female</button>
       </div>
     </div>
 
@@ -9019,7 +9036,6 @@ function applyOnboardingSettings() {
   data.weightUnit = onboardingData.weightUnit;
   data.trainingStyle = onboardingData.trainingStyle;
   data.sex = onboardingData.sex;
-  data.targetCalories = onboardingData.sex === 'female' ? 2000 : 2500;
   data.schedule.trainingDays = onboardingData.trainingDays;
   if (onboardingData.bodyWeight) {
     const w = parseFloat(onboardingData.bodyWeight);
@@ -9040,6 +9056,8 @@ function applyOnboardingSettings() {
     data.nextType = data.schedule.pattern[0];
     data.splitPreset = onboardingData.split;
   }
+  // Estimate TDEE based on body weight + sex (now that weight is saved)
+  data.targetCalories = estimateTDEE();
   localStorage.setItem('iron_onboarded', '1');
   save();
 }
