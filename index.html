@@ -3585,19 +3585,26 @@ function getExerciseLastSession(exerciseName) {
     if (ex && ex.sets.length > 0) {
       let maxWeight = 0, repsAtMax = 0;
       const setReps = [];
+      const workingSetReps = []; // only sets at the top/working weight
       for (const set of ex.sets) {
         const ns = normalizeSet(set);
         if (!ns.skipped) {
           const r = Array.isArray(ns.reps) ? ns.reps.reduce((a, b) => a + b, 0) : ns.reps;
+          const w = ns.weight || 0;
           setReps.push(r);
-          if (ns.weight != null && ns.weight >= maxWeight) {
-            maxWeight = ns.weight;
+          if (w > maxWeight) {
+            maxWeight = w;
+            repsAtMax = r;
+            workingSetReps.length = 0;
+            workingSetReps.push(r);
+          } else if (w === maxWeight && w > 0) {
+            workingSetReps.push(r);
             repsAtMax = r;
           }
         }
       }
       if (maxWeight > 0) {
-        return { weight: maxWeight, reps: repsAtMax, date: session.date, totalSets: setReps.length, setReps };
+        return { weight: maxWeight, reps: repsAtMax, date: session.date, totalSets: setReps.length, setReps, workingSetReps };
       }
     }
   }
@@ -4144,7 +4151,9 @@ function getProgressionRec(exerciseName, currentWeight, bodyweight) {
   }
   if (!targetReps) targetReps = last.setReps.length > 0 ? Math.max(...last.setReps) : 8;
 
-  const hitAllTargets = last.setReps.length > 0 && last.setReps.every(r => r >= targetReps);
+  // Only check working sets (top weight) — ignore back-off sets at lighter weight
+  const repsToCheck = last.workingSetReps || last.setReps;
+  const hitAllTargets = repsToCheck.length > 0 && repsToCheck.every(r => r >= targetReps);
 
   // Check average RPE from last session for this exercise
   const avgRpe = getExerciseAvgRpe(exerciseName);
