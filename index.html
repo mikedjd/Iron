@@ -2964,6 +2964,25 @@
       font-size: 14px;
       font-weight: 600;
     }
+    .missed-day-card {
+      background: var(--surface);
+      border-color: rgba(163, 184, 108, 0.2);
+    }
+    .missed-day-card .btn {
+      border-radius: 12px;
+    }
+    .missed-day-card .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .missed-day-card .btn-secondary {
+      background: rgba(163, 184, 108, 0.08);
+      border: 1px solid rgba(163, 184, 108, 0.15);
+      color: var(--text);
+    }
+    .missed-day-card .btn-ghost {
+      color: var(--text-2);
+    }
 
     /* ═══════════════════════════════════════════════
        HISTORY EXPANDED
@@ -3477,6 +3496,10 @@ function load() {
   if (!data.sex) data.sex = 'male';
   if (data.combinedStreak === undefined) data.combinedStreak = false;
   if (!data.notifications) data.notifications = { enabled: false, reminderTime: '08:00' };
+  // Migration: preferred training time
+  if (!data.schedule.preferredTime) data.schedule.preferredTime = '';
+  // Migration: missed day tracking
+  if (!data.missedDayDismissed) data.missedDayDismissed = null;
   // Migration: exercise DB + set targets
   if (!data.customExerciseTags) data.customExerciseTags = {};
   if (data.setTargets === undefined) data.setTargets = null;
@@ -4556,9 +4579,18 @@ function checkAndFireNotifications() {
   if (!firedToday.reminder && !hasSessionToday && currentMins >= reminderMins && currentMins <= reminderMins + 30) {
     const streak = calculateStreak();
     const typeLabel = getTypeLabel(data.nextType);
-    const body = streak.current > 0
-      ? `${typeLabel} day. ${streak.current}-day streak — keep it going.`
-      : `${typeLabel} session scheduled today. Time to work.`;
+    // Include exercise names for context
+    const programs = getPrograms();
+    const exercises = programs[data.nextType];
+    const exercisePreview = exercises ? exercises.slice(0, 3).map(e => e.name).join(', ') : '';
+    let body;
+    if (streak.current > 0 && exercisePreview) {
+      body = `${typeLabel} day — ${exercisePreview}. ${streak.current}-day streak 🔥`;
+    } else if (exercisePreview) {
+      body = `${typeLabel} today: ${exercisePreview}. Time to work.`;
+    } else {
+      body = `${typeLabel} session scheduled today.`;
+    }
     fireNotification('Training Day', body, 'reminder');
     firedToday.reminder = true;
     localStorage.setItem(lastNotifKey, JSON.stringify(firedToday));
@@ -4568,10 +4600,22 @@ function checkAndFireNotifications() {
   if (!firedToday.streakRisk && !hasSessionToday && now.getHours() >= 14) {
     const streak = calculateStreak();
     if (streak.current > 0) {
-      fireNotification('Streak at Risk!',
-        `Your ${streak.current}-day streak ends today if you don't train. Don't break the chain.`,
+      fireNotification('Streak at Risk',
+        `${streak.current}-day streak ends today. Even a quick session counts — open IRON for options.`,
         'streak-risk');
       firedToday.streakRisk = true;
+      localStorage.setItem(lastNotifKey, JSON.stringify(firedToday));
+    }
+  }
+
+  // Missed day nudge: after 6pm, if yesterday was a training day with no session
+  if (!firedToday.missedNudge && now.getHours() >= 18) {
+    const missed = getMissedTrainingDays();
+    if (missed.length > 0 && missed[0].daysAgo === 1) {
+      fireNotification('Missed Yesterday?',
+        'No stress — reschedule, do a quick home version, or skip guilt-free. Open IRON to choose.',
+        'missed-nudge');
+      firedToday.missedNudge = true;
       localStorage.setItem(lastNotifKey, JSON.stringify(firedToday));
     }
   }
@@ -4601,6 +4645,245 @@ function scheduleNotificationChecks() {
     window._notifInterval = setInterval(checkAndFireNotifications, 15 * 60 * 1000);
     checkAndFireNotifications();
   }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MISSED DAY DETECTION & RECOVERY
+   ═══════════════════════════════════════════════════════════ */
+function getMissedTrainingDays() {
+  // Find recent missed training days (up to 3 days back)
+  const sessions = data.sessions;
+  if (sessions.length === 0) return [];
+  const sessionDates = new Set(sessions.map(s => s.date));
+  const missed = [];
+  const todayDate = new Date(today() + 'T12:00:00');
+
+  for (let i = 1; i <= 3; i++) {
+    const checkDate = new Date(todayDate);
+    checkDate.setDate(checkDate.getDate() - i);
+    const dateStr = checkDate.toISOString().split('T')[0];
+    const dow = checkDate.getDay();
+    if (data.schedule.trainingDays.includes(dow) && !sessionDates.has(dateStr)) {
+      const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      missed.push({ date: dateStr, dayName: dayNames[dow], daysAgo: i });
+    }
+  }
+  return missed;
+}
+
+function shouldShowMissedDayCard() {
+  const missed = getMissedTrainingDays();
+  if (missed.length === 0) return null;
+  // Only show for the most recent missed day
+  const latest = missed[0];
+  // Don't show if already dismissed today for this missed date
+  if (data.missedDayDismissed === latest.date) return null;
+  // Don't show if they already trained today
+  const hasSessionToday = data.sessions.some(s => s.date === today());
+  if (hasSessionToday) return null;
+  return latest;
+}
+
+function dismissMissedDay(date) {
+  data.missedDayDismissed = date;
+  save();
+  renderTrainHome();
+}
+
+function rescheduleToToday() {
+  // Simply start the workout — the scheduled session becomes today's
+  data.missedDayDismissed = getMissedTrainingDays()[0]?.date;
+  save();
+  showPreview();
+}
+
+function skipGuildFree(date) {
+  data.missedDayDismissed = date;
+  save();
+  renderTrainHome();
+}
+
+// Home workout alternatives — bodyweight/minimal equipment swaps
+const HOME_ALTERNATIVES = {
+  'Bench Press': 'Push-ups (3×max)',
+  'Dumbbell Bench Press': 'Push-ups (3×max)',
+  'Incline Bench Press': 'Decline Push-ups (3×15)',
+  'Barbell Squat': 'Goblet Squat or Air Squats (4×20)',
+  'Goblet Squat': 'Air Squats (4×20)',
+  'Leg Press': 'Bulgarian Split Squat (3×12)',
+  'Barbell Row': 'Dumbbell Row or Inverted Row',
+  'Lat Pulldown': 'Pull-ups or Doorframe Rows',
+  'Seated Cable Row': 'Resistance Band Row',
+  'Overhead Press': 'Pike Push-ups (3×12)',
+  'Dumbbell Shoulder Press': 'Pike Push-ups (3×12)',
+  'Lateral Raise': 'Lateral Raise (light DB or band)',
+  'Face Pull': 'Band Pull-apart (3×20)',
+  'Barbell Curl': 'Resistance Band Curls',
+  'Tricep Pushdown': 'Diamond Push-ups (3×12)',
+  'Hip Thrust': 'Glute Bridge (4×20)',
+  'Romanian Deadlift': 'Single-leg Deadlift (bodyweight)',
+  'Dumbbell Romanian Deadlift': 'Single-leg Deadlift (bodyweight)',
+  'Deadlift': 'Single-leg Deadlift (bodyweight)',
+  'Walking Lunge': 'Walking Lunge (bodyweight)',
+  'Leg Extension': 'Sissy Squat or Wall Sit (3×45s)',
+  'Leg Curl': 'Nordic Curl or Slider Curl',
+  'Lying Leg Curl': 'Nordic Curl or Slider Curl',
+  'Cable Kickback': 'Donkey Kicks (3×20)',
+  'Hip Abduction': 'Banded Clamshells (3×20)',
+  'Standing Calf Raise': 'Single-leg Calf Raise (3×20)',
+  'Cable Fly': 'Push-up (wide grip)',
+  'Sumo Deadlift': 'Sumo Squat (bodyweight, 4×15)',
+  'Bulgarian Split Squat': 'Bulgarian Split Squat (bodyweight)',
+};
+
+function generateHomeWorkout() {
+  const programs = getPrograms();
+  const exercises = programs[data.nextType];
+  if (!exercises || exercises.length === 0) return null;
+
+  return exercises.map(ex => {
+    const alt = HOME_ALTERNATIVES[ex.name];
+    return {
+      original: ex.name,
+      home: alt || `${ex.name} (lighter / bodyweight)`,
+      sets: Math.min(ex.sets, 3),
+      reps: ex.reps
+    };
+  });
+}
+
+function showQuickHomeWorkout() {
+  const homeExercises = generateHomeWorkout();
+  if (!homeExercises) return;
+  const missed = getMissedTrainingDays()[0];
+
+  const el = document.getElementById('train-content');
+  el.innerHTML = `
+    <div class="card fade-in" style="padding:24px 20px;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:32px;margin-bottom:8px;">🏠</div>
+        <div class="display display-sm">Quick Home Version</div>
+        <p class="text-xs text-dim mt-8">${getTypeLabel(data.nextType)} — adapted for minimal equipment. ~20 mins.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">
+        ${homeExercises.map(ex => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+            <div>
+              <div style="font-size:13px;color:var(--text);">${ex.home}</div>
+              <div style="font-size:11px;color:var(--text-3);margin-top:2px;">replaces ${ex.original}</div>
+            </div>
+            <div style="font-size:12px;color:var(--text-3);">${ex.sets}×${ex.reps}</div>
+          </div>
+        `).join('')}
+      </div>
+      <p class="text-xs text-dim" style="text-align:center;margin-bottom:16px;">Log this as a regular session to keep your streak alive.</p>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-secondary" onclick="dismissMissedDay('${missed?.date}');renderTrainHome();" style="flex:0.4;">Back</button>
+        <button class="btn btn-primary" onclick="dismissMissedDay('${missed?.date}');showPreview();" style="flex:1;">Start Workout</button>
+      </div>
+    </div>`;
+}
+
+function buildMissedDayCard(missed) {
+  const nextLabel = getTypeLabel(data.nextType);
+  const streak = calculateStreak();
+  const streakMsg = streak.current > 0
+    ? `You're on a ${streak.current}-day streak. Let's keep it going.`
+    : 'Every session counts. Pick an option and stay on track.';
+
+  return `
+    <div class="card missed-day-card fade-in" style="margin-bottom:12px;border:1px solid rgba(163,184,108,0.15);position:relative;">
+      <button onclick="dismissMissedDay('${missed.date}')" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--text-3);font-size:18px;cursor:pointer;padding:0;">×</button>
+      <div style="text-align:center;margin-bottom:16px;">
+        <div style="font-size:24px;margin-bottom:6px;">👋</div>
+        <div class="display display-xs" style="font-size:18px;line-height:1.3;">Missed ${missed.daysAgo === 1 ? 'yesterday' : missed.dayName}?</div>
+        <p class="text-xs text-dim mt-8">${streakMsg}</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button class="btn btn-primary" onclick="rescheduleToToday()" style="width:100%;text-align:left;padding:14px 16px;display:flex;align-items:center;gap:12px;">
+          <span style="font-size:20px;">📅</span>
+          <div>
+            <div style="font-size:14px;font-weight:600;">Do it now</div>
+            <div style="font-size:11px;opacity:0.7;font-weight:400;">${nextLabel} — full session</div>
+          </div>
+        </button>
+        <button class="btn btn-secondary" onclick="showQuickHomeWorkout()" style="width:100%;text-align:left;padding:14px 16px;display:flex;align-items:center;gap:12px;">
+          <span style="font-size:20px;">🏠</span>
+          <div>
+            <div style="font-size:14px;font-weight:600;">Quick home version</div>
+            <div style="font-size:11px;opacity:0.7;font-weight:400;">~20 min bodyweight alternative</div>
+          </div>
+        </button>
+        <button class="btn btn-ghost" onclick="skipGuildFree('${missed.date}')" style="width:100%;text-align:left;padding:14px 16px;display:flex;align-items:center;gap:12px;border:1px solid var(--border);">
+          <span style="font-size:20px;">⏭️</span>
+          <div>
+            <div style="font-size:14px;font-weight:600;">Skip — no stress</div>
+            <div style="font-size:11px;opacity:0.7;font-weight:400;">Pick up your next scheduled session</div>
+          </div>
+        </button>
+      </div>
+      <p class="text-xs text-dim" style="text-align:center;margin-top:12px;opacity:0.6;">Rest is part of the plan.</p>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CALENDAR EXPORT (.ics)
+   ═══════════════════════════════════════════════════════════ */
+function exportCalendar() {
+  const days = data.schedule.trainingDays;
+  if (days.length === 0) return;
+
+  const dayMap = { 0: 'SU', 1: 'MO', 2: 'TU', 3: 'WE', 4: 'TH', 5: 'FR', 6: 'SA' };
+  const byday = days.map(d => dayMap[d]).join(',');
+  const time = data.schedule.preferredTime || '07:00';
+  const [h, m] = time.split(':');
+
+  // Build one recurring event per training day with exercise names
+  let events = '';
+  const programs = getPrograms();
+  let rotIdx = data.schedule.patternIndex;
+
+  // Find the next occurrence of each training day
+  const todayDate = new Date();
+  for (const dayNum of days) {
+    let diff = dayNum - todayDate.getDay();
+    if (diff <= 0) diff += 7;
+    const startDate = new Date(todayDate);
+    startDate.setDate(startDate.getDate() + diff);
+
+    const type = data.schedule.pattern[rotIdx % data.schedule.pattern.length];
+    const typeLabel = getTypeLabel(type);
+    const exercises = programs[type];
+    const exerciseList = exercises ? exercises.map(e => e.name).join(', ') : '';
+    rotIdx++;
+
+    const dateStr = startDate.toISOString().split('T')[0].replace(/-/g, '');
+    const uid = `iron-${dayNum}-${Date.now()}@iron.app`;
+
+    events += `BEGIN:VEVENT
+DTSTART:${dateStr}T${h}${m}00
+DURATION:PT1H
+RRULE:FREQ=WEEKLY;BYDAY=${dayMap[dayNum]}
+SUMMARY:IRON: ${typeLabel}
+DESCRIPTION:${exerciseList}
+UID:${uid}
+END:VEVENT
+`;
+  }
+
+  const ics = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//IRON//Training//EN
+CALSCALE:GREGORIAN
+${events}END:VCALENDAR`;
+
+  const blob = new Blob([ics], { type: 'text/calendar' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'iron-training.ics';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -4766,6 +5049,13 @@ function renderTrainHome() {
     return;
   }
 
+  // Missed day recovery card
+  let missedDayHtml = '';
+  const missedDay = shouldShowMissedDayCard();
+  if (missedDay && state !== 'first-time' && state !== 'rest-today') {
+    missedDayHtml = buildMissedDayCard(missedDay);
+  }
+
   let deloadHtml = '';
   const deloadRec = shouldRecommendDeload();
   if (deloadRec && state !== 'first-time') {
@@ -4815,6 +5105,7 @@ function renderTrainHome() {
   } else if (state === 'rest-recovery') {
     content = `
       ${streakHtml}
+      ${missedDayHtml}
       ${deloadHtml}
       <div class="card fade-in">
         <div class="rest-badge rest">Recovery Day</div>
@@ -4835,6 +5126,7 @@ function renderTrainHome() {
   } else if (state === 'rest-scheduled') {
     content = `
       ${streakHtml}
+      ${missedDayHtml}
       ${deloadHtml}
       <div class="card fade-in">
         <div class="rest-badge rest">Scheduled Rest</div>
@@ -4855,6 +5147,7 @@ function renderTrainHome() {
   } else {
     content = `
       ${streakHtml}
+      ${missedDayHtml}
       ${deloadHtml}
       <div class="card fade-in" style="text-align:center;padding:32px 20px;">
         <div class="rest-badge ready" style="margin:0 auto;">Ready</div>
@@ -8322,6 +8615,22 @@ function renderSettings() {
       <p class="text-xs text-dim mt-8">Show exercise details before each new exercise. Turn off to jump straight into sets.</p>
     </div>
 
+    <p class="settings-section-label">Schedule</p>
+    <div class="card" style="margin-bottom:16px;">
+      <span class="label">Usual Training Time</span>
+      <p class="text-xs text-dim mt-4">Used for calendar sync and smarter reminders.</p>
+      <div style="margin-top:8px;">
+        <input type="time" value="${data.schedule.preferredTime || ''}"
+          onchange="data.schedule.preferredTime=this.value;save();"
+          style="padding:8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;">
+      </div>
+      <div class="divider"></div>
+      <button class="btn btn-secondary" onclick="exportCalendar()" style="width:100%;font-size:13px;">
+        📅 Export to Calendar (.ics)
+      </button>
+      <p class="text-xs text-dim mt-8">Adds your training days as recurring calendar events with exercise names. Import into Apple Calendar, Google Calendar, or Outlook.</p>
+    </div>
+
     ${notifSupported ? `
     <p class="settings-section-label">Notifications</p>
     <div class="card" style="margin-bottom:16px;">
@@ -8329,10 +8638,11 @@ function renderSettings() {
         <span class="text-sm">Training reminders</span>
         <button class="toggle ${data.notifications.enabled ? 'on' : ''}" onclick="toggleNotifications()"></button>
       </div>
-      <p class="text-xs text-dim mt-8">Get reminded on training days and when your streak is at risk.</p>
+      <p class="text-xs text-dim mt-8">Get reminded on training days and nudged when you miss a session. Notifications include your scheduled exercises and streak info.</p>
       ${data.notifications.enabled ? `
         <div class="divider"></div>
         <span class="label">Reminder Time</span>
+        <p class="text-xs text-dim mt-4">${data.schedule.preferredTime ? `Auto-set to 30 min before your usual training time.` : 'Set your training time above for auto-scheduling.'}</p>
         <div style="margin-top:8px;">
           <input type="time" id="notif-time" value="${data.notifications.reminderTime}"
             onchange="setReminderTime(this.value)"
@@ -8902,7 +9212,7 @@ let syncTimer = null;
 // --- Onboarding / Auth UI ---
 let onboardingStep = 1;
 const ONBOARDING_TOTAL = 5;
-let onboardingData = { weightUnit: 'kg', bodyWeight: '', sex: 'male', trainingDays: [1,3,5], split: 'upper-lower', trainingStyle: 'balanced' };
+let onboardingData = { weightUnit: 'kg', bodyWeight: '', sex: 'male', trainingDays: [1,3,5], split: 'upper-lower', trainingStyle: 'balanced', preferredTime: '' };
 
 function renderOnboardingDots(step) {
   const dots = document.getElementById('onboarding-dots');
@@ -8971,9 +9281,15 @@ function renderOnboardingStep(step) {
           style="width:100%;padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif;margin-bottom:24px;box-sizing:border-box;">
 
         <label style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);margin-bottom:10px;display:block;">Training Days</label>
-        <div class="onboarding-day-toggle" style="margin-bottom:32px;">
+        <div class="onboarding-day-toggle" style="margin-bottom:20px;">
           ${days.map((d, i) => `<button class="day-pill ${onboardingData.trainingDays.includes(i) ? 'active' : ''}" onclick="toggleOnboardingDay(${i})">${d}</button>`).join('')}
         </div>
+
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);margin-bottom:8px;display:block;">Usual training time <span style="color:var(--text-3);text-transform:none;letter-spacing:0;">(optional)</span></label>
+        <input type="time" id="ob-time" value="${onboardingData.preferredTime || ''}"
+          oninput="onboardingData.preferredTime=this.value"
+          style="width:100%;padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif;margin-bottom:8px;box-sizing:border-box;">
+        <p style="font-size:10px;color:var(--text-3);margin:0 0 24px;text-align:center;">Used for smarter reminders and calendar sync</p>
 
         <div style="display:flex;gap:10px;">
           <button class="btn btn-secondary" onclick="renderOnboardingStep(1)" style="flex:0.4;">Back</button>
@@ -9090,6 +9406,15 @@ function applyOnboardingSettings() {
   data.trainingStyle = onboardingData.trainingStyle;
   data.sex = onboardingData.sex;
   data.schedule.trainingDays = onboardingData.trainingDays;
+  if (onboardingData.preferredTime) {
+    data.schedule.preferredTime = onboardingData.preferredTime;
+    // Auto-set reminder time to 30 min before preferred training time
+    const [h, m] = onboardingData.preferredTime.split(':').map(Number);
+    const reminderMins = Math.max(0, h * 60 + m - 30);
+    const rH = String(Math.floor(reminderMins / 60)).padStart(2, '0');
+    const rM = String(reminderMins % 60).padStart(2, '0');
+    data.notifications.reminderTime = `${rH}:${rM}`;
+  }
   if (onboardingData.bodyWeight) {
     const w = parseFloat(onboardingData.bodyWeight);
     if (w > 0) {
