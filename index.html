@@ -3418,6 +3418,8 @@ function load() {
   if (!data.deload) {
     data.deload = { mode: 'auto', programmedInterval: 4, lastDeloadDate: null, dismissedUntilSession: null };
   }
+  // Migration: training style (RPE target range)
+  if (!data.trainingStyle) data.trainingStyle = 'balanced';
   // Migration: weightUnit
   if (!data.weightUnit) data.weightUnit = 'kg';
   // Migration: dietGoal
@@ -4079,8 +4081,16 @@ function getStrengthLevel(exerciseName, liftWeight, bodyweight) {
 }
 
 /* Auto-progression recommendation */
+/* RPE target range for the user's training style */
+function getRpeTargetRange() {
+  const ranges = { intensity: [9, 10], balanced: [8, 9], volume: [7, 8] };
+  return ranges[data.trainingStyle] || ranges.balanced;
+}
+
+/* Double progression: hit target reps → add weight.
+   RPE-aware: adjust increment based on effort vs target range.
+   Works for all levels — no strength-level gating. */
 function getProgressionRec(exerciseName, currentWeight, bodyweight) {
-  const level = getStrengthLevel(exerciseName, currentWeight, bodyweight);
   const eqType = getEquipmentType(exerciseName);
   let inc;
   if (eqType === 'dumbbell') {
@@ -4091,13 +4101,73 @@ function getProgressionRec(exerciseName, currentWeight, bodyweight) {
   } else {
     inc = data.weightUnit === 'lbs' ? 5 : (data.machineIncrement || 2.5);
   }
-  if (!level || level === 'beginner' || level === 'novice') {
+
+  // Check last session: did they hit target reps on all sets?
+  const last = getExerciseLastSession(exerciseName);
+  if (!last) {
+    // No history — suggest same weight, no badge
+    return { suggestedWeight: currentWeight, strategy: 'first', badge: null };
+  }
+
+  // Find the target reps for this exercise from the current program
+  let targetReps = null;
+  const programs = getPrograms();
+  for (const type of Object.keys(programs)) {
+    const match = programs[type].find(e => e.name === exerciseName);
+    if (match) { targetReps = match.reps; break; }
+  }
+  if (!targetReps) targetReps = last.setReps.length > 0 ? Math.max(...last.setReps) : 8;
+
+  const hitAllTargets = last.setReps.length > 0 && last.setReps.every(r => r >= targetReps);
+
+  // Check average RPE from last session for this exercise
+  const avgRpe = getExerciseAvgRpe(exerciseName);
+  const [rpeMin, rpeMax] = getRpeTargetRange();
+
+  if (hitAllTargets) {
+    // Double progression: target reps achieved → add weight
+    if (avgRpe > 0 && avgRpe < rpeMin) {
+      // RPE well below target — could handle a bigger jump
+      return { suggestedWeight: currentWeight + inc, strategy: 'weight', badge: `+${displayWeight(inc)}` };
+    }
+    if (avgRpe > rpeMax) {
+      // Hit reps but RPE was very high — hold weight, consolidate
+      return { suggestedWeight: currentWeight, strategy: 'hold', badge: 'hold' };
+    }
+    // Normal progression
     return { suggestedWeight: currentWeight + inc, strategy: 'weight', badge: `+${displayWeight(inc)}` };
   }
-  if (level === 'intermediate') {
-    return { suggestedWeight: currentWeight, strategy: 'reps', badge: '+rep' };
+
+  // Didn't hit target reps — stay at same weight
+  return { suggestedWeight: currentWeight, strategy: 'reps', badge: null };
+}
+
+/* Get average RPE for an exercise from the last session */
+function getExerciseAvgRpe(exerciseName) {
+  for (let i = data.sessions.length - 1; i >= 0; i--) {
+    const session = data.sessions[i];
+    if (session.isDeload) continue;
+    const ex = session.exercises.find(e => e.name === exerciseName);
+    if (ex && ex.sets.length > 0) {
+      const rpes = ex.sets.map(s => normalizeSet(s).rpe || s.rpe).filter(r => r && r > 0);
+      if (rpes.length === 0) return 0;
+      return rpes.reduce((a, b) => a + b, 0) / rpes.length;
+    }
   }
-  return { suggestedWeight: currentWeight, strategy: 'periodize', badge: null };
+  return 0;
+}
+
+/* Get average RPE across all exercises for recent sessions */
+function getSessionAvgRpe(session) {
+  const rpes = [];
+  for (const ex of session.exercises) {
+    for (const set of ex.sets) {
+      const ns = normalizeSet(set);
+      const r = ns.rpe || set.rpe;
+      if (r && r > 0) rpes.push(r);
+    }
+  }
+  return rpes.length > 0 ? rpes.reduce((a, b) => a + b, 0) / rpes.length : 0;
 }
 
 /* Get current bodyweight (latest entry) */
@@ -4208,6 +4278,18 @@ function shouldRecommendDeload() {
   if (weeksSinceDeload >= 6) {
     return { recommend: true, reason: `${weeksSinceDeload} weeks without a deload` };
   }
+
+  // RPE drift detection: average RPE trending above target for 3+ sessions
+  const [, rpeMax] = getRpeTargetRange();
+  const recentWithRpe = data.sessions.slice(-3).filter(s => !s.isDeload);
+  if (recentWithRpe.length >= 3) {
+    const avgRpes = recentWithRpe.map(s => getSessionAvgRpe(s)).filter(r => r > 0);
+    if (avgRpes.length >= 3 && avgRpes.every(r => r > rpeMax)) {
+      const avg = (avgRpes.reduce((a, b) => a + b, 0) / avgRpes.length).toFixed(1);
+      return { recommend: true, reason: `Average RPE ${avg} exceeding your target (${rpeMax}) for 3+ sessions` };
+    }
+  }
+
   // Check for declining performance over last 3 sessions
   if (data.sessions.length >= 3) {
     const recent = data.sessions.slice(-3);
@@ -4632,13 +4714,15 @@ function startWorkout() {
       let w = ex.weight || getLastWeight(ex.name) || 0;
       let progressionBadge = null;
       let previousWeight = w;
-      // Auto-progression: suggest weight increase if not deload
-      if (w && !isDeload && !ex.isBodyweight && bw) {
+      // Auto-progression: double progression — add weight when target reps achieved
+      if (w && !isDeload && !ex.isBodyweight) {
         const rec = getProgressionRec(ex.name, w, bw);
         if (rec.suggestedWeight > w) {
           previousWeight = w;
           w = rec.suggestedWeight;
           progressionBadge = rec.badge;
+        } else if (rec.badge === 'hold') {
+          progressionBadge = 'hold';
         }
       }
       if (isDeload && w) w = Math.round(w * 0.6 * 2) / 2;
@@ -4878,8 +4962,14 @@ function renderExercise() {
   // Weight display (always show for non-bodyweight exercises)
   let weightHtml = '';
   if (!ex.isBodyweight) {
-    const progBadge = ex.progressionBadge && currentSet === 1 && ex.completedSets.length === 0
-      ? `<div class="progression-badge">▲ ${ex.progressionBadge} <span style="opacity:0.5;">was ${displayWeight(ex.previousWeight)}</span></div>` : '';
+    let progBadge = '';
+    if (ex.progressionBadge && currentSet === 1 && ex.completedSets.length === 0) {
+      if (ex.progressionBadge === 'hold') {
+        progBadge = `<div class="progression-badge" style="color:var(--text-3);">● Hold weight — RPE was high last session</div>`;
+      } else {
+        progBadge = `<div class="progression-badge">▲ ${ex.progressionBadge} <span style="opacity:0.5;">was ${displayWeight(ex.previousWeight)}</span></div>`;
+      }
+    }
     weightHtml = `
       <div class="weight-adjuster">
         <button class="weight-adj-btn" onclick="adjustWeight(-1)">−</button>
@@ -4959,8 +5049,12 @@ function renderExercise() {
     // Static target display (no +/− buttons)
     let prepWeightHtml = '';
     if (!ex.isBodyweight && ex.currentWeight) {
-      const progBadge = ex.progressionBadge
-        ? `<div class="progression-badge" style="justify-content:center;margin-top:6px;">▲ ${ex.progressionBadge}</div>` : '';
+      let progBadge = '';
+      if (ex.progressionBadge === 'hold') {
+        progBadge = `<div class="progression-badge" style="justify-content:center;margin-top:6px;color:var(--text-3);">● Hold weight — RPE was high</div>`;
+      } else if (ex.progressionBadge) {
+        progBadge = `<div class="progression-badge" style="justify-content:center;margin-top:6px;">▲ ${ex.progressionBadge}</div>`;
+      }
       prepWeightHtml = `<div class="prep-target">${displayWeight(ex.currentWeight)} ${weightLabel()} + ${ex.targetReps} reps${progBadge}</div>`;
     } else if (ex.isBodyweight) {
       prepWeightHtml = `<div class="prep-target">${ex.targetSets} × ${ex.targetReps} reps</div>`;
@@ -7808,7 +7902,26 @@ function renderSettings() {
             onchange="setDeloadInterval(this.value)">
           <span class="text-sm">weeks</span>
         </div>` : ''}
-      ${data.deload.mode === 'auto' ? `<p class="text-xs text-dim mt-8">Recommends a deload when performance declines or after 6+ weeks.</p>` : ''}
+      ${data.deload.mode === 'auto' ? `<p class="text-xs text-dim mt-8">Recommends a deload when RPE exceeds your target range or performance declines.</p>` : ''}
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <span class="label">Training Style</span>
+      <p class="text-xs text-dim mt-8">Sets your target RPE range. IRON uses this to decide when to add weight and when to recommend a deload.</p>
+      <div class="type-selector mt-8">
+        <button class="type-opt ${data.trainingStyle === 'volume' ? 'active' : ''}" onclick="setTrainingStyle('volume')">Volume</button>
+        <button class="type-opt ${data.trainingStyle === 'balanced' ? 'active' : ''}" onclick="setTrainingStyle('balanced')">Balanced</button>
+        <button class="type-opt ${data.trainingStyle === 'intensity' ? 'active' : ''}" onclick="setTrainingStyle('intensity')">Intensity</button>
+      </div>
+      <div class="mt-8" style="padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+        ${data.trainingStyle === 'volume' ? `<p class="text-xs text-dim" style="margin:0;"><strong style="color:var(--text-2);">RPE 7-8 · 2-3 reps in reserve</strong><br>More sets, further from failure. Accumulate volume and progress by adding reps before weight. Good for hypertrophy-focused blocks.</p>` : ''}
+        ${data.trainingStyle === 'balanced' ? `<p class="text-xs text-dim" style="margin:0;"><strong style="color:var(--text-2);">RPE 8-9 · 1-2 reps in reserve</strong><br>The default for most programs. Hard enough to drive adaptation, manageable enough to recover from. Suits most lifters most of the time.</p>` : ''}
+        ${data.trainingStyle === 'intensity' ? `<p class="text-xs text-dim" style="margin:0;"><strong style="color:var(--text-2);">RPE 9-10 · 0-1 reps in reserve</strong><br>Fewer sets, closer to failure. Maximise stimulus per set. Suits HIT, rest-pause, or strength peaking phases.</p>` : ''}
+      </div>
+      <div class="mt-8" style="padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+        <p class="text-xs text-dim" style="margin:0;"><strong style="color:var(--text-2);">How progression works</strong><br>IRON uses double progression: once you hit your target reps on all sets, it suggests adding weight next session. Your RPE data fine-tunes this — if effort is well below your target range, you could handle more. If it's above, IRON will suggest holding weight or flagging a deload.</p>
+        <p class="text-xs text-dim" style="margin:6px 0 0 0;"><strong style="color:var(--text-2);">Everyone is different</strong><br>There is no universally "correct" style. Research supports all three approaches (Helms et al., Zourdos et al.). Experiment, log your RPE honestly, and let the data guide you. One common mistake is trying to train with both high intensity and high volume — pick one to emphasise per training block.</p>
+      </div>
     </div>
 
     <div class="card" style="margin-bottom:16px;">
@@ -7986,6 +8099,12 @@ function renderSettings() {
 
 function setDeloadMode(mode) {
   data.deload.mode = mode;
+  save();
+  renderSettings();
+}
+
+function setTrainingStyle(style) {
+  data.trainingStyle = style;
   save();
   renderSettings();
 }
