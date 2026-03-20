@@ -7316,6 +7316,61 @@ function renderHistory() {
       </div>`;
   }
 
+  // Streak overview
+  const trainStreak = calculateStreak();
+  const dietStreak = calculateDietStreak();
+  let streakHtml = '';
+  if (data.combinedStreak) {
+    const cs = calculateCombinedStreak();
+    if (cs.current > 0 || trainStreak.longest > 0) {
+      streakHtml = `
+        <div class="card fade-in stagger-2">
+          <span class="label">Consistency</span>
+          <div class="stat-row mt-12">
+            <div class="stat-box">
+              <div class="stat-value" style="color:var(--warning)">🔥 ${cs.current}</div>
+              <div class="stat-label">Combined Streak</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-value">${trainStreak.longest}</div>
+              <div class="stat-label">Longest Training</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-value">${dietStreak.longest}</div>
+              <div class="stat-label">Longest Diet</div>
+            </div>
+          </div>
+        </div>`;
+    }
+  } else {
+    if (trainStreak.current > 0 || dietStreak.current > 0 || trainStreak.longest > 0 || dietStreak.longest > 0) {
+      streakHtml = `
+        <div class="card fade-in stagger-2">
+          <span class="label">Consistency</span>
+          <div class="stat-row mt-12">
+            <div class="stat-box">
+              <div class="stat-value" style="color:var(--warning)">🔥 ${trainStreak.current}</div>
+              <div class="stat-label">Training Streak</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-value" style="color:var(--success)">🥗 ${dietStreak.current}</div>
+              <div class="stat-label">Diet Streak</div>
+            </div>
+          </div>
+          <div class="stat-row mt-8">
+            <div class="stat-box">
+              <div class="stat-value">${trainStreak.longest}</div>
+              <div class="stat-label">Best Training</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-value">${dietStreak.longest}</div>
+              <div class="stat-label">Best Diet</div>
+            </div>
+          </div>
+        </div>`;
+    }
+  }
+
   el.innerHTML = `
     ${periodHtml}
     <div class="stat-row fade-in">
@@ -7328,6 +7383,7 @@ function renderHistory() {
         <div class="stat-label">This Week</div>
       </div>
     </div>
+    ${streakHtml}
     ${bodyPartHtml}
     ${weightHtml}
     ${progressHtml}
