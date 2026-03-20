@@ -5228,7 +5228,10 @@ function renderExercise() {
       ${warmupLogHtml}
       ${!ex.isBodyweight ? `<button class="done-btn" onclick="startWarmup()" style="margin-top:32px;background:var(--surface-2);color:var(--text);">Warm Up</button>` : ''}
       <button class="done-btn" onclick="exerciseReady()" style="margin-top:${ex.isBodyweight ? '32' : '12'}px;">Working Sets</button>
-      <button class="skip-btn mt-8" onclick="workout.exerciseReady=true;skipExercise()" style="margin-top:12px;">Skip Exercise</button>
+      <div class="prep-actions" style="display:flex;gap:10px;margin-top:12px;">
+        <button class="skip-btn" onclick="showSwapExercise()" style="flex:1;">Swap</button>
+        <button class="skip-btn" onclick="workout.exerciseReady=true;skipExercise()" style="flex:1;">Skip</button>
+      </div>
     `;
     upnextEl.style.display = 'none';
     return;
