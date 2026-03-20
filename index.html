@@ -3436,6 +3436,8 @@ function load() {
   if (data.addActivityCalories === undefined) data.addActivityCalories = false;
   // Migration: streak & notifications
   if (!data.streak) data.streak = { current: 0, longest: 0, lastTrainingDate: null };
+  if (!data.dietStreak) data.dietStreak = { current: 0, longest: 0 };
+  if (data.combinedStreak === undefined) data.combinedStreak = false;
   if (!data.notifications) data.notifications = { enabled: false, reminderTime: '08:00' };
   // Migration: exercise DB + set targets
   if (!data.customExerciseTags) data.customExerciseTags = {};
@@ -4260,6 +4262,81 @@ function calculateStreak() {
   return data.streak;
 }
 
+function calculateDietStreak() {
+  if (!data.foodLog || data.foodLog.length === 0) {
+    data.dietStreak.current = 0;
+    return data.dietStreak;
+  }
+  const loggedDates = new Set(data.foodLog.map(f => f.date));
+  let streak = 0;
+  const todayStr = today();
+  let checkDate = new Date(todayStr + 'T12:00:00');
+
+  // If today has entries, count it; otherwise start from yesterday (give them until end of day)
+  if (loggedDates.has(todayStr)) {
+    streak = 1;
+    checkDate.setDate(checkDate.getDate() - 1);
+  } else {
+    // Don't break yet — they might log later today
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+
+  for (let i = 0; i < 400; i++) {
+    const dateStr = checkDate.toISOString().split('T')[0];
+    if (loggedDates.has(dateStr)) {
+      streak++;
+    } else {
+      break;
+    }
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+
+  data.dietStreak.current = streak;
+  if (streak > data.dietStreak.longest) data.dietStreak.longest = streak;
+  return data.dietStreak;
+}
+
+function calculateCombinedStreak() {
+  // Combined: every day must have food logged, and training days must also have a session
+  if (!data.foodLog || data.foodLog.length === 0) return { current: 0, longest: 0 };
+  const loggedDates = new Set(data.foodLog.map(f => f.date));
+  const sessionDates = new Set(data.sessions.map(s => s.date));
+  const trainingDays = data.schedule.trainingDays;
+  let streak = 0;
+  const todayStr = today();
+  let checkDate = new Date(todayStr + 'T12:00:00');
+
+  function dayPasses(dateStr, dow) {
+    const hasFood = loggedDates.has(dateStr);
+    const isTrainingDay = trainingDays.includes(dow);
+    const hasTrained = sessionDates.has(dateStr);
+    // Must log food every day. On training days, must also train.
+    return hasFood && (!isTrainingDay || hasTrained);
+  }
+
+  const todayDow = checkDate.getDay();
+  if (dayPasses(todayStr, todayDow)) {
+    streak = 1;
+    checkDate.setDate(checkDate.getDate() - 1);
+  } else {
+    // Grace: if today isn't complete yet, skip to yesterday
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+
+  for (let i = 0; i < 400; i++) {
+    const dateStr = checkDate.toISOString().split('T')[0];
+    const dow = checkDate.getDay();
+    if (dayPasses(dateStr, dow)) {
+      streak++;
+    } else {
+      break;
+    }
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+
+  return { current: streak };
+}
+
 function getStreakMilestone(count) {
   return STREAK_MILESTONES.includes(count) ? count : null;
 }
@@ -4529,13 +4606,35 @@ function renderDigestCard() {
 }
 
 function renderStreakBadge() {
+  if (data.combinedStreak) {
+    const c = calculateCombinedStreak();
+    if (c.current === 0) return '';
+    return `
+      <div class="streak-badge fade-in">
+        <span class="streak-flame">🔥</span>
+        <span class="streak-count">${c.current}</span>
+        <span class="streak-label">day streak <span style="font-size:10px;color:var(--text-3)">(train + diet)</span></span>
+      </div>`;
+  }
   const s = calculateStreak();
   if (s.current === 0) return '';
   return `
     <div class="streak-badge fade-in">
       <span class="streak-flame">🔥</span>
       <span class="streak-count">${s.current}</span>
-      <span class="streak-label">day streak</span>
+      <span class="streak-label">day training streak</span>
+    </div>`;
+}
+
+function renderDietStreakBadge() {
+  if (data.combinedStreak) return ''; // shown on Train tab instead
+  const s = calculateDietStreak();
+  if (s.current === 0) return '';
+  return `
+    <div class="streak-badge fade-in" style="background:rgba(48,209,88,0.08);border-color:rgba(48,209,88,0.20);">
+      <span class="streak-flame">🥗</span>
+      <span class="streak-count" style="color:var(--success);">${s.current}</span>
+      <span class="streak-label">day diet streak</span>
     </div>`;
 }
 
@@ -6126,6 +6225,7 @@ function renderDiet() {
   }).join('');
 
   el.innerHTML = `
+    ${renderDietStreakBadge()}
     <div class="card fade-in" style="padding-bottom:12px;">
       <div class="diet-swipe-container" onclick="toggleDietTile()">
         <div class="diet-swipe-tile active">
@@ -8069,6 +8169,17 @@ function renderSettings() {
       ` : ''}
     </div>
     ` : ''}
+
+    <p class="settings-section-label">Streaks</p>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="toggle-row" style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="text-sm">Combined streak</span>
+        <button class="toggle ${data.combinedStreak ? 'on' : ''}" onclick="data.combinedStreak=!data.combinedStreak;save();renderSettings()"></button>
+      </div>
+      <p class="text-xs text-dim mt-8">${data.combinedStreak
+        ? 'Streak requires both training (on training days) and food logging (every day). For users who want full accountability.'
+        : 'Training and diet streaks are tracked separately. Turn on for a combined streak that requires both.'}</p>
+    </div>
 
     <p class="settings-section-label">Units</p>
     <div class="card" style="margin-bottom:16px;">
