@@ -644,8 +644,15 @@
       color: var(--text-2);
       letter-spacing: 0.06em;
       text-transform: uppercase;
-      margin-bottom: 12px;
+      margin-bottom: 4px;
     }
+    .last-session-line {
+      font-size: 12px;
+      color: var(--text-3);
+      margin-bottom: 12px;
+      letter-spacing: 0.02em;
+    }
+    .last-session-line span { color: var(--text-2); font-weight: 500; }
 
     /* Rep adjuster */
     .rep-adjuster {
@@ -3566,15 +3573,20 @@ function getExerciseLastSession(exerciseName) {
     const ex = session.exercises.find(e => e.name === exerciseName);
     if (ex && ex.sets.length > 0) {
       let maxWeight = 0, repsAtMax = 0;
+      const setReps = [];
       for (const set of ex.sets) {
         const ns = normalizeSet(set);
-        if (!ns.skipped && ns.weight != null && ns.weight >= maxWeight) {
-          maxWeight = ns.weight;
-          repsAtMax = Array.isArray(ns.reps) ? ns.reps.reduce((a, b) => a + b, 0) : ns.reps;
+        if (!ns.skipped) {
+          const r = Array.isArray(ns.reps) ? ns.reps.reduce((a, b) => a + b, 0) : ns.reps;
+          setReps.push(r);
+          if (ns.weight != null && ns.weight >= maxWeight) {
+            maxWeight = ns.weight;
+            repsAtMax = r;
+          }
         }
       }
       if (maxWeight > 0) {
-        return { weight: maxWeight, reps: repsAtMax, date: session.date, totalSets: ex.sets.filter(s => !normalizeSet(s).skipped).length };
+        return { weight: maxWeight, reps: repsAtMax, date: session.date, totalSets: setReps.length, setReps };
       }
     }
   }
@@ -4990,11 +5002,20 @@ function renderExercise() {
   // Weight info for tracking screen (plates or per-dumbbell)
   const trackPlateHtml = !ex.isBodyweight ? buildWeightInfoHtml(ex.name, ex.currentWeight, 'centered') : '';
 
+  // Last session info
+  const lastSession = getExerciseLastSession(ex.name);
+  let lastSessionHtml = '';
+  if (lastSession) {
+    const repsStr = lastSession.setReps.join(', ');
+    lastSessionHtml = `<div class="last-session-line">Last: <span>${displayWeight(lastSession.weight)}${weightLabel()} · ${repsStr} reps</span></div>`;
+  }
+
   bodyEl.innerHTML = `
     ${typeBadge}
     <div class="exercise-label">Exercise ${workout.currentExerciseIndex + 1} of ${totalExercises}</div>
     <div class="exercise-name">${ex.name}</div>
     <div class="set-indicator">${setLabel}</div>
+    ${lastSessionHtml}
     ${notesHtml}
     ${weightHtml}
     ${trackPlateHtml ? `<div style="margin:4px 0 12px">${trackPlateHtml}</div>` : ''}
