@@ -4267,19 +4267,7 @@ function shouldRecommendDeload() {
 
   const weeksSinceDeload = data.deload.lastDeloadDate ? Math.floor(daysAgo(data.deload.lastDeloadDate) / 7) : Math.floor(daysAgo(data.sessions[0].date) / 7);
 
-  if (data.deload.mode === 'programmed') {
-    if (weeksSinceDeload >= data.deload.programmedInterval) {
-      return { recommend: true, reason: `${weeksSinceDeload} weeks since last deload` };
-    }
-    return null;
-  }
-
-  // Auto mode: check for signs of overtraining
-  if (weeksSinceDeload >= 6) {
-    return { recommend: true, reason: `${weeksSinceDeload} weeks without a deload` };
-  }
-
-  // RPE drift detection: average RPE trending above target for 3+ sessions
+  // RPE drift detection: applies to both auto and programmed modes
   const [, rpeMax] = getRpeTargetRange();
   const recentWithRpe = data.sessions.slice(-3).filter(s => !s.isDeload);
   if (recentWithRpe.length >= 3) {
@@ -4288,6 +4276,18 @@ function shouldRecommendDeload() {
       const avg = (avgRpes.reduce((a, b) => a + b, 0) / avgRpes.length).toFixed(1);
       return { recommend: true, reason: `Average RPE ${avg} exceeding your target (${rpeMax}) for 3+ sessions` };
     }
+  }
+
+  if (data.deload.mode === 'programmed') {
+    if (weeksSinceDeload >= data.deload.programmedInterval) {
+      return { recommend: true, reason: `${weeksSinceDeload} weeks since last deload` };
+    }
+    return null;
+  }
+
+  // Auto mode: additional checks
+  if (weeksSinceDeload >= 6) {
+    return { recommend: true, reason: `${weeksSinceDeload} weeks without a deload` };
   }
 
   // Check for declining performance over last 3 sessions
@@ -7902,7 +7902,8 @@ function renderSettings() {
             onchange="setDeloadInterval(this.value)">
           <span class="text-sm">weeks</span>
         </div>` : ''}
-      ${data.deload.mode === 'auto' ? `<p class="text-xs text-dim mt-8">Recommends a deload when RPE exceeds your target range or performance declines.</p>` : ''}
+      ${data.deload.mode === 'auto' ? `<p class="text-xs text-dim mt-8">Recommends a deload when RPE exceeds your target range, performance declines, or after 6+ weeks.</p>` : ''}
+      ${data.deload.mode === 'programmed' ? `<p class="text-xs text-dim mt-8">RPE fatigue detection still active — will flag early if effort exceeds your target range for 3+ sessions.</p>` : ''}
     </div>
 
     <div class="card" style="margin-bottom:16px;">
