@@ -3500,6 +3500,8 @@ function load() {
   if (!data.schedule.preferredTime) data.schedule.preferredTime = '';
   // Migration: missed day tracking
   if (!data.missedDayDismissed) data.missedDayDismissed = null;
+  // Migration: alternating exercises state
+  if (!data.alternateState) data.alternateState = {};
   // Migration: exercise DB + set targets
   if (!data.customExerciseTags) data.customExerciseTags = {};
   if (data.setTargets === undefined) data.setTargets = null;
@@ -5230,12 +5232,21 @@ function startWorkout() {
     type,
     isDeload,
     exercises: program.map(ex => {
-      let w = ex.weight || getLastWeight(ex.name) || 0;
+      // Resolve alternating exercise for this session
+      let activeName = ex.name;
+      let altPrimary = ex.name; // the "primary" key for state tracking
+      if (ex.alternate) {
+        const stateKey = `${type}-${ex.name}`;
+        const altState = data.alternateState[stateKey] || 0;
+        activeName = altState === 0 ? ex.name : ex.alternate;
+      }
+
+      let w = ex.weight || getLastWeight(activeName) || 0;
       let progressionBadge = null;
       let previousWeight = w;
       // Auto-progression: double progression — add weight when target reps achieved
       if (w && !isDeload && !ex.isBodyweight) {
-        const rec = getProgressionRec(ex.name, w, bw);
+        const rec = getProgressionRec(activeName, w, bw);
         if (rec.suggestedWeight > w) {
           previousWeight = w;
           w = rec.suggestedWeight;
@@ -5246,7 +5257,8 @@ function startWorkout() {
       }
       if (isDeload && w) w = Math.round(w * 0.6 * 2) / 2;
       return {
-        name: ex.name,
+        name: activeName,
+        alternateKey: ex.alternate ? `${type}-${ex.name}` : null, // track for state flip after session
         targetSets: ex.sets,
         targetReps: ex.reps,
         completedSets: [],
@@ -6424,6 +6436,15 @@ function saveWorkout() {
   // Advance schedule pattern
   data.schedule.patternIndex = (data.schedule.patternIndex + 1) % data.schedule.pattern.length;
   data.nextType = data.schedule.pattern[data.schedule.patternIndex];
+
+  // Flip alternating exercise states for next session
+  if (workout.exercises) {
+    workout.exercises.forEach(ex => {
+      if (ex.alternateKey) {
+        data.alternateState[ex.alternateKey] = ((data.alternateState[ex.alternateKey] || 0) === 0) ? 1 : 0;
+      }
+    });
+  }
 
   // Deload tracking
   if (workout.isDeload) {
@@ -8755,7 +8776,19 @@ function renderBuildProgram(type, exercises) {
       badge = '<span class="type-badge rp">RP</span>';
     }
 
-    const w = ex.weight || getLastWeight(ex.name);
+    // Alternating exercise display
+    let altHtml = '';
+    if (ex.alternate) {
+      const stateKey = `${type}-${ex.name}`;
+      const altState = data.alternateState[stateKey] || 0;
+      const nextUp = altState === 0 ? ex.name : ex.alternate;
+      const nextNext = altState === 0 ? ex.alternate : ex.name;
+      badge += `<span class="type-badge" style="background:rgba(90,200,250,0.15);color:#5ac8fa;border:1px solid rgba(90,200,250,0.3);">↔</span>`;
+      altHtml = `<div style="font-size:10px;color:var(--text-3);margin-top:2px;">Next: <span style="color:var(--text-2);">${nextUp}</span> · then ${nextNext}</div>`;
+    }
+
+    const activeExName = ex.alternate ? (((data.alternateState[`${type}-${ex.name}`] || 0) === 0) ? ex.name : ex.alternate) : ex.name;
+    const w = ex.weight || getLastWeight(activeExName);
     const weightStr = w ? ` @ ${displayWeight(w)}${weightLabel()}` : '';
 
     return `
@@ -8763,7 +8796,10 @@ function renderBuildProgram(type, exercises) {
         ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondragend="onDragEnd(event)" ondrop="onDrop(event)"
         ontouchstart="onTouchDragStart(event)" ontouchmove="onTouchDragMove(event)" ontouchend="onTouchDragEnd(event)">
         <span class="drag-handle">☰</span>
-        <span class="ex-name">${ex.name} ${badge}</span>
+        <div style="flex:1;min-width:0;">
+          <span class="ex-name">${ex.name} ${badge}</span>
+          ${altHtml}
+        </div>
         <span class="ex-detail">${ex.sets} × ${ex.reps}${weightStr}</span>
         <div class="build-actions">
           <button class="build-icon-btn" onclick="editExercise('${type}', ${i})" title="Edit">✎</button>
@@ -8848,6 +8884,15 @@ function renderBuildEditForm(type, index, ex) {
       <div style="margin-bottom:8px;">
         <div class="label" style="margin-bottom:4px;">Notes</div>
         <textarea id="edit-notes" placeholder="e.g., use narrow grip, pause at bottom">${ex.notes || ''}</textarea>
+      </div>
+      <div style="margin-bottom:8px;">
+        <div class="label" style="margin-bottom:4px;">Alternating with <span style="font-weight:400;color:var(--text-3);font-size:11px;">(optional — swaps every other session)</span></div>
+        <div class="exercise-search-wrap" style="width:100%">
+          <input type="text" id="edit-alternate" value="${ex.alternate || ''}" placeholder="e.g. Leg Press, Hack Squat…" autocomplete="off"
+            oninput="onAlternateSearch(this.value)" onfocus="onAlternateSearch(this.value)">
+          <div id="alternate-suggestions" class="exercise-suggestions"></div>
+        </div>
+        ${ex.alternate ? `<p class="text-xs text-dim mt-4" style="color:var(--accent);">↔ Alternates with ${ex.alternate} every other session</p>` : ''}
       </div>
       <div style="margin-bottom:8px;">
         <div class="label" style="margin-bottom:4px;">Rest Timer</div>
@@ -8935,6 +8980,8 @@ function saveBuildEdit(type, index) {
   if (restVal && parseInt(restVal) > 0) exercise.restDuration = parseInt(restVal);
   if (buildEditType === 'superset') exercise.supersetNext = true;
   if (buildEditType === 'rest-pause') exercise.restPause = true;
+  const alternateVal = document.getElementById('edit-alternate')?.value.trim();
+  if (alternateVal) exercise.alternate = alternateVal;
 
   // Save custom muscle group tag if not in DB
   const muscleGroup = document.getElementById('edit-muscle-group')?.value;
@@ -8987,6 +9034,26 @@ function selectExercise(name) {
   if (el) el.value = name;
   document.getElementById('exercise-suggestions')?.classList.remove('visible');
   document.getElementById('muscle-group-row')?.classList.remove('visible');
+}
+
+function onAlternateSearch(query) {
+  const sugEl = document.getElementById('alternate-suggestions');
+  if (!sugEl) return;
+  if (!query.trim()) { sugEl.classList.remove('visible'); return; }
+  const results = searchExercises(query);
+  if (results.length === 0) { sugEl.classList.remove('visible'); return; }
+  sugEl.innerHTML = results.map(r =>
+    `<div class="exercise-suggestion" onmousedown="selectAlternate('${r.name.replace(/'/g, "\\'")}')">
+      <span>${r.name}</span><span class="sg-group">${r.group}</span>
+    </div>`
+  ).join('');
+  sugEl.classList.add('visible');
+}
+
+function selectAlternate(name) {
+  const el = document.getElementById('edit-alternate');
+  if (el) el.value = name;
+  document.getElementById('alternate-suggestions')?.classList.remove('visible');
 }
 
 // Dismiss exercise suggestions on outside click
