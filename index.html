@@ -647,8 +647,8 @@
       to { opacity: 1; transform: translateX(-50%) translateY(0); }
     }
     @keyframes slideUp {
-      from { opacity: 0; transform: translateX(-50%) translateY(16px); }
-      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+      from { transform: translateX(-50%) translateY(20px); }
+      to { transform: translateX(-50%) translateY(0); }
     }
 
     .set-indicator {
@@ -8228,7 +8228,7 @@ function renderBuild() {
 
   const anyPreviewing = Object.keys(SPLIT_PRESETS).some(k => data['_splitPreview_' + k]);
   const splitTipHtml = (anyPreviewing && !data.swapTipDismissed) ? `
-    <div id="split-tip" style="position:fixed;bottom:90px;left:50%;transform:translateX(-50%);width:calc(100% - 48px);max-width:420px;z-index:120;padding:12px 14px 12px 14px;background:#1e2420;border:1px solid rgba(163,184,108,0.4);border-radius:12px;font-size:13px;color:#c8d4be;line-height:1.5;box-shadow:0 8px 40px rgba(0,0,0,0.85);animation:slideUp 0.25s ease;">
+    <div id="split-tip" style="position:fixed;bottom:90px;left:50%;transform:translateX(-50%);width:calc(100% - 48px);max-width:420px;z-index:9999;padding:14px 36px 14px 14px;background:#1c2119;border:1px solid rgba(163,184,108,0.5);border-radius:12px;font-size:13px;color:#d0dbc6;line-height:1.5;box-shadow:0 12px 48px #000;animation:slideUp 0.25s ease;isolation:isolate;">
       <button onclick="event.stopPropagation();data.swapTipDismissed=true;save();document.getElementById('split-tip').remove();" style="float:right;background:none;border:none;color:var(--text-3);font-size:18px;cursor:pointer;padding:0;line-height:1;margin-left:8px;">×</button>
       <strong style="color:var(--accent);">Tip:</strong> These are just suggestions — swap any exercise for your preferred variant, or even during a workout.
     </div>` : '';
