@@ -8774,12 +8774,20 @@ function renderSettings() {
         <input type="file" id="import-file-settings" accept=".json" style="display:none" onchange="importData(event)">
       </div>
       <div class="divider"></div>
-      <div style="display:flex;align-items:center;gap:12px;width:100%;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Export to Excel / Sheets</div>
+      <div style="display:flex;align-items:center;gap:12px;width:100%;margin-bottom:10px;">
         <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:500;color:var(--text-1);">Export to Excel / Sheets</div>
-          <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Downloads your full workout history as a .csv</div>
+          <div style="font-size:13px;font-weight:500;color:var(--text-1);">Workouts</div>
+          <div style="font-size:11px;color:var(--text-3);margin-top:2px;">All sessions — sets, reps, weight, volume</div>
         </div>
         <button class="btn btn-ghost" onclick="exportCSV()" style="width:auto;white-space:nowrap;padding:8px 14px;font-size:13px;flex-shrink:0;">↓ CSV</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;width:100%;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;color:var(--text-1);">Diet & Weight</div>
+          <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Daily calories, macros and bodyweight</div>
+        </div>
+        <button class="btn btn-ghost" onclick="exportDietCSV()" style="width:auto;white-space:nowrap;padding:8px 14px;font-size:13px;flex-shrink:0;">↓ CSV</button>
       </div>
       <div class="divider"></div>
       <span class="label">Account & Sync</span>
@@ -9359,6 +9367,60 @@ function exportCSV() {
   a.click();
   URL.revokeObjectURL(url);
   showToast(`Exported ${data.sessions.length} sessions`);
+}
+
+function exportDietCSV() {
+  const hasFood = data.foodLog && data.foodLog.length > 0;
+  const hasWeight = data.weights && data.weights.length > 0;
+  if (!hasFood && !hasWeight) { showToast('No diet or weight data yet'); return; }
+
+  const wUnit = data.weightUnit === 'lbs' ? 'lbs' : 'kg';
+
+  // Build a set of all dates that appear in either food log or weight log
+  const allDates = new Set([
+    ...(data.foodLog || []).map(f => f.date),
+    ...(data.weights || []).map(w => w.date)
+  ]);
+  const sorted = [...allDates].sort();
+
+  const headers = ['Date','Bodyweight (' + wUnit + ')','Calories','Protein (g)','Carbs (g)','Fats (g)','Food Items'];
+  const rows = [headers.join(',')];
+
+  sorted.forEach(date => {
+    const entries = (data.foodLog || []).filter(f => f.date === date);
+    const weightEntry = (data.weights || []).find(w => w.date === date);
+
+    const bw = weightEntry
+      ? (wUnit === 'lbs' ? Math.round(weightEntry.weight * 2.20462 * 10) / 10 : weightEntry.weight)
+      : '';
+    const calories = entries.reduce((s, f) => s + (f.calories || 0), 0);
+    const protein  = entries.reduce((s, f) => s + (f.protein  || 0), 0);
+    const carbs    = entries.reduce((s, f) => s + (f.carbs    || 0), 0);
+    const fats     = entries.reduce((s, f) => s + (f.fats     || 0), 0);
+    const items    = entries.map(f => f.name || '').filter(Boolean).join('; ').replace(/,/g, ';');
+
+    rows.push([
+      date,
+      bw,
+      calories || '',
+      protein  ? Math.round(protein)  : '',
+      carbs    ? Math.round(carbs)    : '',
+      fats     ? Math.round(fats)     : '',
+      items    ? `"${items}"`         : ''
+    ].join(','));
+  });
+
+  const csv = rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const dateStr = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `tensile-diet-${dateStr}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  const days = sorted.length;
+  showToast(`Exported ${days} day${days !== 1 ? 's' : ''} of data`);
 }
 
 function exportData() {
