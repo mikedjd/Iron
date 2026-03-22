@@ -9290,7 +9290,16 @@ function exportCSV() {
   const unit = data.weightUnit === 'lbs' ? 'lbs' : 'kg';
   const toDisplay = w => unit === 'lbs' ? Math.round(w * 2.20462 * 4) / 4 : w;
 
-  const headers = ['Date','Workout Type','Exercise','Sets Done','Top Weight (' + unit + ')','Best Reps','Volume (' + unit + ')','Sets Detail','Notes'];
+  // Find max sets across all exercises so we know how many Set columns to create
+  let maxSets = 0;
+  data.sessions.forEach(s => (s.exercises || []).forEach(ex => {
+    const valid = (ex.sets || []).filter(s => !normalizeSet(s).skipped).length;
+    if (valid > maxSets) maxSets = valid;
+  }));
+  maxSets = Math.max(maxSets, 1);
+
+  const setHeaders = Array.from({length: maxSets}, (_, i) => `Set ${i + 1} (${unit}×reps)`);
+  const headers = ['Date','Workout Type','Exercise','Sets Done',`Top Weight (${unit})`,'Best Reps',`Volume (${unit})`, ...setHeaders, 'Notes'];
   const rows = [headers.join(',')];
 
   data.sessions.forEach(session => {
@@ -9302,27 +9311,26 @@ function exportCSV() {
       const validSets = (ex.sets || []).map(s => normalizeSet(s)).filter(ns => !ns.skipped);
       if (validSets.length === 0) return;
 
-      // Top weight (highest weight used)
       const topWeight = Math.max(...validSets.map(ns => ns.weight || 0));
-      // Best reps at top weight
       const bestReps = validSets
         .filter(ns => (ns.weight || 0) === topWeight)
         .map(ns => Array.isArray(ns.reps) ? ns.reps.reduce((a,b) => a+b, 0) : (ns.reps || 0))
         .reduce((a, b) => Math.max(a, b), 0);
-      // Total volume
       const volume = validSets.reduce((sum, ns) => {
         const w = ns.weight || 0;
         const r = Array.isArray(ns.reps) ? ns.reps.reduce((a,b) => a+b, 0) : (ns.reps || 0);
         return sum + w * r;
       }, 0);
-      // Sets detail: "80×8 / 82.5×8 / 85×7"
-      const detail = validSets.map(ns => {
+
+      // One column per set: "80×8"
+      const setCols = Array.from({length: maxSets}, (_, i) => {
+        const ns = validSets[i];
+        if (!ns) return '';
         const w = ns.weight ? toDisplay(ns.weight) : '—';
         const r = Array.isArray(ns.reps) ? ns.reps.join('+') : (ns.reps || 0);
         return `${w}×${r}`;
-      }).join(' / ');
+      });
 
-      // Per-set notes collapsed
       const setNotes = validSets.map(ns => ns.note || '').filter(Boolean).join('; ').replace(/,/g, ';');
       const notes = [setNotes, sessionNote].filter(Boolean).join(' | ');
 
@@ -9334,7 +9342,7 @@ function exportCSV() {
         topWeight ? toDisplay(topWeight) : '',
         bestReps || '',
         volume ? Math.round(volume) : '',
-        `"${detail}"`,
+        ...setCols,
         notes ? `"${notes}"` : ''
       ];
       rows.push(row.join(','));
