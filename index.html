@@ -646,6 +646,10 @@
       from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
       to { opacity: 1; transform: translateX(-50%) translateY(0); }
     }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
 
     .set-indicator {
       font-family: 'Teko', sans-serif;
@@ -8224,9 +8228,9 @@ function renderBuild() {
 
   const anyPreviewing = Object.keys(SPLIT_PRESETS).some(k => data['_splitPreview_' + k]);
   const splitTipHtml = (anyPreviewing && !data.swapTipDismissed) ? `
-    <div id="split-tip" style="margin-top:12px;padding:10px 12px;background:rgba(163,184,108,0.08);border:1px solid rgba(163,184,108,0.15);border-radius:8px;font-size:12px;color:var(--text-2);line-height:1.5;position:relative;">
-      <button onclick="event.stopPropagation();data.swapTipDismissed=true;save();document.getElementById('split-tip').remove();" style="position:absolute;top:4px;right:8px;background:none;border:none;color:var(--text-3);font-size:16px;cursor:pointer;padding:0;line-height:1;">×</button>
-      <strong style="color:var(--accent);">Tip:</strong> These are just suggestions — swap any exercise for your preferred variant, or during a workout.
+    <div id="split-tip" style="position:fixed;bottom:90px;left:50%;transform:translateX(-50%);width:calc(100% - 48px);max-width:420px;z-index:120;padding:12px 14px 12px 14px;background:var(--card);border:1px solid rgba(163,184,108,0.3);border-radius:12px;font-size:13px;color:var(--text-2);line-height:1.5;box-shadow:0 8px 32px rgba(0,0,0,0.5);animation:slideUp 0.25s ease;">
+      <button onclick="event.stopPropagation();data.swapTipDismissed=true;save();document.getElementById('split-tip').remove();" style="float:right;background:none;border:none;color:var(--text-3);font-size:18px;cursor:pointer;padding:0;line-height:1;margin-left:8px;">×</button>
+      <strong style="color:var(--accent);">Tip:</strong> These are just suggestions — swap any exercise for your preferred variant, or even during a workout.
     </div>` : '';
 
   const splitTemplateHtml = `
@@ -8261,7 +8265,6 @@ function renderBuild() {
           <span class="split-tmpl-desc">Build your own split.</span>
         </button>
       </div>
-      ${splitTipHtml}
       ${currentPreset === 'custom' ? `
         <div class="mt-12">
           <div class="split-chips">
@@ -8319,6 +8322,14 @@ function renderBuild() {
       <button class="btn btn-ghost mt-8 fade-in" onclick="resetPrograms()" style="color:var(--danger);">Reset to Defaults</button>
     ` : ''}
   `;
+
+  // Inject tip as fixed overlay (must be in body, not inside overflow-hidden tab)
+  document.getElementById('split-tip')?.remove();
+  if (splitTipHtml) {
+    const tipEl = document.createElement('div');
+    tipEl.innerHTML = splitTipHtml;
+    document.body.appendChild(tipEl.firstElementChild);
+  }
 }
 
 function getRecoveryWarning() {
