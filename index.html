@@ -6669,6 +6669,19 @@ function renderDiet() {
         <input type="number" id="food-pro-input" inputmode="numeric" placeholder="protein g">
         <button onclick="addFood()">ADD</button>
       </div>
+      <div style="margin-top:12px;">
+        <button class="common-foods-toggle" onclick="toggleAccordion(this,'extraMileOpen')">
+          <span class="label">Extra Mile</span>
+          <span class="common-foods-arrow ${data._extraMileOpen ? 'open' : ''}">▼</span>
+        </button>
+        <div class="common-foods-body ${data._extraMileOpen ? 'open' : ''}">
+          <div class="food-add-row mt-8">
+            <input type="number" id="food-carb-input" inputmode="numeric" placeholder="carbs g">
+            <input type="number" id="food-fat-input" inputmode="numeric" placeholder="fats g">
+            <button onclick="addFood()">ADD</button>
+          </div>
+        </div>
+      </div>
     </div>
     ${buildFoodSearchHtml()}
 
