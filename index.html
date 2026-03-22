@@ -9383,7 +9383,7 @@ function exportDietCSV() {
   ]);
   const sorted = [...allDates].sort();
 
-  const headers = ['Date','Bodyweight (' + wUnit + ')','Calories','Protein (g)','Carbs (g)','Fats (g)','Food Items'];
+  const headers = ['Date','Bodyweight (' + wUnit + ')','Calories','Protein (g)','Carbs (g)','Fats (g)'];
   const rows = [headers.join(',')];
 
   sorted.forEach(date => {
@@ -9397,7 +9397,6 @@ function exportDietCSV() {
     const protein  = entries.reduce((s, f) => s + (f.protein  || 0), 0);
     const carbs    = entries.reduce((s, f) => s + (f.carbs    || 0), 0);
     const fats     = entries.reduce((s, f) => s + (f.fats     || 0), 0);
-    const items    = entries.map(f => f.name || '').filter(Boolean).join('; ').replace(/,/g, ';');
 
     rows.push([
       date,
@@ -9405,8 +9404,7 @@ function exportDietCSV() {
       calories || '',
       protein  ? Math.round(protein)  : '',
       carbs    ? Math.round(carbs)    : '',
-      fats     ? Math.round(fats)     : '',
-      items    ? `"${items}"`         : ''
+      fats     ? Math.round(fats)     : ''
     ].join(','));
   });
 
