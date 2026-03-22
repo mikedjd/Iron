@@ -9298,7 +9298,7 @@ function exportCSV() {
   }));
   maxSets = Math.max(maxSets, 1);
 
-  const setHeaders = Array.from({length: maxSets}, (_, i) => `Set ${i + 1} (${unit}×reps)`);
+  const setHeaders = Array.from({length: maxSets}, (_, i) => `Set ${i + 1} (${unit} x reps)`);
   const headers = ['Date','Workout Type','Exercise','Sets Done',`Top Weight (${unit})`,'Best Reps',`Volume (${unit})`, ...setHeaders, 'Notes'];
   const rows = [headers.join(',')];
 
@@ -9328,7 +9328,7 @@ function exportCSV() {
         if (!ns) return '';
         const w = ns.weight ? toDisplay(ns.weight) : '—';
         const r = Array.isArray(ns.reps) ? ns.reps.join('+') : (ns.reps || 0);
-        return `${w}×${r}`;
+        return `${w} x ${r}`;
       });
 
       const setNotes = validSets.map(ns => ns.note || '').filter(Boolean).join('; ').replace(/,/g, ';');
