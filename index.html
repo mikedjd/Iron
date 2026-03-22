@@ -8774,6 +8774,14 @@ function renderSettings() {
         <input type="file" id="import-file-settings" accept=".json" style="display:none" onchange="importData(event)">
       </div>
       <div class="divider"></div>
+      <div style="display:flex;align-items:center;gap:12px;width:100%;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;color:var(--text-1);">Export to Excel / Sheets</div>
+          <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Downloads your full workout history as a .csv</div>
+        </div>
+        <button class="btn btn-ghost" onclick="exportCSV()" style="width:auto;white-space:nowrap;padding:8px 14px;font-size:13px;flex-shrink:0;">↓ CSV</button>
+      </div>
+      <div class="divider"></div>
       <span class="label">Account & Sync</span>
       ${currentUser ? `
         <div class="sync-status">
@@ -9272,6 +9280,43 @@ function resetPrograms() {
   buildAdding = null;
   save();
   renderBuild();
+}
+
+function exportCSV() {
+  if (!data.sessions || data.sessions.length === 0) {
+    showToast('No sessions to export yet');
+    return;
+  }
+  const unit = data.weightUnit === 'lbs' ? 'lbs' : 'kg';
+  const rows = ['Date,Workout Type,Exercise,Set,Weight (' + unit + '),Reps,Notes'];
+
+  data.sessions.forEach(session => {
+    const date = session.date || '';
+    const type = getTypeLabel(session.type || '');
+    (session.exercises || []).forEach(ex => {
+      (ex.sets || []).forEach((set, si) => {
+        const ns = normalizeSet(set);
+        if (ns.skipped) return;
+        const weight = ns.weight != null
+          ? (unit === 'lbs' ? Math.round(ns.weight * 2.20462 * 4) / 4 : ns.weight)
+          : '';
+        const reps = Array.isArray(ns.reps) ? ns.reps.join('+') : (ns.reps || '');
+        const note = (ns.note || '').replace(/,/g, ';');
+        rows.push([date, type, ex.name, si + 1, weight, reps, note].join(','));
+      });
+    });
+  });
+
+  const csv = rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `tensile-history-${date}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`Exported ${data.sessions.length} sessions`);
 }
 
 function exportData() {
