@@ -9288,22 +9288,56 @@ function exportCSV() {
     return;
   }
   const unit = data.weightUnit === 'lbs' ? 'lbs' : 'kg';
-  const rows = ['Date,Workout Type,Exercise,Set,Weight (' + unit + '),Reps,Notes'];
+  const toDisplay = w => unit === 'lbs' ? Math.round(w * 2.20462 * 4) / 4 : w;
+
+  const headers = ['Date','Workout Type','Exercise','Sets Done','Top Weight (' + unit + ')','Best Reps','Volume (' + unit + ')','Sets Detail','Notes'];
+  const rows = [headers.join(',')];
 
   data.sessions.forEach(session => {
     const date = session.date || '';
     const type = getTypeLabel(session.type || '');
+    const sessionNote = (session.notes || '').replace(/,/g, ';').replace(/\n/g, ' ');
+
     (session.exercises || []).forEach(ex => {
-      (ex.sets || []).forEach((set, si) => {
-        const ns = normalizeSet(set);
-        if (ns.skipped) return;
-        const weight = ns.weight != null
-          ? (unit === 'lbs' ? Math.round(ns.weight * 2.20462 * 4) / 4 : ns.weight)
-          : '';
-        const reps = Array.isArray(ns.reps) ? ns.reps.join('+') : (ns.reps || '');
-        const note = (ns.note || '').replace(/,/g, ';');
-        rows.push([date, type, ex.name, si + 1, weight, reps, note].join(','));
-      });
+      const validSets = (ex.sets || []).map(s => normalizeSet(s)).filter(ns => !ns.skipped);
+      if (validSets.length === 0) return;
+
+      // Top weight (highest weight used)
+      const topWeight = Math.max(...validSets.map(ns => ns.weight || 0));
+      // Best reps at top weight
+      const bestReps = validSets
+        .filter(ns => (ns.weight || 0) === topWeight)
+        .map(ns => Array.isArray(ns.reps) ? ns.reps.reduce((a,b) => a+b, 0) : (ns.reps || 0))
+        .reduce((a, b) => Math.max(a, b), 0);
+      // Total volume
+      const volume = validSets.reduce((sum, ns) => {
+        const w = ns.weight || 0;
+        const r = Array.isArray(ns.reps) ? ns.reps.reduce((a,b) => a+b, 0) : (ns.reps || 0);
+        return sum + w * r;
+      }, 0);
+      // Sets detail: "80×8 / 82.5×8 / 85×7"
+      const detail = validSets.map(ns => {
+        const w = ns.weight ? toDisplay(ns.weight) : '—';
+        const r = Array.isArray(ns.reps) ? ns.reps.join('+') : (ns.reps || 0);
+        return `${w}×${r}`;
+      }).join(' / ');
+
+      // Per-set notes collapsed
+      const setNotes = validSets.map(ns => ns.note || '').filter(Boolean).join('; ').replace(/,/g, ';');
+      const notes = [setNotes, sessionNote].filter(Boolean).join(' | ');
+
+      const row = [
+        date,
+        type,
+        ex.name,
+        validSets.length,
+        topWeight ? toDisplay(topWeight) : '',
+        bestReps || '',
+        volume ? Math.round(volume) : '',
+        `"${detail}"`,
+        notes ? `"${notes}"` : ''
+      ];
+      rows.push(row.join(','));
     });
   });
 
@@ -9311,9 +9345,9 @@ function exportCSV() {
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const date = new Date().toISOString().slice(0, 10);
+  const dateStr = new Date().toISOString().slice(0, 10);
   a.href = url;
-  a.download = `tensile-history-${date}.csv`;
+  a.download = `tensile-history-${dateStr}.csv`;
   a.click();
   URL.revokeObjectURL(url);
   showToast(`Exported ${data.sessions.length} sessions`);
