@@ -3537,7 +3537,9 @@ function saveWorkoutState() {
 function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('tab-' + tab).classList.add('active');
+  const activeTab = document.getElementById('tab-' + tab);
+  activeTab.classList.add('active');
+  activeTab.scrollTop = 0;
   document.querySelectorAll('.nav-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.tab === tab);
   });
