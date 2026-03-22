@@ -8222,6 +8222,13 @@ function renderBuild() {
   const dayNames = ['S','M','T','W','T','F','S'];
   const currentPreset = data.splitPreset || 'custom';
 
+  const anyPreviewing = Object.keys(SPLIT_PRESETS).some(k => data['_splitPreview_' + k]);
+  const splitTipHtml = (anyPreviewing && !data.swapTipDismissed) ? `
+    <div id="split-tip" style="margin-top:12px;padding:10px 12px;background:rgba(163,184,108,0.08);border:1px solid rgba(163,184,108,0.15);border-radius:8px;font-size:12px;color:var(--text-2);line-height:1.5;position:relative;">
+      <button onclick="event.stopPropagation();data.swapTipDismissed=true;save();document.getElementById('split-tip').remove();" style="position:absolute;top:4px;right:8px;background:none;border:none;color:var(--text-3);font-size:16px;cursor:pointer;padding:0;line-height:1;">×</button>
+      <strong style="color:var(--accent);">Tip:</strong> These are just suggestions — swap any exercise for your preferred variant, or during a workout.
+    </div>` : '';
+
   const splitTemplateHtml = `
     <div class="card fade-in" style="margin-bottom:16px;">
       <span class="label">Split Template</span>
@@ -8233,9 +8240,7 @@ function renderBuild() {
             return `<div style="margin-top:10px;padding:14px 16px;background:rgba(0,0,0,0.3);border-radius:12px;width:100%;box-sizing:border-box;">
               <div style="font-family:'Teko',sans-serif;font-size:17px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);margin-bottom:8px;">${label}</div>
               ${exercises.map(ex => {
-                const eqType = getEquipmentType(ex.name);
-                const eqIcon = eqType === 'barbell' ? ' \u{1F3CB}' : eqType === 'dumbbell' ? ' \u{1F4AA}' : '';
-                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04);gap:12px;"><span style="color:var(--text-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ex.name}${eqIcon}</span><span style="color:var(--text-3);font-variant-numeric:tabular-nums;letter-spacing:0.04em;flex-shrink:0;">${ex.sets} × ${ex.reps}</span></div>`;
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04);gap:12px;"><span style="color:var(--text-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ex.name}</span><span style="color:var(--text-3);font-variant-numeric:tabular-nums;letter-spacing:0.04em;flex-shrink:0;">${ex.sets} × ${ex.reps}</span></div>`;
               }).join('')}
             </div>`;
           }).join('') : '';
@@ -8256,6 +8261,7 @@ function renderBuild() {
           <span class="split-tmpl-desc">Build your own split.</span>
         </button>
       </div>
+      ${splitTipHtml}
       ${currentPreset === 'custom' ? `
         <div class="mt-12">
           <div class="split-chips">
@@ -8305,16 +8311,9 @@ function renderBuild() {
     }
   }
 
-  const swapTipHtml = !data.swapTipDismissed ? `
-    <div class="swap-tip" id="swap-tip" style="margin-bottom:16px;padding:12px 14px;background:rgba(163,184,108,0.08);border:1px solid rgba(163,184,108,0.15);border-radius:10px;font-size:12px;color:var(--text-2);line-height:1.5;position:relative;">
-      <button onclick="data.swapTipDismissed=true;save();document.getElementById('swap-tip').remove();" style="position:absolute;top:6px;right:10px;background:none;border:none;color:var(--text-3);font-size:16px;cursor:pointer;padding:0;">×</button>
-      <strong style="color:var(--accent);">Tip:</strong> These exercises are just suggestions. Swap any exercise for your preferred variant — e.g. barbell squat for leg press, or dumbbell press for bench press. You can also swap during a workout.
-    </div>` : '';
-
   el.innerHTML = `
     ${splitTemplateHtml}
     ${scheduleHtml}
-    ${swapTipHtml}
     ${programCards}
     ${data.programs ? `
       <button class="btn btn-ghost mt-8 fade-in" onclick="resetPrograms()" style="color:var(--danger);">Reset to Defaults</button>
