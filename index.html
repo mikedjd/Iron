@@ -5066,12 +5066,21 @@ function renderTrainHome() {
   const deloadRec = shouldRecommendDeload();
   if (deloadRec && state !== 'first-time') {
     deloadHtml = `
-      <div class="card deload-card fade-in" style="margin-bottom:12px;">
-        <div class="deload-title">Consider a deload week</div>
-        <p class="text-xs text-dim mt-8">${deloadRec.reason}</p>
-        <div class="mt-12" style="display:flex;gap:8px">
-          <button class="btn btn-secondary" style="flex:1;font-size:14px;padding:10px" onclick="startDeload()">Start Deload</button>
-          <button class="btn btn-ghost" style="flex:1;font-size:14px;padding:10px" onclick="dismissDeload()">Dismiss</button>
+      <div class="card deload-card fade-in" style="margin-bottom:12px;border:1px solid rgba(255,149,0,0.25);background:rgba(255,149,0,0.04);text-align:center;padding:24px 20px;">
+        <div style="font-size:36px;margin-bottom:10px;">🔋</div>
+        <div style="font-family:'Teko',sans-serif;font-size:28px;font-weight:700;color:var(--warning);letter-spacing:1px;margin-bottom:6px;">Time to Recharge</div>
+        <p style="font-size:13px;color:var(--text-2);margin-bottom:12px;line-height:1.5;">${deloadRec.reason}</p>
+        <div style="padding:12px 14px;background:rgba(255,149,0,0.06);border-radius:12px;margin-bottom:16px;text-align:left;">
+          <p style="font-size:12px;color:var(--text-3);margin:0;line-height:1.6;">Same exercises at <strong style="color:var(--text-2);">60% of your working weight</strong> — enough to move well, not enough to add fatigue. Most lifters PR the week after a deload.</p>
+          <button onclick="var d=this.nextElementSibling;d.style.display=d.style.display==='none'?'block':'none';this.textContent=this.textContent.includes('More')?'Show less ▲':'Learn more ▼'" style="background:none;border:none;color:var(--accent);font-size:11px;letter-spacing:0.5px;cursor:pointer;padding:6px 0 0;font-family:'DM Sans',sans-serif;font-weight:600;">Learn more ▼</button>
+          <div style="display:none;font-size:12px;color:var(--text-3);line-height:1.6;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">
+            <p style="margin:0 0 8px;"><strong style="color:var(--text-2);">Why fatigue hides your strength</strong><br>Your nervous system and connective tissue recover slower than muscle. Weeks of high-effort training builds systemic fatigue that masks what you're capable of — you're stronger than your recent sessions suggest.</p>
+            <p style="margin:0;"><strong style="color:var(--text-2);">What to expect</strong><br>5–7 days of lighter training flushes accumulated fatigue. You'll often feel like a different athlete the week after — and that's the best time to push for new PRs.</p>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost" style="flex:1;border:1px solid var(--border);font-size:14px;padding:12px;" onclick="dismissDeload()">Not yet</button>
+          <button class="btn" style="flex:1;background:var(--warning);color:#1c1c1c;font-size:14px;font-weight:700;padding:12px;" onclick="startDeload()">Start Deload</button>
         </div>
       </div>`;
   }
@@ -5210,7 +5219,7 @@ function showPreview() {
     <div class="fade-in" style="margin-bottom:8px;">
       <button class="btn-ghost" onclick="data._isDeload=false;renderTrainHome()" style="padding:0;font-size:14px;color:var(--text-3);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;">← Back</button>
     </div>
-    ${isDeload ? '<div class="card deload-card fade-in" style="padding:12px 16px;margin-bottom:12px;"><div class="deload-title">Deload Session — weights reduced 40%</div></div>' : ''}
+    ${isDeload ? '<div class="card deload-card fade-in" style="padding:12px 16px;margin-bottom:12px;text-align:center;"><span style="font-size:20px;">🔋</span> <span class="deload-title" style="vertical-align:middle;">Deload Session — weights reduced to 60%</span></div>' : ''}
     <div class="card fade-in">
       <div class="display display-md" style="margin-bottom:4px;">${label}</div>
       <span class="text-sm text-dim">${program.length} exercises · ${totalSets} sets</span>
