@@ -8417,22 +8417,35 @@ function changeRestDuration(delta, type) {
   }
 }
 
+function showToast(msg, duration) {
+  const existing = document.getElementById('app-toast');
+  if (existing) existing.remove();
+  const el = document.createElement('div');
+  el.id = 'app-toast';
+  el.textContent = msg;
+  el.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(8px);background:#1c2119;border:1px solid rgba(163,184,108,0.4);color:#c8d4be;font-size:13px;padding:10px 18px;border-radius:100px;z-index:9999;box-shadow:0 8px 32px #000;opacity:0;transition:opacity 0.2s,transform 0.2s;white-space:nowrap;';
+  document.body.appendChild(el);
+  requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'translateX(-50%) translateY(0)'; });
+  setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(-50%) translateY(8px)';
+    setTimeout(() => el.remove(), 200);
+  }, duration || 2500);
+}
+
 function selectSplit(presetKey) {
   if (presetKey === data.splitPreset) return;
 
-  // If user has programs, warn and archive
+  // Silently archive current programs before switching
   if (data.programs && Object.keys(data.programs).length > 0) {
-    const confirmed = confirm('Switching split will change your program. Your current exercises will be saved and can be restored if you switch back.');
-    if (!confirmed) return;
-    // Archive current programs
     data.archivedPrograms = JSON.parse(JSON.stringify(data.programs));
   }
 
   if (presetKey === 'custom') {
-    // Keep current pattern + programs as-is
     data.splitPreset = 'custom';
     save();
     renderBuild();
+    showToast('Custom split — build your own');
     return;
   }
 
@@ -8456,6 +8469,7 @@ function selectSplit(presetKey) {
   data.splitPreset = presetKey;
   save();
   renderBuild();
+  showToast('Split updated — previous program saved');
 }
 
 function addCustomType() {
