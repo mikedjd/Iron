@@ -5232,6 +5232,30 @@ function showPreview() {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   CIRCUIT / SUPERSET HELPER
+   ═══════════════════════════════════════════════════════════ */
+// Returns circuit info for exercise at `index` in `exercises` array.
+// A "circuit" is 2+ consecutive exercises where all but the last have supersetNext=true.
+// Returns null if this exercise is not part of a circuit.
+function getCircuitInfo(exercises, index) {
+  // Walk backwards to find the circuit start
+  let start = index;
+  while (start > 0 && exercises[start - 1].supersetNext) start--;
+  // Walk forwards to find the circuit end
+  let end = index;
+  while (end < exercises.length - 1 && exercises[end].supersetNext) end++;
+  const size = end - start + 1;
+  if (size <= 1) return null; // Not in a circuit
+  return {
+    start,
+    end,
+    size,
+    position: index - start + 1,             // 1-based position within circuit
+    label: size === 2 ? 'Superset' : 'Circuit'
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════
    TRAIN — ACTIVE WORKOUT
    ═══════════════════════════════════════════════════════════ */
 function startWorkout() {
@@ -5291,8 +5315,6 @@ function startWorkout() {
     }),
     currentExerciseIndex: 0,
     startTime: Date.now(),
-    supersetPartnerPending: false,
-    supersetStarterIndex: null,
     restPausePhase: 0,
     restPauseAccum: []
   };
@@ -5490,9 +5512,9 @@ function renderExercise() {
     const msgIdx = Math.floor(Math.random() * lastSetMessages.length);
     setLabel = lastSetMessages[msgIdx];
   }
-  if (ex.supersetNext || workout.supersetPartnerPending) {
-    const phase = workout.supersetPartnerPending ? '2/2' : '1/2';
-    typeBadge = `<div class="workout-type-badge ss">Superset ${phase}</div>`;
+  const _circuitBadge = getCircuitInfo(workout.exercises, workout.currentExerciseIndex);
+  if (_circuitBadge) {
+    typeBadge = `<div class="workout-type-badge ss">${_circuitBadge.label} ${_circuitBadge.position}/${_circuitBadge.size}</div>`;
   }
   if (ex.restPause) {
     typeBadge = `<div class="workout-type-badge rp">Rest-Pause</div>`;
@@ -5904,20 +5926,27 @@ function skipSet() {
     workout.restPauseAccum = [];
   }
 
-  // Follow standard advancement logic
-  if (workout.supersetPartnerPending) {
-    workout.supersetPartnerPending = false;
-    const starterIdx = workout.supersetStarterIndex;
-    const starter = workout.exercises[starterIdx];
-    if (starter.completedSets.length >= starter.targetSets && ex.completedSets.length >= ex.targetSets) {
-      const nextIdx = starterIdx + 2;
+  // ── CIRCUIT / SUPERSET: chain to next exercise ──
+  if (ex.supersetNext && workout.currentExerciseIndex + 1 < workout.exercises.length) {
+    workout.currentExerciseIndex++;
+    workout.exerciseReady = false;
+    saveWorkoutState(); renderExercise();
+    return;
+  }
+
+  // ── END OF CIRCUIT ROUND ──
+  const _skipCircuit = getCircuitInfo(workout.exercises, workout.currentExerciseIndex);
+  if (_skipCircuit) {
+    const circuitExs = workout.exercises.slice(_skipCircuit.start, _skipCircuit.end + 1);
+    const allDone = circuitExs.every(e => e.completedSets.length >= e.targetSets);
+    if (allDone) {
+      const nextIdx = _skipCircuit.end + 1;
       if (nextIdx >= workout.exercises.length) { saveWorkoutState(); showDoneScreen(); return; }
       workout.currentExerciseIndex = nextIdx;
     } else {
-      workout.currentExerciseIndex = starter.completedSets.length >= starter.targetSets ? starterIdx + 1 : starterIdx;
+      workout.currentExerciseIndex = _skipCircuit.start;
     }
-    saveWorkoutState();
-    renderExercise();
+    saveWorkoutState(); renderExercise();
     return;
   }
 
@@ -6022,11 +6051,8 @@ function completeSet(btnEl) {
     ex.completedSets.push({ reps: ex.currentReps, weight: ex.currentWeight, skipped: false });
   }
 
-  // ── SUPERSET FIRST EXERCISE: go to partner (no rest) ──
-  if (ex.supersetNext && !workout.supersetPartnerPending &&
-      workout.currentExerciseIndex + 1 < workout.exercises.length) {
-    workout.supersetPartnerPending = true;
-    workout.supersetStarterIndex = workout.currentExerciseIndex;
+  // ── CIRCUIT / SUPERSET: chain directly to next exercise (no rest) ──
+  if (ex.supersetNext && workout.currentExerciseIndex + 1 < workout.exercises.length) {
     workout.currentExerciseIndex++;
     workout.exerciseReady = false;
     saveWorkoutState();
@@ -6034,16 +6060,13 @@ function completeSet(btnEl) {
     return;
   }
 
-  // ── SUPERSET PARTNER: return to starter or advance ──
-  if (workout.supersetPartnerPending) {
-    workout.supersetPartnerPending = false;
-    const starterIdx = workout.supersetStarterIndex;
-    const starter = workout.exercises[starterIdx];
-    const starterDone = starter.completedSets.length >= starter.targetSets;
-    const partnerDone = ex.completedSets.length >= ex.targetSets;
-
-    if (starterDone && partnerDone) {
-      const nextIdx = starterIdx + 2;
+  // ── END OF CIRCUIT ROUND: check if all exercises done, then rest ──
+  const circuitInfo = getCircuitInfo(workout.exercises, workout.currentExerciseIndex);
+  if (circuitInfo) {
+    const circuitExs = workout.exercises.slice(circuitInfo.start, circuitInfo.end + 1);
+    const allDone = circuitExs.every(e => e.completedSets.length >= e.targetSets);
+    if (allDone) {
+      const nextIdx = circuitInfo.end + 1;
       if (nextIdx >= workout.exercises.length) {
         saveWorkoutState();
         setTimeout(() => showDoneScreen(), 300);
@@ -6051,7 +6074,7 @@ function completeSet(btnEl) {
       }
       workout.currentExerciseIndex = nextIdx;
     } else {
-      workout.currentExerciseIndex = starterDone ? starterIdx + 1 : starterIdx;
+      workout.currentExerciseIndex = circuitInfo.start;
     }
     saveWorkoutState();
     setTimeout(() => startRestTimer(() => renderExercise()), 300);
@@ -6099,10 +6122,12 @@ function startRestTimer(onComplete, duration) {
         <div class="timer-next-label">Rest-Pause</div>
         <div class="timer-next-exercise">${miniLabel}</div>
       `;
-    } else if (workout.supersetPartnerPending) {
+    } else if (getCircuitInfo(workout.exercises, workout.currentExerciseIndex)) {
+      const _tc = getCircuitInfo(workout.exercises, workout.currentExerciseIndex);
+      const _round = ex.completedSets.length + 1;
       contextEl.innerHTML = `
-        <div class="timer-next-label">Superset · back to</div>
-        <div class="timer-next-exercise">${workout.exercises[workout.supersetStarterIndex].name}</div>
+        <div class="timer-next-label">${_tc.label} · Round ${_round}</div>
+        <div class="timer-next-exercise">${ex.name}</div>
       `;
     } else if (isLastSet && workout.currentExerciseIndex < workout.exercises.length - 1) {
       const nextEx = workout.exercises[workout.currentExerciseIndex + 1];
@@ -6308,7 +6333,8 @@ function showDoneScreen() {
     }).join(', ');
     const w = ex.currentWeight;
     const weightStr = w ? ` @ ${displayWeight(w)}${unit}` : '';
-    const badge = ex.restPause ? ' <span class="type-badge rp">RP</span>' : (ex.supersetNext ? ' <span class="type-badge ss">SS</span>' : '');
+    const _doneCircuit = getCircuitInfo(workout.exercises, i);
+    const badge = ex.restPause ? ' <span class="type-badge rp">RP</span>' : (_doneCircuit ? ` <span class="type-badge ss">${_doneCircuit.label}</span>` : '');
     const isPR = prs.some(pr => pr.name === ex.name);
     const prTag = isPR ? ' <span class="pr-inline-badge">PR</span>' : '';
     return `
@@ -8780,10 +8806,10 @@ function renderBuildProgram(type, exercises) {
     }
     // Type badges
     let badge = '';
-    if (ex.supersetNext) {
-      badge = '<span class="type-badge ss">SS →</span>';
-    } else if (i > 0 && exercises[i - 1].supersetNext) {
-      badge = '<span class="type-badge ss">← SS</span>';
+    const _bc = getCircuitInfo(exercises, i);
+    if (_bc) {
+      const arrow = _bc.position < _bc.size ? ' →' : '';
+      badge = `<span class="type-badge ss">${_bc.label} ${_bc.position}/${_bc.size}${arrow}</span>`;
     }
     if (ex.restPause) {
       badge = '<span class="type-badge rp">RP</span>';
@@ -8804,6 +8830,11 @@ function renderBuildProgram(type, exercises) {
     const w = ex.weight || getLastWeight(activeExName);
     const weightStr = w ? ` @ ${displayWeight(w)}${weightLabel()}` : '';
 
+    const connectorLabel = _bc ? (_bc.size === 2 ? 'SS' : 'Circuit') : '';
+    const connectorHtml = ex.supersetNext
+      ? `<div class="superset-connector">${connectorLabel} ↕</div>`
+      : '';
+
     return `
       <div class="build-exercise" draggable="true" data-type="${type}" data-index="${i}"
         ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondragend="onDragEnd(event)" ondrop="onDrop(event)"
@@ -8818,7 +8849,7 @@ function renderBuildProgram(type, exercises) {
           <button class="build-icon-btn" onclick="editExercise('${type}', ${i})" title="Edit">✎</button>
           <button class="build-icon-btn delete" onclick="deleteExercise('${type}', ${i})" title="Delete">×</button>
         </div>
-      </div>`;
+      </div>${connectorHtml}`;
   }).join('');
 
   if (buildAdding === type) {
@@ -8891,7 +8922,7 @@ function renderBuildEditForm(type, index, ex) {
           <button class="type-opt ${curType === 'superset' ? 'active' : ''}" onclick="setBuildType('superset')">Superset</button>
           <button class="type-opt ${curType === 'rest-pause' ? 'active' : ''}" onclick="setBuildType('rest-pause')">Rest-Pause</button>
         </div>
-        ${curType === 'superset' ? `<p class="text-xs text-dim mt-8">Pairs with the next exercise — no rest between them.${isLast ? ' <span style="color:var(--warning)">Add the partner exercise below.</span>' : ''}</p>` : ''}
+        ${curType === 'superset' ? `<p class="text-xs text-dim mt-8">Chains to the next exercise with no rest. Set multiple exercises this way to build a circuit.${isLast ? ' <span style="color:var(--warning)">Add the next exercise below.</span>' : ''}</p>` : ''}
         ${curType === 'rest-pause' ? `<p class="text-xs text-dim mt-8">Main set → 5s → mini set → 5s → mini set. Three efforts per set.</p>` : ''}
       </div>
       <div style="margin-bottom:8px;">
