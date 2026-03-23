@@ -7619,6 +7619,227 @@ function filterSessionsByPeriod(sessions) {
   return sessions.filter(s => daysAgo(s.date) <= cutoffDays);
 }
 
+// ── Performance Charts ──────────────────────────────────────
+function _chartPeriodCutoff() {
+  return historyPeriod === '1w' ? 7 : historyPeriod === '1m' ? 30 : historyPeriod === '3m' ? 90 : 9999;
+}
+
+function getChartWeights() {
+  const c = _chartPeriodCutoff();
+  return [...(data.weights || [])].filter(w => daysAgo(w.date) <= c).sort((a,b) => a.date.localeCompare(b.date));
+}
+
+function getChartCalories() {
+  const c = _chartPeriodCutoff();
+  const byDate = {};
+  (data.foodLog || []).filter(f => daysAgo(f.date) <= c).forEach(f => {
+    byDate[f.date] = (byDate[f.date] || 0) + (f.calories || 0);
+  });
+  return Object.entries(byDate).sort(([a],[b]) => a.localeCompare(b)).map(([date, calories]) => ({ date, calories: Math.round(calories) }));
+}
+
+function getChartStrengthSeries(exName) {
+  return filterSessionsByPeriod(data.sessions)
+    .filter(s => (s.exercises || []).some(e => e.name === exName))
+    .map(s => {
+      const ex = s.exercises.find(e => e.name === exName);
+      const valid = (ex.sets || []).map(ns => normalizeSet(ns)).filter(ns => !ns.skipped);
+      const topW = valid.length ? Math.max(...valid.map(ns => ns.weight || 0)) : 0;
+      return { date: s.date, weight: topW };
+    })
+    .filter(p => p.weight > 0)
+    .sort((a,b) => a.date.localeCompare(b.date));
+}
+
+function _setupChartCanvas(id, h) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return null;
+  const W = canvas.parentElement.clientWidth - 2;
+  const H = h || 130;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { ctx, W, H };
+}
+
+function drawHistoryCharts() {
+  drawWeightTrendChart();
+  drawCaloriesTrendChart();
+  drawStrengthTrendChart();
+}
+
+function drawWeightTrendChart() {
+  const s = _setupChartCanvas('weight-trend-canvas', 130);
+  if (!s) return;
+  const { ctx, W, H } = s;
+  const weights = getChartWeights();
+  if (weights.length < 2) return;
+
+  const raw = weights.map(w => data.weightUnit === 'lbs' ? Math.round(w.weight * 2.20462 * 10) / 10 : w.weight);
+  const avg7 = raw.map((_, i) => { const sl = raw.slice(Math.max(0, i-6), i+1); return sl.reduce((a,b) => a+b,0) / sl.length; });
+  const allV = [...raw, ...avg7];
+  const minV = Math.min(...allV) - 0.5, maxV = Math.max(...allV) + 0.5;
+  const pL = 42, pR = 12, pT = 14, pB = 24, n = raw.length;
+  const tx = i => pL + (i / (n-1)) * (W - pL - pR);
+  const ty = v => pT + ((maxV - v) / (maxV - minV)) * (H - pT - pB);
+
+  // Grid
+  [0, 0.25, 0.5, 0.75, 1].forEach(t => {
+    const v = minV + t * (maxV - minV), y = ty(v);
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pL, y); ctx.lineTo(W - pR, y); ctx.stroke();
+    ctx.fillStyle = '#4a5644'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(v.toFixed(1), pL - 4, y + 3.5);
+  });
+
+  // Raw line + dots (faint)
+  ctx.beginPath(); ctx.strokeStyle = 'rgba(163,184,108,0.22)'; ctx.lineWidth = 1.5;
+  raw.forEach((v, i) => i === 0 ? ctx.moveTo(tx(i), ty(v)) : ctx.lineTo(tx(i), ty(v)));
+  ctx.stroke();
+  raw.forEach((v, i) => {
+    ctx.beginPath(); ctx.arc(tx(i), ty(v), 2, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(163,184,108,0.28)'; ctx.fill();
+  });
+
+  // 7-day avg gradient fill
+  const grad = ctx.createLinearGradient(0, pT, 0, H - pB);
+  grad.addColorStop(0, 'rgba(163,184,108,0.16)'); grad.addColorStop(1, 'rgba(163,184,108,0)');
+  ctx.beginPath();
+  avg7.forEach((v, i) => i === 0 ? ctx.moveTo(tx(i), ty(v)) : ctx.lineTo(tx(i), ty(v)));
+  ctx.lineTo(tx(n-1), H - pB); ctx.lineTo(tx(0), H - pB); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+
+  // 7-day avg line
+  ctx.beginPath(); ctx.strokeStyle = '#a3b86c'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+  avg7.forEach((v, i) => i === 0 ? ctx.moveTo(tx(i), ty(v)) : ctx.lineTo(tx(i), ty(v)));
+  ctx.stroke();
+
+  // X labels
+  const step = Math.max(1, Math.floor(n / 5));
+  ctx.fillStyle = '#4a5644'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'center';
+  for (let i = 0; i < n; i += step) ctx.fillText(weights[i].date.slice(5).replace('-','/'), tx(i), H - 6);
+}
+
+function drawCaloriesTrendChart() {
+  const s = _setupChartCanvas('calories-trend-canvas', 130);
+  if (!s) return;
+  const { ctx, W, H } = s;
+  const days = getChartCalories();
+  if (days.length < 2) return;
+
+  const target = data.targetCalories || 0;
+  const maxV = Math.max(...days.map(d => d.calories), target || 0) * 1.08;
+  const pL = 40, pR = 12, pT = 14, pB = 24, n = days.length;
+  const barW = Math.max(3, (W - pL - pR) / n - 1.5);
+  const ty = v => pT + ((maxV - v) / maxV) * (H - pT - pB);
+  const bH = v => Math.max(2, (v / maxV) * (H - pT - pB));
+
+  // Grid
+  [0, 0.25, 0.5, 0.75, 1].forEach(t => {
+    const v = t * maxV, y = ty(v);
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pL, y); ctx.lineTo(W - pR, y); ctx.stroke();
+    ctx.fillStyle = '#4a5644'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(v >= 1000 ? (v/1000).toFixed(1)+'k' : Math.round(v), pL - 4, y + 3.5);
+  });
+
+  // Bars
+  days.forEach((d, i) => {
+    const x = pL + (i / n) * (W - pL - pR);
+    const h = bH(d.calories), y = H - pB - h;
+    ctx.fillStyle = (target && d.calories >= target) ? 'rgba(163,184,108,0.78)' : 'rgba(224,92,92,0.62)';
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x, y, barW, h, [2, 2, 0, 0]); else ctx.rect(x, y, barW, h);
+    ctx.fill();
+  });
+
+  // Target line
+  if (target) {
+    const ty2 = ty(target);
+    ctx.setLineDash([5, 3]); ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(pL, ty2); ctx.lineTo(W - pR, ty2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText('target', W - pR - 2, ty2 - 4);
+  }
+
+  // X labels
+  const step = Math.max(1, Math.floor(n / 5));
+  ctx.fillStyle = '#4a5644'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'center';
+  for (let i = 0; i < n; i += step) {
+    ctx.fillText(days[i].date.slice(5).replace('-','/'), pL + (i/n)*(W-pL-pR) + barW/2, H - 6);
+  }
+}
+
+function drawStrengthTrendChart() {
+  const s = _setupChartCanvas('strength-trend-canvas', 130);
+  if (!s) return;
+  const { ctx, W, H } = s;
+
+  if (!data._chartExercise) {
+    const all = [...new Set((data.sessions||[]).flatMap(s => (s.exercises||[]).map(e => e.name)))];
+    data._chartExercise = (data.pinnedExercises||[]).find(p => all.includes(p)) || all[0] || '';
+  }
+
+  const series = getChartStrengthSeries(data._chartExercise);
+  if (series.length < 2) {
+    ctx.fillStyle = '#4a5644'; ctx.font = '13px DM Sans,sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Log more sessions to see trend', W/2, H/2 + 4);
+    return;
+  }
+
+  const vals = series.map(p => data.weightUnit === 'lbs' ? Math.round(p.weight * 2.20462 * 4) / 4 : p.weight);
+  const minV = Math.min(...vals) * 0.97, maxV = Math.max(...vals) * 1.03;
+  const pL = 38, pR = 12, pT = 14, pB = 24, n = series.length;
+  const tx = i => pL + (i / (n - 1 || 1)) * (W - pL - pR);
+  const ty = v => pT + ((maxV - v) / ((maxV - minV) || 1)) * (H - pT - pB);
+
+  // Grid
+  [0, 0.33, 0.67, 1].forEach(t => {
+    const v = minV + t * (maxV - minV), y = ty(v);
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pL, y); ctx.lineTo(W - pR, y); ctx.stroke();
+    ctx.fillStyle = '#4a5644'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(Math.round(v), pL - 4, y + 3.5);
+  });
+
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0, pT, 0, H - pB);
+  grad.addColorStop(0, 'rgba(163,184,108,0.18)'); grad.addColorStop(1, 'rgba(163,184,108,0)');
+  ctx.beginPath();
+  vals.forEach((v, i) => i === 0 ? ctx.moveTo(tx(i), ty(v)) : ctx.lineTo(tx(i), ty(v)));
+  ctx.lineTo(tx(n-1), H - pB); ctx.lineTo(tx(0), H - pB); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+
+  // Line
+  ctx.beginPath(); ctx.strokeStyle = '#a3b86c'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+  vals.forEach((v, i) => i === 0 ? ctx.moveTo(tx(i), ty(v)) : ctx.lineTo(tx(i), ty(v)));
+  ctx.stroke();
+
+  // Dots
+  vals.forEach((v, i) => {
+    ctx.beginPath(); ctx.arc(tx(i), ty(v), 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#a3b86c'; ctx.fill();
+    ctx.strokeStyle = '#0d1209'; ctx.lineWidth = 1.5; ctx.stroke();
+  });
+
+  // X labels
+  const step = Math.max(1, Math.floor((n - 1) / 4));
+  ctx.fillStyle = '#4a5644'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'center';
+  for (let i = 0; i < n; i += step) ctx.fillText(series[i].date.slice(5).replace('-','/'), tx(i), H - 6);
+  if ((n-1) % step !== 0) ctx.fillText(series[n-1].date.slice(5).replace('-','/'), tx(n-1), H - 6);
+}
+
+function setChartExercise(name) {
+  data._chartExercise = name;
+  drawStrengthTrendChart();
+}
+// ────────────────────────────────────────────────────────────
+
 function renderHistory() {
   const el = document.getElementById('history-content');
 
@@ -7664,7 +7885,7 @@ function renderHistory() {
     weightHtml = `
       <div class="card fade-in stagger-3">
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <span class="label">Body Weight</span>
+          <span class="label">Bodyweight Trend</span>
           <div class="unit-toggle">
             <button class="unit-opt ${data.weightUnit === 'kg' ? 'active' : ''}" onclick="setWeightUnit('kg')">kg</button>
             <button class="unit-opt ${data.weightUnit === 'lbs' ? 'active' : ''}" onclick="setWeightUnit('lbs')">lbs</button>
@@ -7672,17 +7893,22 @@ function renderHistory() {
         </div>
         <div class="stat-row mt-12">
           <div class="stat-box">
-            <div class="stat-value" style="font-size:28px">${displayWeight(start)}</div>
+            <div class="stat-value" style="font-size:24px">${displayWeight(start)}</div>
             <div class="stat-label">Start (${unit})</div>
           </div>
           <div class="stat-box">
-            <div class="stat-value" style="font-size:28px">${displayWeight(current)}</div>
+            <div class="stat-value" style="font-size:24px">${displayWeight(current)}</div>
             <div class="stat-label">Current (${unit})</div>
           </div>
           <div class="stat-box">
-            <div class="stat-value" style="font-size:28px;color:${change >= 0 ? 'var(--accent)' : 'var(--danger)'}">${changeStr}</div>
+            <div class="stat-value" style="font-size:24px;color:${change >= 0 ? 'var(--accent)' : 'var(--danger)'}">${changeStr}</div>
             <div class="stat-label">Change (${unit})</div>
           </div>
+        </div>
+        <canvas id="weight-trend-canvas" style="display:block;margin-top:12px;"></canvas>
+        <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:var(--text-3);">
+          <span style="display:flex;align-items:center;gap:5px;"><span style="width:20px;height:2px;background:rgba(163,184,108,0.35);display:inline-block;"></span>Daily</span>
+          <span style="display:flex;align-items:center;gap:5px;"><span style="width:20px;height:2.5px;background:#a3b86c;border-radius:2px;display:inline-block;"></span>7-day avg</span>
         </div>
       </div>`;
   }
@@ -7845,6 +8071,46 @@ function renderHistory() {
     }
   }
 
+  // Calories chart
+  let caloriesHtml = '';
+  if (data.foodLog && data.foodLog.length > 0) {
+    const tgt = data.targetCalories;
+    caloriesHtml = `
+      <div class="card fade-in stagger-4">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+          <span class="label">Calorie Intake</span>
+          ${tgt ? `<span style="font-size:11px;color:var(--text-3);">target: ${tgt} kcal</span>` : ''}
+        </div>
+        <canvas id="calories-trend-canvas" style="display:block;margin-top:12px;"></canvas>
+        <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:var(--text-3);">
+          <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;background:rgba(163,184,108,0.78);border-radius:2px;display:inline-block;"></span>At / above target</span>
+          <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;background:rgba(224,92,92,0.62);border-radius:2px;display:inline-block;"></span>Below target</span>
+        </div>
+      </div>`;
+  }
+
+  // Strength trend chart
+  let strengthHtml = '';
+  const chartExercises = [...new Set(filtered.flatMap(s => (s.exercises||[]).map(e => e.name)))];
+  if (chartExercises.length > 0) {
+    if (!data._chartExercise || !chartExercises.includes(data._chartExercise)) {
+      data._chartExercise = (data.pinnedExercises||[]).find(p => chartExercises.includes(p)) || chartExercises[0];
+    }
+    const exOpts = chartExercises.map(n =>
+      `<option value="${escapeHtml(n)}" ${n === data._chartExercise ? 'selected' : ''}>${escapeHtml(n)}</option>`
+    ).join('');
+    strengthHtml = `
+      <div class="card fade-in stagger-5">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <span class="label">Strength Trend</span>
+          <select onchange="setChartExercise(this.value)" style="background:var(--surface-2);color:var(--text);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:5px 10px;font-size:12px;max-width:190px;outline:none;cursor:pointer;">
+            ${exOpts}
+          </select>
+        </div>
+        <canvas id="strength-trend-canvas" style="display:block;margin-top:12px;"></canvas>
+      </div>`;
+  }
+
   el.innerHTML = `
     ${periodHtml}
     <div class="stat-row fade-in" style="margin-bottom:16px;">
@@ -7860,9 +8126,12 @@ function renderHistory() {
     ${streakHtml}
     ${bodyPartHtml}
     ${weightHtml}
+    ${caloriesHtml}
+    ${strengthHtml}
     ${progressHtml}
     ${calendarHtml}
   `;
+  requestAnimationFrame(() => drawHistoryCharts());
 }
 
 // ── Session Calendar ──
