@@ -2193,7 +2193,7 @@
       padding: 2px 6px;
       border-radius: 4px;
     }
-    .muscle-group-row { display: none; margin-top: 8px; }
+    .muscle-group-row { display: block; margin-top: 8px; }
     .muscle-group-row.visible { display: block; }
 
     /* Info popup */
@@ -3914,7 +3914,7 @@ const EXERCISE_DB = {
   "smith machine bench press": "Chest", "chest press machine": "Chest",
   // Lats
   "lat pulldown": "Lats", "wide grip lat pulldown": "Lats", "close grip lat pulldown": "Lats",
-  "pull up": "Lats", "chin up": "Lats", "assisted pull up": "Lats",
+  "pull up": "Lats", "pull-up": "Lats", "chin up": "Lats", "chin-up": "Lats", "assisted pull up": "Lats", "assisted pull-up": "Lats",
   "straight arm pulldown": "Lats", "cable pullover": "Lats", "machine pulldown": "Lats",
   "neutral grip pull up": "Lats", "single arm lat pulldown": "Lats",
   "lat prayer": "Lats", "lat pullover": "Lats",
@@ -8045,6 +8045,12 @@ function renderHistory() {
         <span class="label">Exercise Progress</span>
         <p class="text-xs text-dim mt-4">${historyPeriod === 'all' ? 'First session' : 'Period start'} vs most recent</p>
         <div class="mt-12">
+          <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:8px;padding:0 0 6px 0;border-bottom:1px solid var(--divider);margin-bottom:4px;">
+            <span style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;">Exercise</span>
+            <span style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;">Start</span>
+            <span style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;">Now</span>
+            <span style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;">Change</span>
+          </div>
           ${visible.map(p => {
             const hasWeight = p.baselineWeight != null && p.currentWeight != null;
             let startStr, currentStr, deltaStr, cls;
@@ -9355,14 +9361,19 @@ function renderBuildEditForm(type, index, ex) {
           <div id="exercise-suggestions" class="exercise-suggestions"></div>
         </div>
       </div>
-      <div id="muscle-group-row" class="muscle-group-row">
-        <div class="label" style="margin-bottom:4px;">Muscle Group</div>
-        <select id="edit-muscle-group" style="width:100%;padding:8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none;">
-          <option value="">Auto-detect</option>
-          ${ALL_GROUPS.map(g => `<option value="${g}">${g}</option>`).join('')}
-        </select>
-        <p class="text-xs text-dim mt-8">Exercise not in our database — select its muscle group.</p>
-      </div>
+      ${(() => {
+        const exName = isNew ? '' : ex.name;
+        const currentMg = exName ? (data.customExerciseTags?.[exName] || classifyExercise(exName)) : '';
+        const displayMg = (currentMg && currentMg !== 'Other') ? currentMg : '';
+        return `<div id="muscle-group-row" class="muscle-group-row">
+          <div class="label" style="margin-bottom:4px;">Muscle Group</div>
+          <select id="edit-muscle-group" style="width:100%;padding:8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none;">
+            <option value="">Auto-detect</option>
+            ${ALL_GROUPS.map(g => `<option value="${g}"${g === displayMg ? ' selected' : ''}>${g}</option>`).join('')}
+          </select>
+          <p class="text-xs text-dim mt-8">Override the default muscle group for body part volume tracking.</p>
+        </div>`;
+      })()}
       <div class="field-row">
         <div style="flex:1">
           <div class="label" style="margin-bottom:4px;">Sets</div>
@@ -9433,10 +9444,14 @@ function setBuildType(t) {
     const w = document.getElementById('edit-weight'); if (w) w.value = weight;
     const nt = document.getElementById('edit-notes'); if (nt) nt.value = notes;
     const rt = document.getElementById('edit-rest'); if (rt) rt.value = rest;
-    if (mg) { const m = document.getElementById('edit-muscle-group'); if (m) m.value = mg; }
-    // Re-show muscle group row if needed
-    if (name && name.trim() && !EXERCISE_DB[name.trim().toLowerCase()]) {
-      document.getElementById('muscle-group-row')?.classList.add('visible');
+    const m = document.getElementById('edit-muscle-group');
+    if (m) {
+      if (mg) {
+        m.value = mg;
+      } else if (name && name.trim()) {
+        const detected = classifyExercise(name.trim());
+        m.value = (detected && detected !== 'Other') ? detected : '';
+      }
     }
   }
 }
@@ -9489,10 +9504,12 @@ function saveBuildEdit(type, index) {
   const alternateVal = document.getElementById('edit-alternate')?.value.trim();
   if (alternateVal) exercise.alternate = alternateVal;
 
-  // Save custom muscle group tag if not in DB
+  // Save custom muscle group tag — allows overriding DB defaults
   const muscleGroup = document.getElementById('edit-muscle-group')?.value;
-  if (muscleGroup && !EXERCISE_DB[name.toLowerCase()]) {
+  if (muscleGroup) {
     data.customExerciseTags[name] = muscleGroup;
+  } else if (data.customExerciseTags[name]) {
+    delete data.customExerciseTags[name]; // clear any previous override if set back to auto
   }
 
   if (!data.programs[type]) {
@@ -9513,17 +9530,19 @@ function saveBuildEdit(type, index) {
 
 function onExerciseSearch(query) {
   const sugEl = document.getElementById('exercise-suggestions');
-  const mgRow = document.getElementById('muscle-group-row');
   if (!sugEl) return;
   const results = searchExercises(query);
+  // Update muscle group dropdown to reflect current detection
+  const mg = document.getElementById('edit-muscle-group');
+  if (mg && query.trim().length > 1) {
+    const detected = classifyExercise(query.trim());
+    // Only auto-set if user hasn't manually overridden
+    if (!mg.dataset.userSet) {
+      mg.value = (detected && detected !== 'Other') ? detected : '';
+    }
+  }
   if (results.length === 0) {
     sugEl.classList.remove('visible');
-    // Show muscle group picker if custom name entered
-    if (query.trim().length > 0 && !EXERCISE_DB[query.trim().toLowerCase()]) {
-      mgRow?.classList.add('visible');
-    } else {
-      mgRow?.classList.remove('visible');
-    }
     return;
   }
   sugEl.innerHTML = results.map(r =>
@@ -9532,14 +9551,18 @@ function onExerciseSearch(query) {
     </div>`
   ).join('');
   sugEl.classList.add('visible');
-  mgRow?.classList.remove('visible');
 }
 
 function selectExercise(name) {
   const el = document.getElementById('edit-name');
   if (el) el.value = name;
   document.getElementById('exercise-suggestions')?.classList.remove('visible');
-  document.getElementById('muscle-group-row')?.classList.remove('visible');
+  // Pre-fill muscle group with DB value (user can still override)
+  const mg = document.getElementById('edit-muscle-group');
+  if (mg) {
+    const detected = classifyExercise(name);
+    mg.value = (detected && detected !== 'Other') ? detected : '';
+  }
 }
 
 function onAlternateSearch(query) {
