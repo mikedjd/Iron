@@ -9568,10 +9568,42 @@ function selectExercise(name) {
 function onAlternateSearch(query) {
   const sugEl = document.getElementById('alternate-suggestions');
   if (!sugEl) return;
-  if (!query.trim()) { sugEl.classList.remove('visible'); return; }
-  const results = searchExercises(query);
-  if (results.length === 0) { sugEl.classList.remove('visible'); return; }
-  sugEl.innerHTML = results.map(r =>
+
+  const mainName = (document.getElementById('edit-name')?.value || '').trim();
+  const mainNameLc = mainName.toLowerCase();
+  const mainGroup = mainName ? classifyExercise(mainName) : null;
+  const hasGroup = mainGroup && mainGroup !== 'Other';
+
+  let results, headerLabel;
+
+  if (!query.trim()) {
+    // On focus with no query: show same-muscle-group suggestions
+    if (!hasGroup) { sugEl.classList.remove('visible'); return; }
+    results = Object.entries(EXERCISE_DB)
+      .filter(([n, g]) => g === mainGroup && n !== mainNameLc)
+      .map(([n, g]) => ({ name: titleCaseExercise(n), group: g }))
+      .slice(0, 8);
+    headerLabel = mainGroup;
+  } else {
+    // Typing: search by query, prioritise same-group, exclude self
+    const all = searchExercises(query).filter(r => r.name.toLowerCase() !== mainNameLc);
+    if (hasGroup) {
+      const sameGrp = all.filter(r => r.group === mainGroup);
+      const other   = all.filter(r => r.group !== mainGroup);
+      results = [...sameGrp, ...other].slice(0, 8);
+    } else {
+      results = all;
+    }
+    headerLabel = null;
+  }
+
+  if (!results.length) { sugEl.classList.remove('visible'); return; }
+
+  const header = headerLabel
+    ? `<div style="padding:4px 12px 2px;font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--divider);">${headerLabel} alternatives</div>`
+    : '';
+
+  sugEl.innerHTML = header + results.map(r =>
     `<div class="exercise-suggestion" onmousedown="selectAlternate('${r.name.replace(/'/g, "\\'")}')">
       <span>${r.name}</span><span class="sg-group">${r.group}</span>
     </div>`
