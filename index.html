@@ -9405,7 +9405,23 @@ function renderBuildEditForm(type, index, ex) {
       <div style="margin-bottom:8px;">
         <div class="label" style="margin-bottom:4px;">Alternating with <span style="font-weight:400;color:var(--text-3);font-size:11px;">(optional — swaps every other session)</span></div>
         <div class="exercise-search-wrap" style="width:100%">
-          <input type="text" id="edit-alternate" value="${ex.alternate || ''}" placeholder="e.g. Leg Press, Hack Squat…" autocomplete="off"
+          <input type="text" id="edit-alternate" value="${ex.alternate || ''}" placeholder="${(() => {
+            const g = classifyExercise(ex.name || '');
+            const examples = {
+              'Quads':         'e.g. Leg Press, Hack Squat…',
+              'Hams/Glutes':   'e.g. Romanian Deadlift, Hip Thrust…',
+              'Chest':         'e.g. Dumbbell Bench Press, Cable Fly…',
+              'Lats':          'e.g. Lat Pulldown, Chin-Up…',
+              'Upper Back':    'e.g. Dumbbell Row, Cable Row…',
+              'Front Delts':   'e.g. Dumbbell Shoulder Press, Arnold Press…',
+              'Side/Rear Delts':'e.g. Lateral Raise, Rear Delt Fly…',
+              'Triceps':       'e.g. Rope Pushdown, Skull Crusher…',
+              'Biceps':        'e.g. Hammer Curl, Preacher Curl…',
+              'Core':          'e.g. Cable Crunch, Hanging Leg Raise…',
+              'Calves':        'e.g. Seated Calf Raise, Donkey Calf Raise…',
+            };
+            return examples[g] || 'Search for an exercise…';
+          })()}" autocomplete="off"
             oninput="onAlternateSearch(this.value)" onfocus="onAlternateSearch(this.value)">
           <div id="alternate-suggestions" class="exercise-suggestions"></div>
         </div>
