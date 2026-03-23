@@ -9307,12 +9307,14 @@ function exportCSV() {
   maxSets = Math.max(maxSets, 1);
 
   const setHeaders = Array.from({length: maxSets}, (_, i) => `Set ${i + 1} (${unit} x reps)`);
-  const headers = ['Date','Workout Type','Exercise','Sets Done',`Top Weight (${unit})`,'Best Reps',`Volume (${unit})`, ...setHeaders, 'Notes'];
+  const headers = ['Date','Workout Type','Deload','Duration (min)','Exercise','Sets Done',`Top Weight (${unit})`,'Best Reps',`Volume (${unit})`,'Est. 1RM','Avg RPE', ...setHeaders, 'Notes'];
   const rows = [headers.join(',')];
 
   data.sessions.forEach(session => {
     const date = session.date || '';
     const type = getTypeLabel(session.type || '');
+    const isDeload = session.isDeload ? 'Y' : 'N';
+    const duration = session.duration ? Math.round(session.duration / 60000) : '';
     const sessionNote = (session.notes || '').replace(/,/g, ';').replace(/\n/g, ' ');
 
     (session.exercises || []).forEach(ex => {
@@ -9330,7 +9332,18 @@ function exportCSV() {
         return sum + w * r;
       }, 0);
 
-      // One column per set: "80×8"
+      // Epley 1RM estimate: weight × (1 + reps/30)
+      const orm = topWeight && bestReps
+        ? Math.round(toDisplay(topWeight) * (1 + bestReps / 30))
+        : '';
+
+      // Average RPE across sets
+      const rpeVals = validSets.map(ns => ns.rpe).filter(r => r && r > 0);
+      const avgRpe = rpeVals.length
+        ? Math.round((rpeVals.reduce((a,b) => a+b, 0) / rpeVals.length) * 10) / 10
+        : '';
+
+      // One column per set
       const setCols = Array.from({length: maxSets}, (_, i) => {
         const ns = validSets[i];
         if (!ns) return '';
@@ -9345,11 +9358,15 @@ function exportCSV() {
       const row = [
         date,
         type,
+        isDeload,
+        duration,
         ex.name,
         validSets.length,
         topWeight ? toDisplay(topWeight) : '',
         bestReps || '',
         volume ? Math.round(volume) : '',
+        orm,
+        avgRpe,
         ...setCols,
         notes ? `"${notes}"` : ''
       ];
@@ -9375,36 +9392,71 @@ function exportDietCSV() {
   if (!hasFood && !hasWeight) { showToast('No diet or weight data yet'); return; }
 
   const wUnit = data.weightUnit === 'lbs' ? 'lbs' : 'kg';
+  const toDisplayW = w => wUnit === 'lbs' ? Math.round(w * 2.20462 * 10) / 10 : w;
+  const calTarget = data.targetCalories || '';
 
-  // Build a set of all dates that appear in either food log or weight log
+  // Build sorted list of all dates
   const allDates = new Set([
     ...(data.foodLog || []).map(f => f.date),
     ...(data.weights || []).map(w => w.date)
   ]);
   const sorted = [...allDates].sort();
 
-  const headers = ['Date','Bodyweight (' + wUnit + ')','Calories','Protein (g)','Carbs (g)','Fats (g)'];
+  // Training day lookup: set of dates that have a saved session
+  const trainingDates = new Set((data.sessions || []).map(s => s.date).filter(Boolean));
+
+  // Build weight map keyed by date (raw kg) for rolling avg
+  const weightByDate = {};
+  (data.weights || []).forEach(w => { weightByDate[w.date] = w.weight; });
+
+  const headers = [
+    'Date',
+    'Bodyweight (' + wUnit + ')',
+    '7-Day Avg (' + wUnit + ')',
+    'Calories',
+    'Calorie Target',
+    'Surplus / Deficit',
+    'Protein (g)',
+    'Carbs (g)',
+    'Fats (g)',
+    'Training Day'
+  ];
   const rows = [headers.join(',')];
 
-  sorted.forEach(date => {
+  sorted.forEach((date, idx) => {
     const entries = (data.foodLog || []).filter(f => f.date === date);
     const weightEntry = (data.weights || []).find(w => w.date === date);
 
-    const bw = weightEntry
-      ? (wUnit === 'lbs' ? Math.round(weightEntry.weight * 2.20462 * 10) / 10 : weightEntry.weight)
+    const bw = weightEntry ? toDisplayW(weightEntry.weight) : '';
+
+    // 7-day rolling average: average of weights in the 7 days ending on this date (inclusive)
+    const window7 = sorted.slice(Math.max(0, idx - 6), idx + 1)
+      .map(d => weightByDate[d])
+      .filter(w => w != null);
+    const rollingAvgDisplay = window7.length
+      ? (wUnit === 'lbs'
+          ? Math.round((window7.reduce((a,b) => a+b, 0) / window7.length) * 2.20462 * 10) / 10
+          : Math.round((window7.reduce((a,b) => a+b, 0) / window7.length) * 10) / 10)
       : '';
+
     const calories = entries.reduce((s, f) => s + (f.calories || 0), 0);
+    const surplus  = (calories && calTarget) ? calories - calTarget : '';
     const protein  = entries.reduce((s, f) => s + (f.protein  || 0), 0);
     const carbs    = entries.reduce((s, f) => s + (f.carbs    || 0), 0);
     const fats     = entries.reduce((s, f) => s + (f.fats     || 0), 0);
+    const trainingDay = trainingDates.has(date) ? 'Y' : 'N';
 
     rows.push([
       date,
       bw,
+      rollingAvgDisplay,
       calories || '',
+      calTarget || '',
+      surplus !== '' ? (surplus > 0 ? '+' + surplus : surplus) : '',
       protein  ? Math.round(protein)  : '',
       carbs    ? Math.round(carbs)    : '',
-      fats     ? Math.round(fats)     : ''
+      fats     ? Math.round(fats)     : '',
+      trainingDay
     ].join(','));
   });
 
