@@ -3453,6 +3453,21 @@ function getPrograms() {
   return base;
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function supportsSecureFeatures() {
+  return window.isSecureContext
+    || location.hostname === 'localhost'
+    || location.hostname === '127.0.0.1';
+}
+
 /* ═══════════════════════════════════════════════════════════
    PERSISTENCE
    ═══════════════════════════════════════════════════════════ */
@@ -3825,7 +3840,8 @@ function togglePreviewDetail(name, element) {
   if (bw && last.weight) {
     const rec = getProgressionRec(name, last.weight, bw);
     if (rec.badge) {
-      suggestionHtml = `<div class="preview-detail-row"><span class="label">Suggested</span><span>${displayWeight(rec.suggestedWeight)}${weightLabel()} (${rec.badge})</span></div>`;
+      const suggestionBadge = escapeHtml(rec.badge);
+      suggestionHtml = `<div class="preview-detail-row"><span class="label">Suggested</span><span>${displayWeight(rec.suggestedWeight)}${weightLabel()} (${suggestionBadge})</span></div>`;
     }
   }
   const detail = document.createElement('div');
@@ -4548,7 +4564,7 @@ function shouldRecommendDeload() {
    ═══════════════════════════════════════════════════════════ */
 async function toggleNotifications() {
   if (!data.notifications.enabled) {
-    if (!('Notification' in window)) return;
+    if (!('Notification' in window) || !supportsSecureFeatures()) return;
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
       data.notifications.enabled = true;
@@ -4569,6 +4585,7 @@ function setReminderTime(time) {
 
 function checkAndFireNotifications() {
   if (!data.notifications.enabled) return;
+  if (!supportsSecureFeatures()) return;
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
   const now = new Date();
@@ -4645,6 +4662,7 @@ function fireNotification(title, body, tag) {
 
 function fireMilestoneNotification(milestone) {
   if (!data.notifications.enabled) return;
+  if (!supportsSecureFeatures()) return;
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   fireNotification('Streak Milestone!', `🔥 ${milestone} days! ${getMilestoneMessage(milestone)}`, 'milestone');
 }
@@ -4779,8 +4797,8 @@ function showQuickHomeWorkout() {
         ${homeExercises.map(ex => `
           <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
             <div>
-              <div style="font-size:13px;color:var(--text);">${ex.home}</div>
-              <div style="font-size:11px;color:var(--text-3);margin-top:2px;">replaces ${ex.original}</div>
+              <div style="font-size:13px;color:var(--text);">${escapeHtml(ex.home)}</div>
+              <div style="font-size:11px;color:var(--text-3);margin-top:2px;">replaces ${escapeHtml(ex.original)}</div>
             </div>
             <div style="font-size:12px;color:var(--text-3);">${ex.sets}×${ex.reps}</div>
           </div>
@@ -4788,8 +4806,8 @@ function showQuickHomeWorkout() {
       </div>
       <p class="text-xs text-dim" style="text-align:center;margin-bottom:16px;">Log this as a regular session to keep your streak alive.</p>
       <div style="display:flex;gap:10px;">
-        <button class="btn btn-secondary" onclick="dismissMissedDay('${missed?.date}');renderTrainHome();" style="flex:0.4;">Back</button>
-        <button class="btn btn-primary" onclick="dismissMissedDay('${missed?.date}');showPreview();" style="flex:1;">Start Workout</button>
+        <button class="btn btn-secondary" onclick="dismissMissedDay(decodeURIComponent('${encodeURIComponent(missed?.date ?? '')}'));renderTrainHome();" style="flex:0.4;">Back</button>
+        <button class="btn btn-primary" onclick="dismissMissedDay(decodeURIComponent('${encodeURIComponent(missed?.date ?? '')}'));showPreview();" style="flex:1;">Start Workout</button>
       </div>
     </div>`;
 }
@@ -5537,7 +5555,7 @@ function renderExercise() {
       if (ex.progressionBadge === 'hold') {
         progBadge = `<div class="progression-badge" style="color:var(--text-3);">● Hold weight — RPE was high last session</div>`;
       } else {
-        progBadge = `<div class="progression-badge">▲ ${ex.progressionBadge} <span style="opacity:0.5;">was ${displayWeight(ex.previousWeight)}</span></div>`;
+        progBadge = `<div class="progression-badge">▲ ${escapeHtml(ex.progressionBadge)} <span style="opacity:0.5;">was ${displayWeight(ex.previousWeight)}</span></div>`;
       }
     }
     weightHtml = `
@@ -5572,13 +5590,13 @@ function renderExercise() {
     }
 
     // Recommendation label
-    const recHtml = warmupLabel ? `<div style="margin-top:8px;font-size:12px;color:var(--accent);font-weight:500;text-align:center;">${warmupLabel}</div>` : '';
+    const recHtml = warmupLabel ? `<div style="margin-top:8px;font-size:12px;color:var(--accent);font-weight:500;text-align:center;">${escapeHtml(warmupLabel)}</div>` : '';
     // Working weight context
     const contextHtml = ex.currentWeight ? `<div style="margin-top:4px;font-size:11px;color:var(--text-3);text-align:center;">Working: ${displayWeight(ex.currentWeight)}${weightLabel()}</div>` : '';
 
     bodyEl.innerHTML = `
       <div class="exercise-label" style="color:var(--text-3);">Warm-up set ${warmupNum}</div>
-      <div class="exercise-name">${ex.name}</div>
+      <div class="exercise-name">${escapeHtml(ex.name)}</div>
       ${warmupPrevHtml}
       ${recHtml}
       ${contextHtml}
@@ -5613,7 +5631,7 @@ function renderExercise() {
   }
   if (!workout.exerciseReady && currentSet === 1) {
     const prepNoteDisplay = ex.notes
-      ? `<div class="prep-note">${ex.notes}</div>`
+      ? `<div class="prep-note">${escapeHtml(ex.notes)}</div>`
       : `<div class="prep-note empty" onclick="showWorkoutNoteInput()">+ add note</div>`;
 
     // Static target display (no +/− buttons)
@@ -5623,7 +5641,7 @@ function renderExercise() {
       if (ex.progressionBadge === 'hold') {
         progBadge = `<div class="progression-badge" style="justify-content:center;margin-top:6px;color:var(--text-3);">● Hold weight — RPE was high</div>`;
       } else if (ex.progressionBadge) {
-        progBadge = `<div class="progression-badge" style="justify-content:center;margin-top:6px;">▲ ${ex.progressionBadge}</div>`;
+        progBadge = `<div class="progression-badge" style="justify-content:center;margin-top:6px;">▲ ${escapeHtml(ex.progressionBadge)}</div>`;
       }
       prepWeightHtml = `<div class="prep-target">${displayWeight(ex.currentWeight)} ${weightLabel()} + ${ex.targetReps} reps${progBadge}</div>`;
     } else if (ex.isBodyweight) {
@@ -5643,7 +5661,7 @@ function renderExercise() {
     bodyEl.innerHTML = `
       ${typeBadge}
       <div class="exercise-label">Exercise ${workout.currentExerciseIndex + 1} of ${totalExercises}</div>
-      <div class="exercise-name">${ex.name}</div>
+      <div class="exercise-name">${escapeHtml(ex.name)}</div>
       ${prepNoteDisplay}
       ${prepWeightHtml}
       ${prepPlateHtml}
@@ -5687,7 +5705,7 @@ function renderExercise() {
   bodyEl.innerHTML = `
     ${typeBadge}
     <div class="exercise-label">Exercise ${workout.currentExerciseIndex + 1} of ${totalExercises}</div>
-    <div class="exercise-name">${ex.name}</div>
+    <div class="exercise-name">${escapeHtml(ex.name)}</div>
     <div class="set-indicator">${setLabel}</div>
     ${lastSessionHtml}
     ${notesHtml}
@@ -10406,7 +10424,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // Service Worker registration
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && supportsSecureFeatures()) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 </script>
