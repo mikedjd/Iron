@@ -7620,50 +7620,68 @@ function filterSessionsByPeriod(sessions) {
 }
 
 // ── Performance Charts ──────────────────────────────────────
-function _chartPeriodCutoff() {
-  return historyPeriod === '1w' ? 7 : historyPeriod === '1m' ? 30 : historyPeriod === '3m' ? 90 : 9999;
-}
+let _wPts = [], _cPts = [], _sPts = [];
 
-function getChartWeights() {
-  const c = _chartPeriodCutoff();
-  return [...(data.weights || [])].filter(w => daysAgo(w.date) <= c).sort((a,b) => a.date.localeCompare(b.date));
-}
+function _pCut(p) { return p==='1w'?7:p==='1m'?30:p==='3m'?90:9999; }
 
-function getChartCalories() {
-  const c = _chartPeriodCutoff();
-  const byDate = {};
-  (data.foodLog || []).filter(f => daysAgo(f.date) <= c).forEach(f => {
-    byDate[f.date] = (byDate[f.date] || 0) + (f.calories || 0);
-  });
-  return Object.entries(byDate).sort(([a],[b]) => a.localeCompare(b)).map(([date, calories]) => ({ date, calories: Math.round(calories) }));
-}
-
-function getChartStrengthSeries(exName) {
-  return filterSessionsByPeriod(data.sessions)
-    .filter(s => (s.exercises || []).some(e => e.name === exName))
-    .map(s => {
-      const ex = s.exercises.find(e => e.name === exName);
-      const valid = (ex.sets || []).map(ns => normalizeSet(ns)).filter(ns => !ns.skipped);
-      const topW = valid.length ? Math.max(...valid.map(ns => ns.weight || 0)) : 0;
-      return { date: s.date, weight: topW };
-    })
-    .filter(p => p.weight > 0)
-    .sort((a,b) => a.date.localeCompare(b.date));
-}
-
-function _setupChartCanvas(id, h) {
+function _mkCanvas(id, h) {
   const canvas = document.getElementById(id);
   if (!canvas) return null;
-  const W = canvas.parentElement.clientWidth - 2;
-  const H = h || 130;
+  const W = canvas.parentElement.clientWidth;
+  const H = h || 150;
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = W * dpr;
-  canvas.height = H * dpr;
-  canvas.style.width = W + 'px';
-  canvas.style.height = H + 'px';
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
-  return { ctx, W, H };
+  return { ctx, W, H, dpr };
+}
+
+function _periodPills(activeP, fnName, cls) {
+  return `<div class="${cls}" style="display:flex;gap:3px;">` +
+    ['1w','1m','3m','all'].map(p => {
+      const on = activeP === p;
+      return `<button data-p="${p}" onclick="${fnName}('${p}')" style="padding:3px 7px;border-radius:6px;font-size:10px;line-height:1.5;border:1px solid ${on?'var(--accent)':'rgba(255,255,255,0.1)'};background:${on?'rgba(163,184,108,0.12)':'transparent'};color:${on?'var(--accent)':'var(--text-3)'};cursor:pointer;">${p==='all'?'All':p.toUpperCase()}</button>`;
+    }).join('') + `</div>`;
+}
+
+function _syncPills(cls, activeP) {
+  document.querySelectorAll('.'+cls+' button').forEach(btn => {
+    const on = btn.dataset.p === activeP;
+    btn.style.borderColor = on?'var(--accent)':'rgba(255,255,255,0.1)';
+    btn.style.background = on?'rgba(163,184,108,0.12)':'transparent';
+    btn.style.color = on?'var(--accent)':'var(--text-3)';
+  });
+}
+
+function _drawCrosshair(canvas, pt) {
+  const dpr = window.devicePixelRatio || 1;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width/dpr, H = canvas.height/dpr;
+  const x = pt.x/dpr, y = pt.y/dpr;
+  ctx.save();
+  // Vertical dashed line
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(x, pt.pT); ctx.lineTo(x, H - pt.pB); ctx.stroke();
+  ctx.setLineDash([]);
+  // Highlight dot
+  ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2);
+  ctx.fillStyle = '#a3b86c'; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1.5; ctx.stroke();
+  // Badge
+  ctx.font = '11px DM Sans,sans-serif';
+  const txt = `${pt.date}  ${pt.displayVal}`;
+  const tw = ctx.measureText(txt).width;
+  let bx = Math.min(Math.max(x, tw/2 + 48), W - tw/2 - 8);
+  const by = Math.max(y - 20, pt.pT + 8);
+  ctx.fillStyle = 'rgba(20,24,18,0.95)';
+  ctx.strokeStyle = 'rgba(163,184,108,0.5)'; ctx.lineWidth = 1;
+  if (ctx.roundRect) ctx.roundRect(bx - tw/2 - 8, by - 13, tw + 16, 20, 4);
+  else ctx.rect(bx - tw/2 - 8, by - 13, tw + 16, 20);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#c8d4be'; ctx.textAlign = 'center';
+  ctx.fillText(txt, bx, by + 1);
+  ctx.restore();
 }
 
 function drawHistoryCharts() {
@@ -7672,172 +7690,257 @@ function drawHistoryCharts() {
   drawStrengthTrendChart();
 }
 
-function drawWeightTrendChart() {
-  const s = _setupChartCanvas('weight-trend-canvas', 130);
-  if (!s) return;
-  const { ctx, W, H } = s;
-  const weights = getChartWeights();
-  if (weights.length < 2) return;
+// ── Weight chart ──
+function _wData() {
+  const c = _pCut(data._weightPeriod || '3m');
+  return [...(data.weights||[])].filter(w => daysAgo(w.date) <= c).sort((a,b) => a.date.localeCompare(b.date));
+}
 
-  const raw = weights.map(w => data.weightUnit === 'lbs' ? Math.round(w.weight * 2.20462 * 10) / 10 : w.weight);
-  const avg7 = raw.map((_, i) => { const sl = raw.slice(Math.max(0, i-6), i+1); return sl.reduce((a,b) => a+b,0) / sl.length; });
+function drawWeightTrendChart() {
+  const s = _mkCanvas('weight-trend-canvas', 155);
+  if (!s) return;
+  const { ctx, W, H, dpr } = s;
+  const weights = _wData();
+  if (weights.length < 2) {
+    ctx.fillStyle='#4a5644'; ctx.font='13px DM Sans,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('Not enough data for this period', W/2, H/2); return;
+  }
+  const raw = weights.map(w => data.weightUnit==='lbs' ? Math.round(w.weight*2.20462*10)/10 : w.weight);
+  const avg7 = raw.map((_,i) => { const sl=raw.slice(Math.max(0,i-6),i+1); return sl.reduce((a,b)=>a+b,0)/sl.length; });
   const allV = [...raw, ...avg7];
-  const minV = Math.min(...allV) - 0.5, maxV = Math.max(...allV) + 0.5;
-  const pL = 42, pR = 12, pT = 14, pB = 24, n = raw.length;
-  const tx = i => pL + (i / (n-1)) * (W - pL - pR);
-  const ty = v => pT + ((maxV - v) / (maxV - minV)) * (H - pT - pB);
+  const span = Math.max(...allV) - Math.min(...allV);
+  const pad = Math.max(0.3, span * 0.08);
+  const minV = Math.min(...allV) - pad, maxV = Math.max(...allV) + pad;
+  const pL=44, pR=14, pT=18, pB=26, n=raw.length;
+  const tx = i => pL + (i/(n-1)) * (W-pL-pR);
+  const ty = v => pT + ((maxV-v)/(maxV-minV)) * (H-pT-pB);
 
   // Grid
-  [0, 0.25, 0.5, 0.75, 1].forEach(t => {
-    const v = minV + t * (maxV - minV), y = ty(v);
-    ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(pL, y); ctx.lineTo(W - pR, y); ctx.stroke();
-    ctx.fillStyle = '#4a5644'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText(v.toFixed(1), pL - 4, y + 3.5);
+  for (let i=0; i<=4; i++) {
+    const v = minV + (i/4)*(maxV-minV), y = ty(v);
+    ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(pL,y); ctx.lineTo(W-pR,y); ctx.stroke();
+    ctx.fillStyle='#4a5644'; ctx.font='10px DM Sans,sans-serif'; ctx.textAlign='right';
+    ctx.fillText(v.toFixed(1), pL-5, y+3.5);
+  }
+  // Raw dots
+  raw.forEach((v,i) => {
+    ctx.beginPath(); ctx.arc(tx(i),ty(v),1.8,0,Math.PI*2);
+    ctx.fillStyle='rgba(163,184,108,0.22)'; ctx.fill();
   });
-
-  // Raw line + dots (faint)
-  ctx.beginPath(); ctx.strokeStyle = 'rgba(163,184,108,0.22)'; ctx.lineWidth = 1.5;
-  raw.forEach((v, i) => i === 0 ? ctx.moveTo(tx(i), ty(v)) : ctx.lineTo(tx(i), ty(v)));
+  // Raw line
+  ctx.beginPath(); ctx.strokeStyle='rgba(163,184,108,0.15)'; ctx.lineWidth=1.5;
+  raw.forEach((v,i) => i===0?ctx.moveTo(tx(i),ty(v)):ctx.lineTo(tx(i),ty(v)));
   ctx.stroke();
-  raw.forEach((v, i) => {
-    ctx.beginPath(); ctx.arc(tx(i), ty(v), 2, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(163,184,108,0.28)'; ctx.fill();
-  });
-
-  // 7-day avg gradient fill
-  const grad = ctx.createLinearGradient(0, pT, 0, H - pB);
-  grad.addColorStop(0, 'rgba(163,184,108,0.16)'); grad.addColorStop(1, 'rgba(163,184,108,0)');
+  // Gradient fill under avg7
+  const grad = ctx.createLinearGradient(0,pT,0,H-pB);
+  grad.addColorStop(0,'rgba(163,184,108,0.22)'); grad.addColorStop(1,'rgba(163,184,108,0)');
   ctx.beginPath();
-  avg7.forEach((v, i) => i === 0 ? ctx.moveTo(tx(i), ty(v)) : ctx.lineTo(tx(i), ty(v)));
-  ctx.lineTo(tx(n-1), H - pB); ctx.lineTo(tx(0), H - pB); ctx.closePath();
-  ctx.fillStyle = grad; ctx.fill();
-
-  // 7-day avg line
-  ctx.beginPath(); ctx.strokeStyle = '#a3b86c'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
-  avg7.forEach((v, i) => i === 0 ? ctx.moveTo(tx(i), ty(v)) : ctx.lineTo(tx(i), ty(v)));
+  avg7.forEach((v,i) => i===0?ctx.moveTo(tx(i),ty(v)):ctx.lineTo(tx(i),ty(v)));
+  ctx.lineTo(tx(n-1),H-pB); ctx.lineTo(tx(0),H-pB); ctx.closePath();
+  ctx.fillStyle=grad; ctx.fill();
+  // Avg7 line
+  ctx.beginPath(); ctx.strokeStyle='#a3b86c'; ctx.lineWidth=2.5; ctx.lineJoin='round'; ctx.lineCap='round';
+  avg7.forEach((v,i) => i===0?ctx.moveTo(tx(i),ty(v)):ctx.lineTo(tx(i),ty(v)));
   ctx.stroke();
-
+  // Store points
+  _wPts = raw.map((v,i) => ({ x:tx(i)*dpr, y:ty(v)*dpr, pT, pB, displayVal:`${v.toFixed(1)} ${data.weightUnit==='lbs'?'lbs':'kg'}`, date:weights[i].date.slice(5).replace('-','/') }));
   // X labels
-  const step = Math.max(1, Math.floor(n / 5));
-  ctx.fillStyle = '#4a5644'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'center';
-  for (let i = 0; i < n; i += step) ctx.fillText(weights[i].date.slice(5).replace('-','/'), tx(i), H - 6);
+  const step = Math.max(1,Math.floor(n/5));
+  ctx.fillStyle='#4a5644'; ctx.font='10px DM Sans,sans-serif'; ctx.textAlign='center';
+  for (let i=0; i<n; i+=step) ctx.fillText(weights[i].date.slice(5).replace('-','/'), tx(i), H-7);
+}
+
+function onWeightChartPointer(e) {
+  if (!_wPts.length) return;
+  e.preventDefault();
+  const canvas = document.getElementById('weight-trend-canvas');
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const x = (clientX - rect.left) * (canvas.width / rect.width);
+  const pt = _wPts.reduce((b,p) => Math.abs(p.x-x)<Math.abs(b.x-x)?p:b, _wPts[0]);
+  drawWeightTrendChart();
+  _drawCrosshair(canvas, pt);
+}
+function setWeightPeriod(p) { data._weightPeriod=p; _syncPills('w-period-pills',p); drawWeightTrendChart(); }
+
+// ── Calories chart ──
+function _cData() {
+  const c = _pCut(data._calPeriod || '1m');
+  const m = data._calMacro || 'calories';
+  const byDate = {};
+  (data.foodLog||[]).filter(f => daysAgo(f.date) <= c).forEach(f => {
+    if (!byDate[f.date]) byDate[f.date] = {calories:0,protein:0,carbs:0,fats:0};
+    byDate[f.date].calories += f.calories||0; byDate[f.date].protein += f.protein||0;
+    byDate[f.date].carbs += f.carbs||0; byDate[f.date].fats += f.fats||0;
+  });
+  return Object.entries(byDate).sort(([a],[b])=>a.localeCompare(b))
+    .map(([date,v]) => ({ date, value: Math.round(v[m]||0) }));
 }
 
 function drawCaloriesTrendChart() {
-  const s = _setupChartCanvas('calories-trend-canvas', 130);
+  const s = _mkCanvas('calories-trend-canvas', 150);
   if (!s) return;
-  const { ctx, W, H } = s;
-  const days = getChartCalories();
-  if (days.length < 2) return;
-
-  const target = data.targetCalories || 0;
-  const maxV = Math.max(...days.map(d => d.calories), target || 0) * 1.08;
-  const pL = 40, pR = 12, pT = 14, pB = 24, n = days.length;
-  const barW = Math.max(3, (W - pL - pR) / n - 1.5);
-  const ty = v => pT + ((maxV - v) / maxV) * (H - pT - pB);
-  const bH = v => Math.max(2, (v / maxV) * (H - pT - pB));
+  const { ctx, W, H, dpr } = s;
+  const days = _cData();
+  if (days.length < 2) {
+    ctx.fillStyle='#4a5644'; ctx.font='13px DM Sans,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('Not enough data for this period', W/2, H/2); return;
+  }
+  const m = data._calMacro || 'calories';
+  const target = m==='calories' ? (data.targetCalories||0) : 0;
+  const maxV = Math.max(...days.map(d=>d.value), target||0) * 1.08;
+  if (!maxV) return;
+  const pL=42, pR=14, pT=18, pB=26, n=days.length;
+  const barW = Math.max(3, (W-pL-pR)/n - 1.5);
+  const ty = v => pT + ((maxV-v)/maxV) * (H-pT-pB);
+  const bH = v => Math.max(2, (v/maxV) * (H-pT-pB));
 
   // Grid
-  [0, 0.25, 0.5, 0.75, 1].forEach(t => {
-    const v = t * maxV, y = ty(v);
-    ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(pL, y); ctx.lineTo(W - pR, y); ctx.stroke();
-    ctx.fillStyle = '#4a5644'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText(v >= 1000 ? (v/1000).toFixed(1)+'k' : Math.round(v), pL - 4, y + 3.5);
-  });
-
+  for (let i=0; i<=4; i++) {
+    const v=(i/4)*maxV, y=ty(v);
+    ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(pL,y); ctx.lineTo(W-pR,y); ctx.stroke();
+    ctx.fillStyle='#4a5644'; ctx.font='10px DM Sans,sans-serif'; ctx.textAlign='right';
+    ctx.fillText(v>=1000?(v/1000).toFixed(1)+'k':Math.round(v), pL-5, y+3.5);
+  }
   // Bars
-  days.forEach((d, i) => {
-    const x = pL + (i / n) * (W - pL - pR);
-    const h = bH(d.calories), y = H - pB - h;
-    ctx.fillStyle = (target && d.calories >= target) ? 'rgba(163,184,108,0.78)' : 'rgba(224,92,92,0.62)';
+  _cPts = [];
+  days.forEach((d,i) => {
+    const x = pL + (i/n)*(W-pL-pR);
+    const h = bH(d.value), y = H-pB-h;
+    const isOver = target ? d.value>=target : true;
+    ctx.fillStyle = isOver ? 'rgba(163,184,108,0.78)' : 'rgba(224,92,92,0.62)';
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(x, y, barW, h, [2, 2, 0, 0]); else ctx.rect(x, y, barW, h);
+    if (ctx.roundRect) ctx.roundRect(x,y,barW,h,[2,2,0,0]); else ctx.rect(x,y,barW,h);
     ctx.fill();
+    const unit = m==='calories'?'kcal':'g';
+    _cPts.push({ x:(x+barW/2)*dpr, y:y*dpr, pT, pB, displayVal:`${d.value} ${unit}`, date:d.date.slice(5).replace('-','/') });
   });
-
   // Target line
   if (target) {
-    const ty2 = ty(target);
-    ctx.setLineDash([5, 3]); ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(pL, ty2); ctx.lineTo(W - pR, ty2); ctx.stroke();
+    const ty2=ty(target);
+    ctx.setLineDash([5,3]); ctx.strokeStyle='rgba(255,255,255,0.28)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(pL,ty2); ctx.lineTo(W-pR,ty2); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText('target', W - pR - 2, ty2 - 4);
+    ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font='10px DM Sans,sans-serif'; ctx.textAlign='right';
+    ctx.fillText('target', W-pR-2, ty2-4);
   }
-
   // X labels
-  const step = Math.max(1, Math.floor(n / 5));
-  ctx.fillStyle = '#4a5644'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'center';
-  for (let i = 0; i < n; i += step) {
-    ctx.fillText(days[i].date.slice(5).replace('-','/'), pL + (i/n)*(W-pL-pR) + barW/2, H - 6);
-  }
+  const step = Math.max(1,Math.floor(n/5));
+  ctx.fillStyle='#4a5644'; ctx.font='10px DM Sans,sans-serif'; ctx.textAlign='center';
+  for (let i=0; i<n; i+=step) ctx.fillText(days[i].date.slice(5).replace('-','/'), pL+(i/n)*(W-pL-pR)+barW/2, H-7);
+}
+
+function onCalChartPointer(e) {
+  if (!_cPts.length) return;
+  e.preventDefault();
+  const canvas = document.getElementById('calories-trend-canvas');
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const x = (clientX - rect.left) * (canvas.width / rect.width);
+  const pt = _cPts.reduce((b,p) => Math.abs(p.x-x)<Math.abs(b.x-x)?p:b, _cPts[0]);
+  drawCaloriesTrendChart();
+  _drawCrosshair(canvas, pt);
+}
+function setCalPeriod(p) { data._calPeriod=p; _syncPills('c-period-pills',p); drawCaloriesTrendChart(); }
+function setCalMacro(m) {
+  data._calMacro = m;
+  document.querySelectorAll('.c-macro-pills button').forEach(btn => {
+    const on = btn.dataset.m===m;
+    btn.style.borderColor = on?'var(--accent)':'rgba(255,255,255,0.1)';
+    btn.style.background = on?'rgba(163,184,108,0.12)':'transparent';
+    btn.style.color = on?'var(--accent)':'var(--text-3)';
+  });
+  drawCaloriesTrendChart();
+}
+
+// ── Strength chart ──
+function _sData() {
+  const c = _pCut(data._strengthPeriod || '3m');
+  const ex = data._chartExercise;
+  if (!ex) return [];
+  return (data.sessions||[])
+    .filter(s => daysAgo(s.date)<=c && (s.exercises||[]).some(e=>e.name===ex))
+    .map(s => {
+      const exd = s.exercises.find(e=>e.name===ex);
+      const valid = (exd.sets||[]).map(ns=>normalizeSet(ns)).filter(ns=>!ns.skipped);
+      const top = valid.length ? Math.max(...valid.map(ns=>ns.weight||0)) : 0;
+      return { date:s.date, weight:top };
+    })
+    .filter(p=>p.weight>0).sort((a,b)=>a.date.localeCompare(b.date));
 }
 
 function drawStrengthTrendChart() {
-  const s = _setupChartCanvas('strength-trend-canvas', 130);
+  const s = _mkCanvas('strength-trend-canvas', 150);
   if (!s) return;
-  const { ctx, W, H } = s;
-
+  const { ctx, W, H, dpr } = s;
   if (!data._chartExercise) {
-    const all = [...new Set((data.sessions||[]).flatMap(s => (s.exercises||[]).map(e => e.name)))];
-    data._chartExercise = (data.pinnedExercises||[]).find(p => all.includes(p)) || all[0] || '';
+    const all = [...new Set((data.sessions||[]).flatMap(s=>(s.exercises||[]).map(e=>e.name)))];
+    data._chartExercise = (data.pinnedExercises||[]).find(p=>all.includes(p)) || all[0] || '';
   }
-
-  const series = getChartStrengthSeries(data._chartExercise);
+  const series = _sData();
   if (series.length < 2) {
-    ctx.fillStyle = '#4a5644'; ctx.font = '13px DM Sans,sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('Log more sessions to see trend', W/2, H/2 + 4);
-    return;
+    ctx.fillStyle='#4a5644'; ctx.font='13px DM Sans,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('Log more sessions to see trend', W/2, H/2); return;
   }
-
-  const vals = series.map(p => data.weightUnit === 'lbs' ? Math.round(p.weight * 2.20462 * 4) / 4 : p.weight);
-  const minV = Math.min(...vals) * 0.97, maxV = Math.max(...vals) * 1.03;
-  const pL = 38, pR = 12, pT = 14, pB = 24, n = series.length;
-  const tx = i => pL + (i / (n - 1 || 1)) * (W - pL - pR);
-  const ty = v => pT + ((maxV - v) / ((maxV - minV) || 1)) * (H - pT - pB);
+  const vals = series.map(p => data.weightUnit==='lbs' ? Math.round(p.weight*2.20462*4)/4 : p.weight);
+  const minV=Math.min(...vals)*0.97, maxV=Math.max(...vals)*1.03;
+  const pL=38, pR=14, pT=18, pB=26, n=series.length;
+  const tx = i => pL + (i/(n-1||1)) * (W-pL-pR);
+  const ty = v => pT + ((maxV-v)/((maxV-minV)||1)) * (H-pT-pB);
 
   // Grid
-  [0, 0.33, 0.67, 1].forEach(t => {
-    const v = minV + t * (maxV - minV), y = ty(v);
-    ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(pL, y); ctx.lineTo(W - pR, y); ctx.stroke();
-    ctx.fillStyle = '#4a5644'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText(Math.round(v), pL - 4, y + 3.5);
+  [0,.33,.67,1].forEach(t => {
+    const v=minV+t*(maxV-minV), y=ty(v);
+    ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(pL,y); ctx.lineTo(W-pR,y); ctx.stroke();
+    ctx.fillStyle='#4a5644'; ctx.font='10px DM Sans,sans-serif'; ctx.textAlign='right';
+    ctx.fillText(Math.round(v), pL-5, y+3.5);
   });
-
   // Gradient fill
-  const grad = ctx.createLinearGradient(0, pT, 0, H - pB);
-  grad.addColorStop(0, 'rgba(163,184,108,0.18)'); grad.addColorStop(1, 'rgba(163,184,108,0)');
+  const grad = ctx.createLinearGradient(0,pT,0,H-pB);
+  grad.addColorStop(0,'rgba(163,184,108,0.2)'); grad.addColorStop(1,'rgba(163,184,108,0)');
   ctx.beginPath();
-  vals.forEach((v, i) => i === 0 ? ctx.moveTo(tx(i), ty(v)) : ctx.lineTo(tx(i), ty(v)));
-  ctx.lineTo(tx(n-1), H - pB); ctx.lineTo(tx(0), H - pB); ctx.closePath();
-  ctx.fillStyle = grad; ctx.fill();
-
+  vals.forEach((v,i) => i===0?ctx.moveTo(tx(i),ty(v)):ctx.lineTo(tx(i),ty(v)));
+  ctx.lineTo(tx(n-1),H-pB); ctx.lineTo(tx(0),H-pB); ctx.closePath();
+  ctx.fillStyle=grad; ctx.fill();
   // Line
-  ctx.beginPath(); ctx.strokeStyle = '#a3b86c'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
-  vals.forEach((v, i) => i === 0 ? ctx.moveTo(tx(i), ty(v)) : ctx.lineTo(tx(i), ty(v)));
+  ctx.beginPath(); ctx.strokeStyle='#a3b86c'; ctx.lineWidth=2.5; ctx.lineJoin='round'; ctx.lineCap='round';
+  vals.forEach((v,i) => i===0?ctx.moveTo(tx(i),ty(v)):ctx.lineTo(tx(i),ty(v)));
   ctx.stroke();
-
-  // Dots
-  vals.forEach((v, i) => {
-    ctx.beginPath(); ctx.arc(tx(i), ty(v), 3.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#a3b86c'; ctx.fill();
-    ctx.strokeStyle = '#0d1209'; ctx.lineWidth = 1.5; ctx.stroke();
+  // Dots + store points
+  _sPts = [];
+  vals.forEach((v,i) => {
+    ctx.beginPath(); ctx.arc(tx(i),ty(v),3.5,0,Math.PI*2);
+    ctx.fillStyle='#a3b86c'; ctx.fill();
+    ctx.strokeStyle='#0d1209'; ctx.lineWidth=1.5; ctx.stroke();
+    const unit = data.weightUnit==='lbs'?'lbs':'kg';
+    _sPts.push({ x:tx(i)*dpr, y:ty(v)*dpr, pT, pB, displayVal:`${vals[i]} ${unit}`, date:series[i].date.slice(5).replace('-','/') });
   });
-
   // X labels
-  const step = Math.max(1, Math.floor((n - 1) / 4));
-  ctx.fillStyle = '#4a5644'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'center';
-  for (let i = 0; i < n; i += step) ctx.fillText(series[i].date.slice(5).replace('-','/'), tx(i), H - 6);
-  if ((n-1) % step !== 0) ctx.fillText(series[n-1].date.slice(5).replace('-','/'), tx(n-1), H - 6);
+  const step = Math.max(1,Math.floor((n-1)/4));
+  ctx.fillStyle='#4a5644'; ctx.font='10px DM Sans,sans-serif'; ctx.textAlign='center';
+  for (let i=0; i<n; i+=step) ctx.fillText(series[i].date.slice(5).replace('-','/'), tx(i), H-7);
+  if ((n-1)%step!==0) ctx.fillText(series[n-1].date.slice(5).replace('-','/'), tx(n-1), H-7);
 }
 
-function setChartExercise(name) {
-  data._chartExercise = name;
+function onStrengthChartPointer(e) {
+  if (!_sPts.length) return;
+  e.preventDefault();
+  const canvas = document.getElementById('strength-trend-canvas');
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const x = (clientX - rect.left) * (canvas.width / rect.width);
+  const pt = _sPts.reduce((b,p) => Math.abs(p.x-x)<Math.abs(b.x-x)?p:b, _sPts[0]);
   drawStrengthTrendChart();
+  _drawCrosshair(canvas, pt);
 }
+function setStrengthPeriod(p) { data._strengthPeriod=p; _syncPills('s-period-pills',p); drawStrengthTrendChart(); }
+function setChartExercise(name) { data._chartExercise=name; drawStrengthTrendChart(); }
 // ────────────────────────────────────────────────────────────
 
 function renderHistory() {
@@ -7882,33 +7985,39 @@ function renderHistory() {
     const current = sorted[sorted.length - 1].weight;
     const change = current - start;
     const changeStr = (change >= 0 ? '+' : '') + displayWeight(change);
+    const wPeriod = data._weightPeriod || '3m';
     weightHtml = `
-      <div class="card fade-in stagger-3">
-        <div style="display:flex;justify-content:space-between;align-items:center">
+      <div class="card fade-in stagger-3" style="overflow:hidden;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
           <span class="label">Bodyweight Trend</span>
-          <div class="unit-toggle">
-            <button class="unit-opt ${data.weightUnit === 'kg' ? 'active' : ''}" onclick="setWeightUnit('kg')">kg</button>
-            <button class="unit-opt ${data.weightUnit === 'lbs' ? 'active' : ''}" onclick="setWeightUnit('lbs')">lbs</button>
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${_periodPills(wPeriod,'setWeightPeriod','w-period-pills')}
+            <div class="unit-toggle">
+              <button class="unit-opt ${data.weightUnit === 'kg' ? 'active' : ''}" onclick="setWeightUnit('kg')">kg</button>
+              <button class="unit-opt ${data.weightUnit === 'lbs' ? 'active' : ''}" onclick="setWeightUnit('lbs')">lbs</button>
+            </div>
           </div>
         </div>
         <div class="stat-row mt-12">
           <div class="stat-box">
-            <div class="stat-value" style="font-size:24px">${displayWeight(start)}</div>
+            <div class="stat-value" style="font-size:22px">${displayWeight(start)}</div>
             <div class="stat-label">Start (${unit})</div>
           </div>
           <div class="stat-box">
-            <div class="stat-value" style="font-size:24px">${displayWeight(current)}</div>
+            <div class="stat-value" style="font-size:22px">${displayWeight(current)}</div>
             <div class="stat-label">Current (${unit})</div>
           </div>
           <div class="stat-box">
-            <div class="stat-value" style="font-size:24px;color:${change >= 0 ? 'var(--accent)' : 'var(--danger)'}">${changeStr}</div>
+            <div class="stat-value" style="font-size:22px;color:${change >= 0 ? 'var(--accent)' : 'var(--danger)'}">${changeStr}</div>
             <div class="stat-label">Change (${unit})</div>
           </div>
         </div>
-        <canvas id="weight-trend-canvas" style="display:block;margin-top:12px;"></canvas>
+        <canvas id="weight-trend-canvas" style="display:block;margin-top:12px;cursor:crosshair;"
+          onmousemove="onWeightChartPointer(event)" ontouchmove="onWeightChartPointer(event)"
+          onmouseleave="drawWeightTrendChart()" ontouchend="drawWeightTrendChart()"></canvas>
         <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:var(--text-3);">
-          <span style="display:flex;align-items:center;gap:5px;"><span style="width:20px;height:2px;background:rgba(163,184,108,0.35);display:inline-block;"></span>Daily</span>
-          <span style="display:flex;align-items:center;gap:5px;"><span style="width:20px;height:2.5px;background:#a3b86c;border-radius:2px;display:inline-block;"></span>7-day avg</span>
+          <span style="display:flex;align-items:center;gap:5px;"><span style="width:18px;height:1.5px;background:rgba(163,184,108,0.3);display:inline-block;"></span>Daily</span>
+          <span style="display:flex;align-items:center;gap:5px;"><span style="width:18px;height:2.5px;background:#a3b86c;border-radius:2px;display:inline-block;"></span>7-day avg</span>
         </div>
       </div>`;
   }
@@ -7938,28 +8047,31 @@ function renderHistory() {
         <div class="mt-12">
           ${visible.map(p => {
             const hasWeight = p.baselineWeight != null && p.currentWeight != null;
-            let display, deltaStr, cls;
+            let startStr, currentStr, deltaStr, cls;
             if (hasWeight) {
               const wDelta = p.currentWeight - p.baselineWeight;
               deltaStr = (wDelta >= 0 ? '+' : '') + displayWeight(wDelta) + unit;
-              display = `${displayWeight(p.baselineWeight)} → ${displayWeight(p.currentWeight)}`;
+              startStr = displayWeight(p.baselineWeight) + unit;
+              currentStr = displayWeight(p.currentWeight) + unit;
               cls = classifyProgress(wDelta, hasWeight);
             } else {
               deltaStr = (p.delta >= 0 ? '+' : '') + p.delta.toFixed(1);
-              display = `${p.baseline.toFixed(0)} → ${p.current.toFixed(0)}`;
+              startStr = p.baseline.toFixed(0);
+              currentStr = p.current.toFixed(0);
               cls = classifyProgress(p.delta, false);
             }
             const level = bw && p.currentWeight ? getStrengthLevel(p.name, p.currentWeight, bw) : null;
             const levelBadge = level ? ` <span class="strength-badge ${level}">${level.substring(0,3).toUpperCase()}</span>` : '';
             const isPinned = pinnedExercises.includes(p.name);
             return `
-              <div class="progress-row" onclick="showExerciseChart('${p.name.replace(/'/g, "\\'")}')" style="cursor:pointer;">
-                <span class="progress-name">
+              <div class="progress-row" onclick="showExerciseChart('${p.name.replace(/'/g, "\\'")}')" style="cursor:pointer;display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:8px;">
+                <span class="progress-name" style="min-width:0;">
                   <button class="progress-pin ${isPinned ? 'pinned' : ''}" onclick="event.stopPropagation();togglePinExercise('${p.name.replace(/'/g, "\\'")}')" title="${isPinned ? 'Unpin' : 'Pin to top'}">★</button>
-                  <span class="progress-name-text">${p.name}${levelBadge}</span>
+                  <span class="progress-name-text">${escapeHtml(p.name)}${levelBadge}</span>
                 </span>
-                <span class="progress-reps">${display}</span>
-                <span class="progress-delta ${cls}">${deltaStr}</span>
+                <span style="font-size:12px;color:var(--text-3);white-space:nowrap;">${startStr}</span>
+                <span style="font-size:12px;color:var(--text);white-space:nowrap;">${currentStr}</span>
+                <span class="progress-delta ${cls}" style="white-space:nowrap;">${deltaStr}</span>
               </div>`;
           }).join('')}
         </div>
@@ -7976,6 +8088,12 @@ function renderHistory() {
   let bodyPartHtml = '';
   const bpGroups = Object.entries(bodyPartVolumes).filter(([g, d]) => (d.volume > 0 || d.sets > 0) && g !== 'Other');
   const viewMode = data.bodyPartViewMode || 'sets';
+  // Compute weeks in period for weekly avg
+  const bpWeeks = historyPeriod === '1w' ? 1 : historyPeriod === '1m' ? 4.3 : historyPeriod === '3m' ? 13 : (() => {
+    if (filtered.length < 2) return 1;
+    const dates = filtered.map(s => new Date(s.date + 'T12:00:00')).sort((a,b) => a-b);
+    return Math.max(1, (dates[dates.length-1] - dates[0]) / (7 * 24 * 3600 * 1000));
+  })();
   if (bpGroups.length > 0) {
     if (viewMode === 'sets') {
       bpGroups.sort((a, b) => b[1].sets - a[1].sets);
@@ -7986,14 +8104,16 @@ function renderHistory() {
     const maxSets = bpGroups[0][1].sets;
     const barsHtml = bpGroups.map(([name, d]) => {
       if (viewMode === 'sets') {
+        const weeklyAvg = Math.round(d.sets / bpWeeks * 10) / 10;
         const pct = (d.sets / maxSets * 100).toFixed(0);
-        const colorClass = getBarColorClass(name, d.sets);
+        const colorClass = getBarColorClass(name, weeklyAvg);
         const targets = getSetTargets()[name];
         const targetStr = targets ? ` / ${targets.min}-${targets.max}` : '';
+        const avgLabel = bpWeeks > 1.2 ? ` <span style="font-size:10px;color:var(--text-3);">(${weeklyAvg}/wk)</span>` : '';
         return `<div class="bv-bar-row">
           <div class="bv-bar-meta">
             <span class="bv-bar-label">${name}</span>
-            <span class="bv-bar-value">${d.sets} sets${targetStr}</span>
+            <span class="bv-bar-value">${d.sets} sets${targetStr}${avgLabel}</span>
           </div>
           <div class="bv-bar-track"><div class="bv-bar-fill ${colorClass}" style="width:${pct}%"></div></div>
         </div>`;
@@ -8075,39 +8195,54 @@ function renderHistory() {
   let caloriesHtml = '';
   if (data.foodLog && data.foodLog.length > 0) {
     const tgt = data.targetCalories;
+    const cPeriod = data._calPeriod || '1m';
+    const cMacro = data._calMacro || 'calories';
+    const macroLabels = { calories:'Kcal', protein:'Protein', carbs:'Carbs', fats:'Fats' };
+    const macroPills = Object.entries(macroLabels).map(([m, label]) => {
+      const on = cMacro === m;
+      return `<button data-m="${m}" onclick="setCalMacro('${m}')" style="padding:3px 7px;border-radius:6px;font-size:10px;line-height:1.5;border:1px solid ${on?'var(--accent)':'rgba(255,255,255,0.1)'};background:${on?'rgba(163,184,108,0.12)':'transparent'};color:${on?'var(--accent)':'var(--text-3)'};cursor:pointer;">${label}</button>`;
+    }).join('');
     caloriesHtml = `
-      <div class="card fade-in stagger-4">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-          <span class="label">Calorie Intake</span>
-          ${tgt ? `<span style="font-size:11px;color:var(--text-3);">target: ${tgt} kcal</span>` : ''}
+      <div class="card fade-in stagger-4" style="overflow:hidden;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+          <span class="label">Nutrition</span>
+          <div class="c-macro-pills" style="display:flex;gap:3px;">${macroPills}</div>
         </div>
-        <canvas id="calories-trend-canvas" style="display:block;margin-top:12px;"></canvas>
-        <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:var(--text-3);">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+          ${_periodPills(cPeriod,'setCalPeriod','c-period-pills')}
+          ${tgt && cMacro==='calories' ? `<span style="font-size:11px;color:var(--text-3);">target: ${tgt} kcal/day</span>` : ''}
+        </div>
+        <canvas id="calories-trend-canvas" style="display:block;margin-top:10px;cursor:crosshair;"
+          onmousemove="onCalChartPointer(event)" ontouchmove="onCalChartPointer(event)"
+          onmouseleave="drawCaloriesTrendChart()" ontouchend="drawCaloriesTrendChart()"></canvas>
+        ${tgt && cMacro==='calories' ? `<div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:var(--text-3);">
           <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;background:rgba(163,184,108,0.78);border-radius:2px;display:inline-block;"></span>At / above target</span>
           <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;background:rgba(224,92,92,0.62);border-radius:2px;display:inline-block;"></span>Below target</span>
-        </div>
+        </div>` : ''}
       </div>`;
   }
 
   // Strength trend chart
   let strengthHtml = '';
-  const chartExercises = [...new Set(filtered.flatMap(s => (s.exercises||[]).map(e => e.name)))];
-  if (chartExercises.length > 0) {
-    if (!data._chartExercise || !chartExercises.includes(data._chartExercise)) {
-      data._chartExercise = (data.pinnedExercises||[]).find(p => chartExercises.includes(p)) || chartExercises[0];
+  const allChartEx = [...new Set((data.sessions||[]).flatMap(s => (s.exercises||[]).map(e => e.name)))];
+  if (allChartEx.length > 0) {
+    if (!data._chartExercise || !allChartEx.includes(data._chartExercise)) {
+      data._chartExercise = (data.pinnedExercises||[]).find(p => allChartEx.includes(p)) || allChartEx[0];
     }
-    const exOpts = chartExercises.map(n =>
+    const sPeriod = data._strengthPeriod || '3m';
+    const exOpts = allChartEx.map(n =>
       `<option value="${escapeHtml(n)}" ${n === data._chartExercise ? 'selected' : ''}>${escapeHtml(n)}</option>`
     ).join('');
     strengthHtml = `
-      <div class="card fade-in stagger-5">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <div class="card fade-in stagger-5" style="overflow:hidden;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
           <span class="label">Strength Trend</span>
-          <select onchange="setChartExercise(this.value)" style="background:var(--surface-2);color:var(--text);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:5px 10px;font-size:12px;max-width:190px;outline:none;cursor:pointer;">
-            ${exOpts}
-          </select>
+          <select onchange="setChartExercise(this.value)" style="background:var(--surface-2);color:var(--text);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:4px 8px;font-size:12px;max-width:180px;outline:none;cursor:pointer;">${exOpts}</select>
         </div>
-        <canvas id="strength-trend-canvas" style="display:block;margin-top:12px;"></canvas>
+        ${_periodPills(sPeriod,'setStrengthPeriod','s-period-pills')}
+        <canvas id="strength-trend-canvas" style="display:block;margin-top:10px;cursor:crosshair;"
+          onmousemove="onStrengthChartPointer(event)" ontouchmove="onStrengthChartPointer(event)"
+          onmouseleave="drawStrengthTrendChart()" ontouchend="drawStrengthTrendChart()"></canvas>
       </div>`;
   }
 
