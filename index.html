@@ -3822,6 +3822,22 @@ function isUpperExercise(name) {
   return !lower.some(l => name.toLowerCase().includes(l));
 }
 
+/* Single-joint isolation exercises progress more slowly — a 2.5kg jump on
+   a bicep curl or lateral raise is a huge relative load increase. */
+function isIsolationExercise(name) {
+  const n = name.toLowerCase();
+  return [
+    'curl',           // bicep curl, hammer curl, preacher curl, leg curl, wrist curl…
+    'lateral raise', 'front raise', 'side raise',
+    'fly', 'flye', 'pec deck', 'chest fly', 'cable fly',
+    'pushdown', 'pressdown', 'tricep extension', 'skull crusher', 'kickback',
+    'leg extension',  // quad isolation machine
+    'calf raise', 'seated calf', 'standing calf',
+    'shrug',
+    'reverse fly', 'rear delt fly',
+  ].some(k => n.includes(k));
+}
+
 /* Exercise-to-muscle-group classification (priority order) */
 const MUSCLE_GROUPS = [
   // Head → shoulders → arms → torso → core → lower body → feet (head to toe)
@@ -4538,14 +4554,27 @@ function getRpeTargetRange() {
    RPE-aware: hold weight if RPE spiked above target range. */
 function getProgressionRec(exerciseName, bodyweight) {
   const eqType = getEquipmentType(exerciseName);
+  const isolation = isIsolationExercise(exerciseName);
   let inc;
   if (eqType === 'dumbbell') {
-    inc = data.weightUnit === 'lbs' ? 5 : (data.dumbbellIncrement || 2);
+    // Isolation (curl, lateral raise, fly…): 1kg / 2.5lb — a 2kg jump per dumbbell
+    // is a huge relative increase on a 12kg curl or a 10kg lateral raise
+    inc = isolation
+      ? (data.weightUnit === 'lbs' ? 2.5 : 1)
+      : (data.weightUnit === 'lbs' ? 5 : (data.dumbbellIncrement || 2));
   } else if (eqType === 'barbell') {
     const barbellInc = data.weightUnit === 'lbs' ? 5 : (data.barbellIncrement || 2.5);
-    inc = isUpperExercise(exerciseName) ? barbellInc : barbellInc * 2;
+    if (isolation) {
+      // EZ bar curl, skull crusher etc — smallest plate available (1.25kg / 2.5lb)
+      inc = data.weightUnit === 'lbs' ? 2.5 : 1.25;
+    } else {
+      inc = isUpperExercise(exerciseName) ? barbellInc : barbellInc * 2;
+    }
   } else {
-    inc = data.weightUnit === 'lbs' ? 5 : (data.machineIncrement || 2.5);
+    // Cable / machine — isolation (pushdown, leg curl, pec deck): smaller pin jump
+    inc = isolation
+      ? (data.weightUnit === 'lbs' ? 2.5 : 1.25)
+      : (data.weightUnit === 'lbs' ? 5 : (data.machineIncrement || 2.5));
   }
 
   // Always use the actual last-logged peak weight, not a stale program value
