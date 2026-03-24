@@ -71,11 +71,9 @@
        TYPOGRAPHY
        ═══════════════════════════════════════════════ */
     .display { font-family: 'Teko', sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1; }
-    .display-xl { font-size: clamp(48px, 12vw, 64px); }
     .display-lg { font-size: clamp(36px, 9vw, 48px); }
     .display-md { font-size: clamp(28px, 7vw, 36px); }
     .display-sm { font-size: clamp(22px, 5.5vw, 28px); }
-    .mono { font-variant-numeric: tabular-nums; }
     .label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--label-color); }
 
     /* ═══════════════════════════════════════════════
@@ -164,7 +162,6 @@
       background: var(--accent);
     }
     .nav-btn svg { width: 22px; height: 22px; }
-    .nav-icon { font-size: 20px; line-height: 22px; }
     .nav-btn span { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
 
     /* ═══════════════════════════════════════════════
@@ -176,12 +173,6 @@
       border-radius: 18px;
       padding: 24px;
       margin-bottom: 12px;
-    }
-    .card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
     }
     .stat-row {
       display: flex;
@@ -426,17 +417,12 @@
     .db-end {
       width: 4px; height: 28px; background: #555; border-radius: 1px;
     }
-    .db-label {
-      font-size: 11px; font-weight: 700; color: var(--accent);
-      text-align: center; margin-top: 4px;
-    }
     /* Fallback text */
     .plate-calc {
       padding: 4px 0 8px;
       display: flex; align-items: center; justify-content: center;
       gap: 4px; flex-wrap: wrap;
     }
-    .plate-label { font-size: 10px; color: var(--text-3); font-weight: 500; margin-left: 2px; }
 
     /* ═══════════════════════════════════════════════
        WORKOUT MODE (full-screen overlay)
@@ -502,8 +488,9 @@
     .exercise-name {
       font-family: 'Teko', sans-serif;
       font-weight: 700;
-      font-size: clamp(44px, 12vw, 60px);
-      line-height: 1;
+      font-size: clamp(28px, 8vw, 36px);
+      line-height: 1.1;
+      max-width: 100%;
       text-transform: uppercase;
       letter-spacing: 0.02em;
       margin-bottom: 8px;
@@ -517,7 +504,7 @@
       background: var(--surface-2);
       border: 1px solid var(--border);
       border-radius: 14px;
-      margin: 24px auto 0;
+      margin: 16px auto 0;
       max-width: 320px;
       font-family: 'DM Sans', sans-serif;
       font-weight: 500;
@@ -526,17 +513,18 @@
       color: var(--text-3);
       font-size: 14px;
       cursor: pointer;
-      padding: 14px 24px;
+      padding: 10px 24px;
       font-style: normal;
     }
     .prep-target {
       font-family: 'Teko', sans-serif;
       font-weight: 500;
-      font-size: 22px;
+      font-size: 36px;
       color: var(--accent);
       text-align: center;
       margin-top: 20px;
       letter-spacing: 0.02em;
+      line-height: 1.1;
     }
 
     /* Note toggle on tracking screen */
@@ -661,16 +649,16 @@
       margin-bottom: 4px;
     }
     .last-session-line {
-      font-size: 13px;
+      font-size: 11px;
       color: var(--text-3);
-      margin-bottom: 12px;
+      margin-bottom: 8px;
       letter-spacing: 0.02em;
       text-align: center;
       padding: 8px 12px;
       background: rgba(255,255,255,0.03);
       border-radius: 8px;
     }
-    .last-session-line span { color: var(--text-2); font-weight: 500; }
+    .last-session-line span { color: var(--text-3); font-weight: 500; }
 
     /* Rep adjuster */
     .rep-adjuster {
@@ -753,28 +741,28 @@
 
     /* Up next */
     .up-next {
-      padding: 12px 20px;
-      padding-bottom: calc(12px + var(--safe-bottom));
+      padding: 8px 20px;
+      padding-bottom: calc(8px + var(--safe-bottom));
       background: var(--surface);
       border-top: 1px solid var(--divider);
       flex-shrink: 0;
     }
     .up-next-label {
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 600;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--text-3);
-      margin-bottom: 8px;
+      margin-bottom: 4px;
     }
     .up-next-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 6px 0;
+      padding: 2px 0;
     }
-    .up-next-item .name { font-size: 14px; font-weight: 500; color: var(--text-2); }
-    .up-next-item .info { font-size: 13px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+    .up-next-item .name { font-size: 13px; font-weight: 500; color: var(--text-2); }
+    .up-next-item .info { font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
 
     /* ═══════════════════════════════════════════════
        REST TIMER
@@ -1210,11 +1198,6 @@
     /* ═══════════════════════════════════════════════
        DIET TAB
        ═══════════════════════════════════════════════ */
-    .target-display {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
     .target-box {
       flex: 1;
       text-align: center;
@@ -1656,7 +1639,6 @@
     .weight-log-entry .weight { font-weight: 600; font-variant-numeric: tabular-nums; }
 
     /* Food tracking */
-    .food-totals { display: flex; gap: 12px; margin-bottom: 12px; }
     .food-total-bar {
       flex: 1;
       text-align: center;
@@ -1742,11 +1724,6 @@
     }
     .food-add-row button:active { background: #8fa05a; }
 
-    .macro-summary {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
     .macro-pill {
       display: flex;
       align-items: center;
@@ -1757,12 +1734,6 @@
       background: var(--surface-3);
       padding: 4px 10px;
       border-radius: 20px;
-    }
-    .macro-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      flex-shrink: 0;
     }
 
     /* Food Search */
@@ -2069,28 +2040,6 @@
     /* ═══════════════════════════════════════════════
        BODY PART VOLUME
        ═══════════════════════════════════════════════ */
-    .body-volume-layout {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 20px;
-    }
-    .body-map-side-by-side {
-      display: flex; justify-content: center; gap: 8px;
-      width: 100%; max-width: 320px; margin: 0 auto;
-    }
-    .body-map-col {
-      flex: 1; display: flex; flex-direction: column; align-items: center;
-    }
-    .body-map { width: 100%; height: auto; display: block; }
-    .body-outline { fill: none; stroke: rgba(255,255,255,0.12); stroke-width: 0.5; }
-    .body-silhouette { fill: rgba(255,255,255,0.04); stroke: rgba(255,255,255,0.12); stroke-width: 0.5; }
-    .body-region { transition: fill 0.3s ease; stroke: none; }
-    .body-map-label {
-      text-align: center; font-size: 9px; font-weight: 600;
-      letter-spacing: 1.5px; text-transform: uppercase;
-      color: var(--text-3); margin-top: 2px;
-    }
     .body-volume-bars { width: 100%; }
     .bv-bar-row {
       display: flex;
@@ -2130,14 +2079,13 @@
       font-size: 16px;
       color: var(--text-2);
     }
-    .bv-bar-fill.under { background: var(--warning); }
-    .bv-bar-fill.in-range { background: var(--accent); }
+    .bv-bar-fill.in-range { background: #34c759; }
     .bv-bar-fill.over { background: var(--danger); }
-    .bv-bar-target {
-      font-size: 10px;
-      color: var(--text-3);
-      margin-left: 4px;
-    }
+    .bv-parent-row { cursor: pointer; user-select: none; }
+    .bv-parent-row:active { opacity: 0.75; }
+    .bv-chevron { font-size: 10px; color: var(--text-3); margin-left: 3px; }
+    .bv-children { margin-top: 2px; }
+    .bv-child-row { padding-left: 14px; opacity: 0.85; }
     .bv-header {
       display: flex;
       justify-content: space-between;
@@ -2388,13 +2336,6 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .progress-reps {
-      color: var(--text-2);
-      font-variant-numeric: tabular-nums;
-      font-size: 13px;
-      white-space: nowrap;
-      text-align: right;
-    }
     .progress-delta {
       font-weight: 600;
       font-variant-numeric: tabular-nums;
@@ -2461,11 +2402,6 @@
     .session-detail-row:last-child { border-bottom: none; }
     .session-detail-name { color: var(--text-2); }
     .session-detail-stats { color: var(--text-3); font-variant-numeric: tabular-nums; }
-    .session-exercises {
-      font-size: 13px;
-      color: var(--text-3);
-      line-height: 1.5;
-    }
 
     /* ═══════════════════════════════════════════════
        BUILD TAB
@@ -2635,7 +2571,6 @@
     .mt-24 { margin-top: 24px; }
     .mb-12 { margin-bottom: 12px; }
     .mb-16 { margin-bottom: 16px; }
-    .text-center { text-align: center; }
     .text-dim { color: var(--text-2); }
     .text-xs { font-size: 12px; }
     .text-sm { font-size: 13px; }
@@ -2833,7 +2768,6 @@
       display: flex; align-items: center; gap: 6px;
     }
     .split-chip.current { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
-    .split-add { border-style: dashed; color: var(--text-3); }
     .split-chip-remove {
       width: 14px; height: 14px; border-radius: 50%;
       border: none; background: rgba(255,59,48,0.2); color: var(--danger);
@@ -3214,7 +3148,7 @@
         Guidelines based on hypertrophy research (Schoenfeld et al.):
       </p>
       <ul>
-        <li><strong>Large muscles</strong> (Chest, Lats, Quads, Hams/Glutes): 10-20 sets/week</li>
+        <li><strong>Large muscles</strong> (Chest, Lats, Quads, Hamstrings, Glutes): 10-20 sets/week</li>
         <li><strong>Medium muscles</strong> (Delts, Upper Back): 8-16 sets/week</li>
         <li><strong>Small muscles</strong> (Biceps, Triceps, Calves, Forearms, Core): 6-14 sets/week</li>
       </ul>
@@ -3440,6 +3374,7 @@ let dietTrendPeriod = 7; // days: 7, 14, 30, 0 for all, or 'custom'
 let dietCustomFrom = '';
 let dietCustomTo = '';
 let workoutNotesExpanded = false;
+let prepNoteExpanded = false;
 let selectedCardioType = 'run';
 
 function getPrograms() {
@@ -3889,18 +3824,21 @@ function isUpperExercise(name) {
 
 /* Exercise-to-muscle-group classification (priority order) */
 const MUSCLE_GROUPS = [
-  ['Forearms', ['wrist', 'forearm', 'grip']],
-  ['Calves', ['calf', 'calves']],
-  ['Core', ['ab ', 'abs', 'crunch', 'plank', 'leg raise', 'hanging leg', 'sit up', 'core']],
-  ['Hams/Glutes', ['deadlift', 'rdl', 'romanian', 'leg curl', 'hip thrust', 'glute', 'hamstring']],
-  ['Quads', ['squat', 'leg press', 'lunge', 'leg extension', 'front squat']],
+  // Head → shoulders → arms → torso → core → lower body → feet (head to toe)
+  ['Front Delts', ['overhead press', 'shoulder press', 'military press', 'ohp', 'front raise']],
+  ['Side Delts', ['lateral raise', 'side raise', 'side laying', 'upright row']],
+  ['Rear Delts', ['rear delt', 'reverse fly', 'face pull', 'bent over lateral']],
+  ['Upper Back', ['row', 'shrug']],
   ['Chest', ['bench press', 'chest press', 'cable fly', 'chest fly', 'push up', 'pushup', 'pec', 'smith bench']],
   ['Lats', ['lat ', 'lat press', 'pull up', 'pullup', 'pulldown', 'pull down', 'chin up']],
-  ['Front Delts', ['overhead press', 'shoulder press', 'military press', 'ohp', 'front raise']],
-  ['Upper Back', ['row', 'shrug', 'face pull', 'reverse fly']],
-  ['Side/Rear Delts', ['lateral raise', 'side raise', 'side laying', 'rear delt']],
   ['Triceps', ['tricep', 'press down', 'pressdown', 'skull crush', 'dip']],
-  ['Biceps', ['curl', 'bicep']]
+  ['Biceps', ['curl', 'bicep']],
+  ['Forearms', ['wrist', 'forearm', 'grip']],
+  ['Core', ['ab ', 'abs', 'crunch', 'plank', 'leg raise', 'hanging leg', 'sit up', 'core']],
+  ['Glutes', ['hip thrust', 'glute bridge', 'cable pull through', 'glute']],
+  ['Hamstrings', ['deadlift', 'rdl', 'romanian', 'leg curl', 'hamstring', 'nordic', 'good morning']],
+  ['Quads', ['squat', 'leg press', 'lunge', 'leg extension', 'front squat']],
+  ['Calves', ['calf', 'calves']],
 ];
 const ALL_GROUPS = MUSCLE_GROUPS.map(([g]) => g);
 
@@ -3922,7 +3860,7 @@ const EXERCISE_DB = {
   "barbell row": "Upper Back", "bent over row": "Upper Back", "dumbbell row": "Upper Back",
   "cable row": "Upper Back", "seated cable row": "Upper Back", "t-bar row": "Upper Back",
   "chest supported row": "Upper Back", "pendlay row": "Upper Back", "machine row": "Upper Back",
-  "face pull": "Upper Back", "barbell shrug": "Upper Back", "dumbbell shrug": "Upper Back",
+  "face pull": "Rear Delts", "barbell shrug": "Upper Back", "dumbbell shrug": "Upper Back",
   "rack pull": "Upper Back", "meadows row": "Upper Back", "helms row": "Upper Back",
   "cross body cable row": "Upper Back", "incline row": "Upper Back",
   // Front Delts
@@ -3930,26 +3868,28 @@ const EXERCISE_DB = {
   "seated dumbbell press": "Front Delts", "arnold press": "Front Delts", "barbell overhead press": "Front Delts",
   "smith machine overhead press": "Front Delts", "machine shoulder press": "Front Delts",
   "front raise": "Front Delts", "dumbbell front raise": "Front Delts",
-  // Side/Rear Delts
-  "lateral raise": "Side/Rear Delts", "dumbbell lateral raise": "Side/Rear Delts",
-  "cable lateral raise": "Side/Rear Delts", "machine lateral raise": "Side/Rear Delts",
-  "rear delt fly": "Side/Rear Delts", "reverse pec deck": "Side/Rear Delts",
-  "cable rear delt fly": "Side/Rear Delts", "bent over lateral raise": "Side/Rear Delts",
-  "side laying lateral raise": "Side/Rear Delts", "upright row": "Side/Rear Delts",
+  // Side Delts
+  "lateral raise": "Side Delts", "dumbbell lateral raise": "Side Delts",
+  "cable lateral raise": "Side Delts", "machine lateral raise": "Side Delts",
+  "side laying lateral raise": "Side Delts", "upright row": "Side Delts",
+  // Rear Delts
+  "rear delt fly": "Rear Delts", "reverse pec deck": "Rear Delts",
+  "cable rear delt fly": "Rear Delts", "bent over lateral raise": "Rear Delts",
   // Quads
   "barbell squat": "Quads", "back squat": "Quads", "front squat": "Quads",
   "goblet squat": "Quads", "leg press": "Quads", "hack squat": "Quads",
   "leg extension": "Quads", "bulgarian split squat": "Quads", "walking lunge": "Quads",
   "dumbbell lunge": "Quads", "barbell lunge": "Quads", "smith machine squat": "Quads",
   "sissy squat": "Quads", "step up": "Quads", "v squat": "Quads",
-  // Hams/Glutes
-  "romanian deadlift": "Hams/Glutes", "stiff leg deadlift": "Hams/Glutes",
-  "conventional deadlift": "Hams/Glutes", "sumo deadlift": "Hams/Glutes",
-  "lying leg curl": "Hams/Glutes", "seated leg curl": "Hams/Glutes",
-  "nordic curl": "Hams/Glutes", "hip thrust": "Hams/Glutes", "barbell hip thrust": "Hams/Glutes",
-  "glute bridge": "Hams/Glutes", "cable pull through": "Hams/Glutes",
-  "good morning": "Hams/Glutes", "dumbbell rdl": "Hams/Glutes",
-  "single leg rdl": "Hams/Glutes", "trap bar deadlift": "Hams/Glutes",
+  // Hamstrings
+  "romanian deadlift": "Hamstrings", "stiff leg deadlift": "Hamstrings",
+  "conventional deadlift": "Hamstrings", "sumo deadlift": "Hamstrings",
+  "lying leg curl": "Hamstrings", "seated leg curl": "Hamstrings",
+  "nordic curl": "Hamstrings", "good morning": "Hamstrings",
+  "dumbbell rdl": "Hamstrings", "single leg rdl": "Hamstrings", "trap bar deadlift": "Hamstrings",
+  // Glutes
+  "hip thrust": "Glutes", "barbell hip thrust": "Glutes",
+  "glute bridge": "Glutes", "cable pull through": "Glutes",
   // Biceps
   "barbell curl": "Biceps", "dumbbell curl": "Biceps", "hammer curl": "Biceps",
   "preacher curl": "Biceps", "incline dumbbell curl": "Biceps", "cable curl": "Biceps",
@@ -3975,6 +3915,238 @@ const EXERCISE_DB = {
 };
 const EXERCISE_NAMES = Object.keys(EXERCISE_DB).sort();
 
+/* ─── Tier system ───────────────────────────────────────────────────────────
+ * Free  → broad groups (12).  Pro → granular sub-groups (22).
+ * isPro() gates classification, dropdown options, and volume targets.
+ * data.isPro = true is set when user unlocks Pro (payment TBD).
+ * ─────────────────────────────────────────────────────────────────────────── */
+function isPro() { return !!data.isPro; }
+
+/* Granular sub-group classifications available to Pro users only */
+const PRO_EXERCISE_DB = {
+  // Chest sub-groups (incline=Upper Chest, flat/decline=Lower Chest)
+  "incline barbell bench press": "Upper Chest", "incline dumbbell press": "Upper Chest",
+  "incline dumbbell fly": "Upper Chest", "incline cable fly": "Upper Chest",
+  "incline bench press": "Upper Chest", "low to high cable fly": "Upper Chest",
+  "decline bench press": "Lower Chest", "decline dumbbell press": "Lower Chest",
+  "decline push up": "Lower Chest", "dip": "Lower Chest",
+  "bench press": "Lower Chest", "barbell bench press": "Lower Chest", "dumbbell bench press": "Lower Chest",
+  "dumbbell fly": "Lower Chest", "cable fly": "Lower Chest", "chest fly": "Lower Chest",
+  "machine fly": "Lower Chest", "pec deck": "Lower Chest", "push up": "Lower Chest", "pushup": "Lower Chest",
+  "cable crossover": "Lower Chest", "smith machine bench press": "Lower Chest",
+  // Core sub-groups
+  "crunch": "Upper Abs", "cable crunch": "Upper Abs", "sit up": "Upper Abs", "ab wheel": "Upper Abs",
+  "decline sit up": "Upper Abs", "machine crunch": "Upper Abs",
+  "leg raise": "Lower Abs", "hanging leg raise": "Lower Abs", "hanging knee raise": "Lower Abs",
+  "reverse crunch": "Lower Abs", "captain's chair": "Lower Abs", "dragon flag": "Lower Abs",
+  "russian twist": "Obliques", "side bend": "Obliques", "cable woodchop": "Obliques",
+  "pallof press": "Obliques", "oblique crunch": "Obliques", "bicycle crunch": "Obliques",
+  // Calves sub-groups (knee-straight=Gastrocnemius, knee-bent=Soleus)
+  "standing calf raise": "Gastrocnemius", "donkey calf raise": "Gastrocnemius",
+  "smith machine calf raise": "Gastrocnemius", "single leg calf raise": "Gastrocnemius",
+  "leg press calf raise": "Gastrocnemius", "calf raise": "Gastrocnemius",
+  "box jump": "Gastrocnemius", "jump rope": "Gastrocnemius",
+  "seated calf raise": "Soleus", "tibialis raise": "Soleus",
+  // Forearm sub-groups
+  "wrist curl": "Forearm Flexors", "farmer walk": "Forearm Flexors",
+  "farmer carry": "Forearm Flexors", "plate pinch": "Forearm Flexors", "dead hang": "Forearm Flexors",
+  "reverse wrist curl": "Brachioradialis", "reverse curl": "Brachioradialis",
+  // Biceps sub-groups (long head=stretch/hammer, short head=peak/preacher)
+  "incline dumbbell curl": "Biceps Long Head", "hammer curl": "Biceps Long Head",
+  "zottman curl": "Biceps Long Head", "bayesian curl": "Biceps Long Head",
+  "cable curl behind back": "Biceps Long Head",
+  "barbell curl": "Biceps Short Head", "ez bar curl": "Biceps Short Head",
+  "dumbbell curl": "Biceps Short Head", "alternating dumbbell curl": "Biceps Short Head",
+  "cable curl": "Biceps Short Head", "machine curl": "Biceps Short Head",
+  "seated dumbbell curl": "Biceps Short Head",
+  "preacher curl": "Biceps Short Head", "concentration curl": "Biceps Short Head",
+  "spider curl": "Biceps Short Head", "scott curl": "Biceps Short Head",
+  // Triceps sub-groups (long head=overhead/stretched, lateral=pushdowns, medial=close grip)
+  "overhead tricep extension": "Triceps Long Head", "cable overhead extension": "Triceps Long Head",
+  "skull crusher": "Triceps Long Head", "french press": "Triceps Long Head", "jm press": "Triceps Long Head",
+  "lying tricep extension": "Triceps Long Head", "dumbbell overhead extension": "Triceps Long Head",
+  "tricep pushdown": "Triceps Lateral Head", "rope pushdown": "Triceps Lateral Head",
+  "single arm pushdown": "Triceps Lateral Head", "kickback": "Triceps Lateral Head",
+  "tricep dip": "Triceps Lateral Head",
+  "close grip bench press": "Triceps Medial Head", "close-grip bench press": "Triceps Medial Head",
+  "diamond push up": "Triceps Medial Head", "reverse grip pushdown": "Triceps Medial Head",
+  // Glutes sub-groups
+  "hip thrust": "Glute Max", "barbell hip thrust": "Glute Max",
+  "glute bridge": "Glute Max", "cable pull through": "Glute Max",
+  "romanian deadlift": "Glute Max", "rdl": "Glute Max",
+  "cable kickback": "Glute Med", "hip abduction": "Glute Med",
+  "banded walk": "Glute Med", "clamshell": "Glute Med",
+};
+
+/* Maps pro-only granular groups → free-tier consolidated group */
+const FREE_GROUP_MAP = {
+  "Front Delts": "Shoulders", "Side Delts": "Shoulders", "Rear Delts": "Shoulders",
+  "Upper Chest": "Chest", "Lower Chest": "Chest",
+  "Upper Abs": "Core", "Lower Abs": "Core", "Obliques": "Core",
+  "Gastrocnemius": "Calves", "Soleus": "Calves",
+  "Forearm Flexors": "Forearms", "Brachioradialis": "Forearms",
+  "Biceps Long Head": "Biceps", "Biceps Short Head": "Biceps",
+  "Triceps Long Head": "Triceps", "Triceps Lateral Head": "Triceps", "Triceps Medial Head": "Triceps",
+  "Glute Max": "Glutes", "Glute Med": "Glutes",
+};
+
+/* Dropdown options per tier — head to toe */
+const FREE_GROUPS  = ["Shoulders","Upper Back","Chest","Lats","Triceps","Biceps","Forearms","Core","Glutes","Hamstrings","Quads","Calves"];
+const PRO_GROUPS   = ["Front Delts","Side Delts","Rear Delts","Upper Back","Upper Chest","Lower Chest","Lats","Triceps Long Head","Triceps Lateral Head","Triceps Medial Head","Biceps Long Head","Biceps Short Head","Forearm Flexors","Brachioradialis","Upper Abs","Lower Abs","Obliques","Glute Max","Glute Med","Hamstrings","Quads","Gastrocnemius","Soleus"];
+
+/* Sort order for volume bars — head to toe, covers both tiers */
+const HEAD_TO_TOE_ORDER = [
+  "Shoulders","Front Delts","Side Delts","Rear Delts",
+  "Upper Back","Lats",
+  "Upper Chest","Chest","Lower Chest",
+  "Triceps","Triceps Long Head","Triceps Lateral Head","Triceps Medial Head",
+  "Biceps","Biceps Long Head","Biceps Short Head",
+  "Forearms","Forearm Flexors","Brachioradialis",
+  "Core","Upper Abs","Lower Abs","Obliques",
+  "Glutes","Glute Max","Glute Med",
+  "Hamstrings","Quads",
+  "Calves","Gastrocnemius","Soleus",
+];
+
+/* ─── Secondary Muscle Database ──────────────────────────────────────────────
+ * Strong secondary = 0.5 set credit  (substantial EMG activation)
+ * Weak secondary   = 0.25 set credit (stabiliser / minor contributor)
+ *
+ * Sources:
+ *  [1] Barnett C et al. (1995). Effects of variations of the bench press on EMG.
+ *      J Strength Cond Res 9(4):222-227.
+ *  [2] Lehman GJ (2005). Grip width and forearm pronation on flat bench press EMG.
+ *      J Strength Cond Res 19(3):587-591.
+ *  [3] Saeterbakken AH & Fimland MS (2013). EMG and 6RM strength in bench press on
+ *      stable/unstable surfaces. J Strength Cond Res 27(4):1101-7.
+ *  [4] Youdas JW et al. (2010). Surface EMG of pull-up, chin-up & lat pulldown.
+ *      J Strength Cond Res 24(12):3404-14.
+ *  [5] Fenwick CM et al. (2009). Comparison of row exercises.
+ *      J Strength Cond Res 23(2):350-8.
+ *  [6] Escamilla RF et al. (1998). Biomechanics of the knee during closed and open
+ *      kinetic chain exercises. Med Sci Sports Exerc 30(4):556-69.
+ *  [7] Escamilla RF et al. (2001). Biomechanics of sumo and conventional deadlifts.
+ *      Med Sci Sports Exerc 33(7):1105-21.
+ *  [8] Contreras B et al. (2011). A comparison of gluteus maximus EMG activity
+ *      during various hip extension exercises. J Strength Cond Res 25(3):796-803.
+ *  [9] Contreras B et al. (2013). Hip thrust vs back squat EMG.
+ *      J Strength Cond Res 29(6):1521-6.
+ * [10] Gullett JC et al. (2009). Front vs back squat kinematics and EMG.
+ *      J Strength Cond Res 23(1):284-92.
+ * [11] Camara KD et al. (2016). Trap bar vs straight bar deadlift.
+ *      J Strength Cond Res 30(5):1182-8.
+ * ─────────────────────────────────────────────────────────────────────────── */
+const SECONDARY_DB = {
+  // ── HORIZONTAL PUSH ──────────────────────────────────────────────────────
+  // [1][2] High tricep (lateral head) + moderate anterior deltoid across all flat press variants
+  "barbell bench press":        { strong: ["Triceps Lateral Head"],  weak: ["Front Delts"] },
+  "dumbbell bench press":       { strong: ["Triceps Lateral Head"],  weak: ["Front Delts"] },
+  "smith machine bench press":  { strong: ["Triceps Lateral Head"],  weak: ["Front Delts"] },
+  "machine chest press":        { strong: ["Triceps Lateral Head"],  weak: ["Front Delts"] },
+  "chest press machine":        { strong: ["Triceps Lateral Head"],  weak: ["Front Delts"] },
+  // [1] Incline increases anterior deltoid activation vs flat
+  "incline barbell bench press":{ strong: ["Triceps Lateral Head"],  weak: ["Front Delts", "Side Delts"] },
+  "incline dumbbell press":     { strong: ["Triceps Lateral Head"],  weak: ["Front Delts", "Side Delts"] },
+  // [1] Decline reduces deltoid involvement vs flat
+  "decline bench press":        { strong: ["Triceps Lateral Head"],  weak: [] },
+  // [2] Push-up: similar to bench; core added as weak due to plank position
+  "push up":                    { strong: ["Triceps Lateral Head"],  weak: ["Front Delts", "Upper Abs"] },
+  // Dip: chest-lean dip has chest primary (already in DB); tricep is strong secondary
+  "dip":                        { strong: ["Triceps Lateral Head"],  weak: ["Front Delts"] },
+  "tricep dip":                 { strong: ["Lower Chest"],           weak: ["Front Delts"] },
+  // Close-grip bench: triceps primary (in DB), chest is strong secondary [2]
+  "close grip bench press":     { strong: ["Lower Chest"],           weak: ["Front Delts"] },
+
+  // ── VERTICAL PUSH ────────────────────────────────────────────────────────
+  // [3] OHP: triceps long head (overhead stretch); upper back (trapezius) active as stabiliser
+  "overhead press":             { strong: ["Triceps Long Head"],  weak: ["Side Delts", "Upper Back"] },
+  "military press":             { strong: ["Triceps Long Head"],  weak: ["Side Delts", "Upper Back"] },
+  "barbell overhead press":     { strong: ["Triceps Long Head"],  weak: ["Side Delts", "Upper Back"] },
+  "dumbbell shoulder press":    { strong: ["Triceps Long Head"],  weak: ["Side Delts"] },
+  "seated dumbbell press":      { strong: ["Triceps Long Head"],  weak: ["Side Delts"] },
+  "arnold press":               { strong: ["Triceps Long Head"],  weak: ["Side Delts"] },
+  "smith machine overhead press":{ strong: ["Triceps Long Head"], weak: ["Side Delts"] },
+  "machine shoulder press":     { strong: ["Triceps Long Head"],  weak: ["Side Delts"] },
+
+  // ── VERTICAL PULL ────────────────────────────────────────────────────────
+  // [4] Chin-up: supinated grip emphasises biceps short head
+  "chin up":                    { strong: ["Biceps Short Head"],  weak: ["Upper Back"] },
+  "chin-up":                    { strong: ["Biceps Short Head"],  weak: ["Upper Back"] },
+  // [4] Pull-up: pronated grip emphasises biceps long head; rear delts actively contribute
+  "pull up":                    { strong: ["Biceps Long Head"],   weak: ["Upper Back", "Rear Delts"] },
+  "pull-up":                    { strong: ["Biceps Long Head"],   weak: ["Upper Back", "Rear Delts"] },
+  "neutral grip pull up":       { strong: ["Biceps Long Head"],   weak: ["Upper Back"] },
+  "assisted pull up":           { strong: ["Biceps Long Head"],   weak: ["Upper Back", "Rear Delts"] },
+  "assisted pull-up":           { strong: ["Biceps Long Head"],   weak: ["Upper Back", "Rear Delts"] },
+  // [4] Lat pulldown mirrors pull-up activation pattern
+  "lat pulldown":               { strong: ["Biceps Long Head"],   weak: ["Upper Back", "Rear Delts"] },
+  "wide grip lat pulldown":     { strong: ["Biceps Long Head"],   weak: ["Upper Back", "Rear Delts"] },
+  "close grip lat pulldown":    { strong: ["Biceps Short Head"],  weak: ["Upper Back"] },
+  "single arm lat pulldown":    { strong: ["Biceps Short Head"],  weak: ["Upper Back"] },
+  "machine pulldown":           { strong: ["Biceps Long Head"],   weak: ["Upper Back"] },
+
+  // ── HORIZONTAL PULL ──────────────────────────────────────────────────────
+  // [5] Rows: biceps short head (neutral/supinated grip) + lat activation; rear delts moderate
+  "barbell row":                { strong: ["Biceps Short Head", "Lats"],  weak: ["Rear Delts", "Upper Abs"] },
+  "bent over row":              { strong: ["Biceps Short Head", "Lats"],  weak: ["Rear Delts", "Upper Abs"] },
+  "dumbbell row":               { strong: ["Biceps Short Head", "Lats"],  weak: ["Rear Delts"] },
+  "cable row":                  { strong: ["Biceps Short Head", "Lats"],  weak: ["Rear Delts"] },
+  "seated cable row":           { strong: ["Biceps Short Head", "Lats"],  weak: ["Rear Delts"] },
+  "t-bar row":                  { strong: ["Biceps Short Head", "Lats"],  weak: ["Rear Delts", "Upper Abs"] },
+  "chest supported row":        { strong: ["Biceps Short Head", "Lats"],  weak: ["Rear Delts"] },
+  "pendlay row":                { strong: ["Biceps Short Head", "Lats"],  weak: ["Rear Delts", "Upper Abs"] },
+  "machine row":                { strong: ["Biceps Short Head", "Lats"],  weak: ["Rear Delts"] },
+  "meadows row":                { strong: ["Biceps Short Head", "Lats"],  weak: ["Rear Delts"] },
+  "helms row":                  { strong: ["Biceps Short Head"],          weak: ["Rear Delts"] },
+  "incline row":                { strong: ["Biceps Short Head", "Lats"],  weak: ["Rear Delts"] },
+  "cross body cable row":       { strong: ["Biceps Short Head", "Lats"],  weak: ["Rear Delts"] },
+  // Face pull primary=Rear Delts; upper back is strong secondary [5]
+  "face pull":                  { strong: ["Upper Back"],      weak: ["Side Delts"] },
+
+  // ── HIP HINGE ────────────────────────────────────────────────────────────
+  // [7] Conventional: glute max and upper back (erectors/traps) are strong secondaries
+  "conventional deadlift":      { strong: ["Glute Max", "Upper Back"], weak: ["Lats", "Upper Abs", "Quads"] },
+  // [7] Sumo: wider stance increases glute + quad contribution vs conventional
+  "sumo deadlift":              { strong: ["Glute Max", "Upper Back"], weak: ["Quads", "Upper Abs"] },
+  // [11] Trap bar sits between conventional and squat pattern in quad/glute loading
+  "trap bar deadlift":          { strong: ["Glute Max", "Upper Back"], weak: ["Quads", "Upper Abs"] },
+  // RDL/SLDL: glute max strong secondary; erectors weak (less bar travel than deadlift)
+  "romanian deadlift":          { strong: ["Glute Max"],       weak: ["Upper Back"] },
+  "stiff leg deadlift":         { strong: ["Glute Max"],       weak: ["Upper Back"] },
+  "dumbbell rdl":               { strong: ["Glute Max"],       weak: ["Upper Back"] },
+  "single leg rdl":             { strong: ["Glute Max"],       weak: ["Upper Abs"] },
+  "good morning":               { strong: ["Glute Max"],       weak: ["Upper Back", "Upper Abs"] },
+  // [8][9] Hip thrust primary=Glutes; hamstrings and core are active secondaries
+  "hip thrust":                 { strong: ["Hamstrings"],      weak: ["Quads", "Upper Abs"] },
+  "barbell hip thrust":         { strong: ["Hamstrings"],      weak: ["Quads", "Upper Abs"] },
+  "glute bridge":               { strong: ["Hamstrings"],      weak: ["Upper Abs"] },
+  "cable pull through":         { strong: ["Hamstrings"],      weak: ["Upper Abs"] },
+
+  // ── SQUAT PATTERN ────────────────────────────────────────────────────────
+  // [6] Back squat: glute max strong secondary; hamstrings and core weak
+  "barbell squat":              { strong: ["Glute Max"],       weak: ["Hamstrings", "Upper Abs"] },
+  "back squat":                 { strong: ["Glute Max"],       weak: ["Hamstrings", "Upper Abs"] },
+  "smith machine squat":        { strong: ["Glute Max"],       weak: ["Hamstrings", "Upper Abs"] },
+  // [10] Front squat: more upright torso = more core demand, less posterior chain
+  "front squat":                { strong: ["Glute Max"],       weak: ["Upper Abs"] },
+  "goblet squat":               { strong: ["Glute Max"],       weak: ["Upper Abs"] },
+  // [6] Leg press: reduced hip ROM limits glute vs squat; hamstrings minor
+  "leg press":                  { strong: ["Glute Max"],       weak: ["Hamstrings"] },
+  "hack squat":                 { strong: ["Glute Max"],       weak: ["Hamstrings"] },
+  "v squat":                    { strong: ["Glute Max"],       weak: ["Hamstrings"] },
+  // Split/lunge patterns: glute max strong; hamstrings and core moderate
+  "bulgarian split squat":      { strong: ["Glute Max"],       weak: ["Hamstrings", "Upper Abs"] },
+  "walking lunge":              { strong: ["Glute Max"],       weak: ["Hamstrings"] },
+  "dumbbell lunge":             { strong: ["Glute Max"],       weak: ["Hamstrings"] },
+  "barbell lunge":              { strong: ["Glute Max"],       weak: ["Hamstrings"] },
+  "step up":                    { strong: ["Glute Max"],       weak: ["Hamstrings"] },
+
+  // ── CARRIES / FULL BODY ───────────────────────────────────────────────────
+  // Farmer carry: traps + upper back heavily loaded; upper abs as stabiliser
+  "farmer walk":                { strong: ["Upper Abs"],       weak: ["Upper Back"] },
+  "farmer carry":               { strong: ["Upper Abs"],       weak: ["Upper Back"] },
+};
+
 /* Default recommended sets per muscle per week (Schoenfeld et al.) */
 /* Weekly set targets scaled by training style.
    Volume: higher volume, further from failure (Schoenfeld ranges).
@@ -3982,28 +4154,58 @@ const EXERCISE_NAMES = Object.keys(EXERCISE_DB).sort();
    Intensity: fewer sets, closer to failure — each set carries more stimulus. */
 const SET_TARGETS_BY_STYLE = {
   volume: {
+    // Free groups
+    "Shoulders": { min: 12, max: 22 },
     "Chest": { min: 12, max: 20 }, "Lats": { min: 12, max: 20 },
-    "Quads": { min: 12, max: 20 }, "Hams/Glutes": { min: 12, max: 20 },
-    "Front Delts": { min: 10, max: 16 }, "Side/Rear Delts": { min: 10, max: 16 },
+    "Quads": { min: 12, max: 20 }, "Hamstrings": { min: 10, max: 16 }, "Glutes": { min: 10, max: 16 },
     "Upper Back": { min: 10, max: 16 },
     "Biceps": { min: 8, max: 14 }, "Triceps": { min: 8, max: 14 },
-    "Calves": { min: 8, max: 14 }, "Forearms": { min: 6, max: 12 }, "Core": { min: 6, max: 12 }
+    "Calves": { min: 8, max: 14 }, "Forearms": { min: 6, max: 12 }, "Core": { min: 6, max: 12 },
+    // Pro sub-groups
+    "Front Delts": { min: 4, max: 8 }, "Side Delts": { min: 6, max: 12 }, "Rear Delts": { min: 6, max: 12 },
+    "Upper Chest": { min: 4, max: 8 }, "Lower Chest": { min: 6, max: 14 },
+    "Upper Abs": { min: 3, max: 8 }, "Lower Abs": { min: 3, max: 8 }, "Obliques": { min: 2, max: 6 },
+    "Gastrocnemius": { min: 4, max: 8 }, "Soleus": { min: 4, max: 8 },
+    "Forearm Flexors": { min: 3, max: 6 }, "Brachioradialis": { min: 3, max: 6 },
+    "Biceps Long Head": { min: 4, max: 8 }, "Biceps Short Head": { min: 4, max: 8 },
+    "Triceps Long Head": { min: 3, max: 6 }, "Triceps Lateral Head": { min: 3, max: 6 }, "Triceps Medial Head": { min: 2, max: 4 },
+    "Glute Max": { min: 6, max: 12 }, "Glute Med": { min: 4, max: 8 },
   },
   balanced: {
+    // Free groups
+    "Shoulders": { min: 10, max: 18 },
     "Chest": { min: 10, max: 16 }, "Lats": { min: 10, max: 16 },
-    "Quads": { min: 10, max: 16 }, "Hams/Glutes": { min: 10, max: 16 },
-    "Front Delts": { min: 8, max: 14 }, "Side/Rear Delts": { min: 8, max: 14 },
+    "Quads": { min: 10, max: 16 }, "Hamstrings": { min: 8, max: 14 }, "Glutes": { min: 8, max: 14 },
     "Upper Back": { min: 8, max: 14 },
     "Biceps": { min: 6, max: 12 }, "Triceps": { min: 6, max: 12 },
-    "Calves": { min: 6, max: 12 }, "Forearms": { min: 4, max: 10 }, "Core": { min: 4, max: 10 }
+    "Calves": { min: 6, max: 12 }, "Forearms": { min: 4, max: 10 }, "Core": { min: 4, max: 10 },
+    // Pro sub-groups
+    "Front Delts": { min: 3, max: 7 }, "Side Delts": { min: 5, max: 10 }, "Rear Delts": { min: 5, max: 10 },
+    "Upper Chest": { min: 3, max: 7 }, "Lower Chest": { min: 5, max: 12 },
+    "Upper Abs": { min: 2, max: 6 }, "Lower Abs": { min: 2, max: 6 }, "Obliques": { min: 2, max: 5 },
+    "Gastrocnemius": { min: 3, max: 7 }, "Soleus": { min: 3, max: 7 },
+    "Forearm Flexors": { min: 2, max: 5 }, "Brachioradialis": { min: 2, max: 5 },
+    "Biceps Long Head": { min: 3, max: 7 }, "Biceps Short Head": { min: 3, max: 7 },
+    "Triceps Long Head": { min: 2, max: 5 }, "Triceps Lateral Head": { min: 2, max: 5 }, "Triceps Medial Head": { min: 2, max: 4 },
+    "Glute Max": { min: 5, max: 10 }, "Glute Med": { min: 3, max: 7 },
   },
   intensity: {
+    // Free groups
+    "Shoulders": { min: 6, max: 12 },
     "Chest": { min: 6, max: 12 }, "Lats": { min: 6, max: 12 },
-    "Quads": { min: 6, max: 12 }, "Hams/Glutes": { min: 6, max: 12 },
-    "Front Delts": { min: 4, max: 10 }, "Side/Rear Delts": { min: 4, max: 10 },
+    "Quads": { min: 6, max: 12 }, "Hamstrings": { min: 5, max: 10 }, "Glutes": { min: 5, max: 10 },
     "Upper Back": { min: 4, max: 10 },
     "Biceps": { min: 3, max: 8 }, "Triceps": { min: 3, max: 8 },
-    "Calves": { min: 3, max: 8 }, "Forearms": { min: 2, max: 6 }, "Core": { min: 2, max: 6 }
+    "Calves": { min: 3, max: 8 }, "Forearms": { min: 2, max: 6 }, "Core": { min: 2, max: 6 },
+    // Pro sub-groups
+    "Front Delts": { min: 2, max: 5 }, "Side Delts": { min: 3, max: 7 }, "Rear Delts": { min: 3, max: 7 },
+    "Upper Chest": { min: 2, max: 5 }, "Lower Chest": { min: 3, max: 8 },
+    "Upper Abs": { min: 2, max: 5 }, "Lower Abs": { min: 2, max: 5 }, "Obliques": { min: 1, max: 4 },
+    "Gastrocnemius": { min: 2, max: 5 }, "Soleus": { min: 2, max: 5 },
+    "Forearm Flexors": { min: 1, max: 4 }, "Brachioradialis": { min: 1, max: 4 },
+    "Biceps Long Head": { min: 2, max: 5 }, "Biceps Short Head": { min: 2, max: 5 },
+    "Triceps Long Head": { min: 1, max: 4 }, "Triceps Lateral Head": { min: 1, max: 4 }, "Triceps Medial Head": { min: 1, max: 3 },
+    "Glute Max": { min: 3, max: 7 }, "Glute Med": { min: 2, max: 5 },
   }
 };
 const DEFAULT_SET_TARGETS = SET_TARGETS_BY_STYLE.balanced;
@@ -4160,15 +4362,71 @@ const SPLIT_PRESETS = {
 };
 
 function classifyExercise(name) {
-  // 1. User-defined custom tags
-  if (data.customExerciseTags && data.customExerciseTags[name]) return data.customExerciseTags[name];
-  // 2. Curated exercise database
-  const dbResult = EXERCISE_DB[name.toLowerCase()];
-  if (dbResult) return dbResult;
-  // 3. Keyword fallback (backward compat)
-  const n = name.toLowerCase();
+  const lower = name.toLowerCase().trim();
+  // 1. User-defined custom tag (always respected)
+  if (data.customExerciseTags?.[name]) {
+    const tag = data.customExerciseTags[name];
+    return isPro() ? tag : (FREE_GROUP_MAP[tag] || tag);
+  }
+  // 2. Pro: check granular DB first
+  if (isPro() && PRO_EXERCISE_DB[lower]) return PRO_EXERCISE_DB[lower];
+  // 2b. Pro: keyword-based sub-group fallback (catches name variations not in exact DB)
+  if (isPro()) {
+    const inc = s => lower.includes(s);
+    // Triceps sub-groups
+    if (inc('tricep') || inc('skull crush') || (inc('press down') && !inc('shoulder')) || inc('pressdown') || inc('kickback')) {
+      if (inc('overhead') || inc('skull') || inc('french') || inc('lying') || inc('jm')) return 'Triceps Long Head';
+      if (inc('close grip') || inc('close-grip') || inc('diamond') || inc('reverse grip')) return 'Triceps Medial Head';
+      return 'Triceps Lateral Head'; // pushdowns, kickbacks, default
+    }
+    // Biceps sub-groups (exclude leg curl, wrist curl, glute)
+    if ((inc('curl') && !inc('leg curl') && !inc('wrist curl') && !inc('glute') && !inc('nordic')) || (inc('bicep') && !inc('biceps brachii'))) {
+      if (inc('hammer') || inc('zottman') || inc('bayesian') || (inc('incline') && inc('curl')) || inc('behind back')) return 'Biceps Long Head';
+      return 'Biceps Short Head';
+    }
+    // Chest sub-groups
+    if (inc('bench press') || inc('chest press') || inc('chest fly') || inc('cable fly') || inc('pec deck') || inc('cable crossover') ||
+        ((inc('push up') || inc('pushup')) && !inc('pushdown'))) {
+      if (inc('incline') || inc('low to high')) return 'Upper Chest';
+      return 'Lower Chest';
+    }
+    // Calves sub-groups
+    if (inc('calf') || inc('calves') || inc('tibialis')) {
+      if (inc('seated') || inc('tibialis')) return 'Soleus';
+      return 'Gastrocnemius';
+    }
+    // Core sub-groups
+    if (inc('crunch') || inc('sit up') || inc('ab ') || inc('abs') || inc('plank') || inc('leg raise') ||
+        inc('core') || inc('twist') || inc('oblique') || inc('woodchop') || inc('pallof') || inc('dragon flag') ||
+        inc('hanging') || inc('ab wheel') || inc('bicycle')) {
+      if (inc('hanging') || (inc('leg raise') && !inc('side')) || inc('reverse crunch') || inc('dragon flag') || inc('captain')) return 'Lower Abs';
+      if (inc('oblique') || inc('twist') || inc('woodchop') || inc('pallof') || inc('side bend') || inc('bicycle')) return 'Obliques';
+      return 'Upper Abs';
+    }
+    // Glute sub-groups
+    if (inc('glute') || inc('hip thrust') || inc('cable pull through')) {
+      if (inc('abduction') || inc('clamshell') || inc('banded walk') || inc('hip abduct') || inc('glute med')) return 'Glute Med';
+      return 'Glute Max';
+    }
+    // Forearm sub-groups
+    if (inc('wrist') || inc('forearm') || inc('grip') || (inc('reverse curl') && !inc('pec'))) {
+      if (inc('reverse curl') || inc('reverse wrist') || inc('brachioradialis')) return 'Brachioradialis';
+      return 'Forearm Flexors';
+    }
+    // Shoulder sub-groups
+    if (inc('lateral raise') || inc('side raise') || inc('side lying') || inc('upright row')) return 'Side Delts';
+    if (inc('rear delt') || inc('reverse fly') || inc('face pull') || inc('bent over lateral') || inc('reverse pec')) return 'Rear Delts';
+  }
+  // 3. Standard exercise DB
+  if (EXERCISE_DB[lower]) {
+    const tag = EXERCISE_DB[lower];
+    return isPro() ? tag : (FREE_GROUP_MAP[tag] || tag);
+  }
+  // 4. Keyword fallback
   for (const [group, keywords] of MUSCLE_GROUPS) {
-    if (keywords.some(k => n.includes(k))) return group;
+    if (keywords.some(k => lower.includes(k))) {
+      return isPro() ? group : (FREE_GROUP_MAP[group] || group);
+    }
   }
   return 'Other';
 }
@@ -4194,24 +4452,58 @@ function getSetTargets() {
 function getBarColorClass(group, sets) {
   const t = getSetTargets()[group];
   if (!t) return '';
-  if (sets < t.min) return 'under';
+  if (sets > t.max) return 'over';
+  return 'in-range';
+}
+
+// In Pro mode, parent bars sum only PRESENT children's targets
+// so the parent reflects reality (not penalising for missing sub-groups).
+function getProParentTarget(parentName, presentChildren) {
+  const targets = getSetTargets();
+  const allChildren = Object.entries(FREE_GROUP_MAP).filter(([, p]) => p === parentName).map(([c]) => c);
+  const children = presentChildren ? allChildren.filter(c => presentChildren.includes(c)) : allChildren;
+  if (!children.length) return targets[parentName] || null;
+  const minSum = children.reduce((s, g) => s + (targets[g]?.min || 0), 0);
+  const maxSum = children.reduce((s, g) => s + (targets[g]?.max || 0), 0);
+  return minSum || maxSum ? { min: minSum, max: maxSum } : null;
+}
+
+function getParentBarColorClass(parentName, sets, presentChildren) {
+  const t = isPro() ? getProParentTarget(parentName, presentChildren) : getSetTargets()[parentName];
+  if (!t) return '';
   if (sets > t.max) return 'over';
   return 'in-range';
 }
 
 function calculateBodyPartVolume(sessions) {
   const volumes = {};
+  function addTo(group, setCredit, volCredit, isDirect) {
+    if (!group || group === 'Other') return;
+    if (!volumes[group]) volumes[group] = { volume: 0, sets: 0, directSets: 0, indirectSets: 0 };
+    volumes[group].sets += setCredit;
+    volumes[group].volume += volCredit;
+    if (isDirect) volumes[group].directSets += setCredit;
+    else          volumes[group].indirectSets += setCredit;
+  }
   for (const session of sessions) {
     for (const ex of session.exercises) {
-      const group = classifyExercise(ex.name);
-      if (!volumes[group]) volumes[group] = { volume: 0, sets: 0 };
+      const primary = classifyExercise(ex.name);
+      const sec = SECONDARY_DB[ex.name.toLowerCase()] || null;
       for (const set of ex.sets) {
         const ns = normalizeSet(set);
         if (!ns.skipped) {
           const reps = Array.isArray(ns.reps) ? ns.reps.reduce((a, b) => a + b, 0) : (ns.reps || 0);
           const weight = ns.weight || 0;
-          volumes[group].volume += reps * weight;
-          volumes[group].sets += 1;
+          const vol = reps * weight;
+          // Primary: full credit
+          addTo(primary, 1, vol, true);
+          if (sec) {
+            const remap = g => isPro() ? g : (FREE_GROUP_MAP[g] || g);
+            // Strong secondary: 0.5 set credit
+            (sec.strong || []).forEach(g => addTo(remap(g), 0.5, vol * 0.5, false));
+            // Weak secondary: 0.25 set credit
+            (sec.weak || []).forEach(g => addTo(remap(g), 0.25, vol * 0.25, false));
+          }
         }
       }
     }
@@ -5555,7 +5847,7 @@ function renderExercise() {
       if (ex.progressionBadge === 'hold') {
         progBadge = `<div class="progression-badge" style="color:var(--text-3);">● Hold weight — RPE was high last session</div>`;
       } else {
-        progBadge = `<div class="progression-badge">▲ ${escapeHtml(ex.progressionBadge)} <span style="opacity:0.5;">was ${displayWeight(ex.previousWeight)}</span></div>`;
+        progBadge = `<div class="progression-badge">▲ ${escapeHtml(ex.progressionBadge)}</div>`;
       }
     }
     weightHtml = `
@@ -5630,9 +5922,13 @@ function renderExercise() {
     saveWorkoutState();
   }
   if (!workout.exerciseReady && currentSet === 1) {
-    const prepNoteDisplay = ex.notes
-      ? `<div class="prep-note">${escapeHtml(ex.notes)}</div>`
-      : `<div class="prep-note empty" onclick="showWorkoutNoteInput()">+ add note</div>`;
+    const prepToggleLabel = ex.notes ? 'Note' : 'Add note';
+    const prepNoteDisplay = `<div class="note-toggle" onclick="togglePrepNote()">\u{1F4DD} ${prepToggleLabel} <span class="note-chevron">${prepNoteExpanded ? '\u25BE' : '\u25B8'}</span></div>`
+      + (prepNoteExpanded
+        ? (ex.notes
+          ? `<div class="prep-note">${escapeHtml(ex.notes)}<span class="prep-note-edit-link" onclick="showWorkoutNoteInput()"> Edit</span></div>`
+          : `<textarea class="exercise-note-edit" rows="2" placeholder="e.g., pause at bottom, narrow grip" onblur="updateWorkoutNote(this.value)" onfocus="this.style.borderColor='var(--accent)'">${ex.notes || ''}</textarea>`)
+        : '');
 
     // Static target display (no +/− buttons)
     let prepWeightHtml = '';
@@ -5662,10 +5958,10 @@ function renderExercise() {
       ${typeBadge}
       <div class="exercise-label">Exercise ${workout.currentExerciseIndex + 1} of ${totalExercises}</div>
       <div class="exercise-name">${escapeHtml(ex.name)}</div>
-      ${prepNoteDisplay}
       ${prepWeightHtml}
       ${prepPlateHtml}
       ${warmupLogHtml}
+      ${prepNoteDisplay}
       ${!ex.isBodyweight ? `<button class="done-btn" onclick="startWarmup()" style="margin-top:32px;background:var(--surface-2);color:var(--text);">Warm Up</button>` : ''}
       <button class="done-btn" onclick="exerciseReady()" style="margin-top:${ex.isBodyweight ? '32' : '12'}px;">Working Sets</button>
       <div class="prep-actions" style="display:flex;gap:10px;margin-top:12px;">
@@ -5707,10 +6003,8 @@ function renderExercise() {
     <div class="exercise-label">Exercise ${workout.currentExerciseIndex + 1} of ${totalExercises}</div>
     <div class="exercise-name">${escapeHtml(ex.name)}</div>
     <div class="set-indicator">${setLabel}</div>
-    ${lastSessionHtml}
     ${notesHtml}
     ${weightHtml}
-    ${trackPlateHtml ? `<div style="margin:4px 0 12px">${trackPlateHtml}</div>` : ''}
     <div class="rep-adjuster">
       <button class="rep-btn" onclick="adjustReps(-1)">−</button>
       <div style="text-align:center">
@@ -5719,7 +6013,8 @@ function renderExercise() {
       </div>
       <button class="rep-btn" onclick="adjustReps(1)">+</button>
     </div>
-    <button class="done-btn" onclick="completeSet(this)">Done</button>
+    ${lastSessionHtml}
+    <button class="done-btn" onclick="completeSet(this)" style="width:100%;border-radius:16px;">Done</button>
     <div class="workout-actions">
       ${(workout.currentExerciseIndex > 0 || ex.completedSets.length > 0) ? '<button class="back-btn" onclick="goBackSet()">Back</button>' : ''}
       <button class="skip-btn" onclick="skipSet()">Skip Set</button>
@@ -5729,7 +6024,7 @@ function renderExercise() {
   `;
 
   // Up next
-  const remaining = workout.exercises.slice(workout.currentExerciseIndex + 1, workout.currentExerciseIndex + 3);
+  const remaining = workout.exercises.slice(workout.currentExerciseIndex + 1, workout.currentExerciseIndex + 2);
   if (remaining.length > 0) {
     upnextEl.innerHTML = `
       <div class="up-next-label">Up next <span style="font-size:10px;color:var(--text-3);font-weight:400;text-transform:none;letter-spacing:0;">(tap to swap)</span></div>
@@ -5784,23 +6079,6 @@ function adjustWeight(delta) {
   const el = document.querySelector('.weight-display');
   if (el) el.textContent = displayWeight(ex.currentWeight);
 
-  // Update weight info dynamically (plate calc or per-dumbbell)
-  const plateEl = document.getElementById('dynamic-plate-calc');
-  const eqType = getEquipmentType(ex.name);
-  if (eqType) {
-    const newHtml = buildWeightInfoHtml(ex.name, ex.currentWeight, 'centered');
-    if (plateEl) {
-      if (newHtml) {
-        plateEl.outerHTML = newHtml;
-      } else {
-        plateEl.remove();
-      }
-    } else if (newHtml) {
-      const adjuster = document.querySelector('.weight-adjuster');
-      if (adjuster) adjuster.insertAdjacentHTML('afterend', newHtml);
-    }
-  }
-
   // Warning if weight increased >10% above session start
   if (ex.startWeight && ex.startWeight > 0) {
     const increase = (ex.currentWeight - ex.startWeight) / ex.startWeight;
@@ -5835,6 +6113,17 @@ function updateWorkoutNote(val) {
     if (match) { match.notes = ex.notes; save(); }
   }
   saveWorkoutState();
+}
+
+function togglePrepNote() {
+  prepNoteExpanded = !prepNoteExpanded;
+  renderExercise();
+  if (prepNoteExpanded) {
+    setTimeout(() => {
+      const ta = document.querySelector('.exercise-note-edit');
+      if (ta) ta.focus();
+    }, 50);
+  }
 }
 
 function toggleWorkoutNotes() {
@@ -7300,174 +7589,6 @@ function deleteFood(id) {
   renderDietSafe();
 }
 
-function getMuscleFill(group, volumes, maxVal, mode) {
-  const val = mode === 'sets' ? (volumes[group]?.sets || 0) : (volumes[group]?.volume || 0);
-  const opacity = val > 0 ? (0.15 + 0.85 * (val / maxVal)).toFixed(2) : 0.03;
-  if (val === 0) return `rgba(255,255,255,0.03)`;
-  if (mode === 'sets') {
-    const cc = getBarColorClass(group, volumes[group]?.sets || 0);
-    if (cc === 'under') return `rgba(255,149,0,${opacity})`;
-    if (cc === 'over') return `rgba(255,59,48,${opacity})`;
-    return `rgba(163,184,108,${opacity})`;
-  }
-  return `rgba(163,184,108,${opacity})`;
-}
-
-function buildBodyMapSVG(volumes, maxVal, mode) {
-  // Clean anatomy illustration — Hevy-style
-  // Thin outlined silhouette + simple rounded muscle shapes floating on top
-  // Slightly more muscular than reference but same clean aesthetic
-  // Center x=100, figure height ~350
-
-  // Smooth body silhouette — athletic male, arms taper cleanly (no hands/fingers)
-  const silhouette = 'M100,18 C94,18 89,23 89,32 C89,41 94,47 100,47 C106,47 111,41 111,32 C111,23 106,18 100,18 Z M93,47 C91,49 89,53 88,58 C85,57 78,58 70,62 C62,66 55,73 52,80 C49,88 50,96 52,104 C52,110 52,118 54,126 C52,132 50,140 50,148 C52,156 56,160 62,162 C64,164 66,164 68,162 C66,174 64,190 66,206 C68,222 72,240 76,252 C78,258 80,264 82,268 C82,274 80,284 78,298 C76,316 78,332 82,346 C84,354 88,360 94,362 L100,364 L106,362 C112,360 116,354 118,346 C122,332 124,316 122,298 C120,284 118,274 118,268 C120,264 122,258 124,252 C128,240 132,222 134,206 C136,190 136,174 132,162 C134,164 136,164 138,162 C144,160 148,156 150,148 C150,140 148,132 146,126 C148,118 148,110 148,104 C150,96 151,88 148,80 C145,73 138,66 130,62 C122,58 115,57 112,58 C111,53 109,49 107,47 Z';
-
-  // --- FRONT VIEW: Individual muscle shapes ---
-  const frontRegions = [
-    // --- SHOULDERS ---
-    ['Front Delts', [
-      'M70,64 C64,63 58,67 55,73 C53,79 53,85 55,90 L60,88 C60,84 62,78 66,74 C68,72 70,68 72,66 Z',
-      'M130,64 C136,63 142,67 145,73 C147,79 147,85 145,90 L140,88 C140,84 138,78 134,74 C132,72 130,68 128,66 Z'
-    ]],
-    ['Side/Rear Delts', [
-      'M55,73 C52,78 51,84 52,88 L55,90 C53,84 54,78 55,73 Z',
-      'M145,73 C148,78 149,84 148,88 L145,90 C147,84 146,78 145,73 Z'
-    ]],
-
-    // --- CHEST ---
-    ['Chest', [
-      'M72,70 C66,72 63,78 62,86 C62,94 65,100 70,104 C75,107 82,108 90,106 L98,102 L98,74 C90,70 80,68 72,70 Z',
-      'M128,70 C134,72 137,78 138,86 C138,94 135,100 130,104 C125,107 118,108 110,106 L102,102 L102,74 C110,70 120,68 128,70 Z'
-    ]],
-
-    // --- ARMS ---
-    ['Biceps', [
-      'M60,90 L64,88 C66,92 68,98 68,106 C68,114 66,122 64,128 L60,132 C58,124 56,114 56,106 C56,98 58,94 60,90 Z',
-      'M140,90 L136,88 C134,92 132,98 132,106 C132,114 134,122 136,128 L140,132 C142,124 144,114 144,106 C144,98 142,94 140,90 Z'
-    ]],
-    ['Triceps', [
-      'M52,88 L55,90 C54,98 54,108 56,118 C57,124 58,130 60,134 L56,136 C52,128 50,118 50,108 C50,98 50,92 52,88 Z',
-      'M148,88 L145,90 C146,98 146,108 144,118 C143,124 142,130 140,134 L144,136 C148,128 150,118 150,108 C150,98 150,92 148,88 Z'
-    ]],
-    ['Forearms', [
-      'M56,136 L60,134 L64,128 C66,138 66,150 64,160 L62,166 C58,162 56,156 54,148 C52,142 54,138 56,136 Z',
-      'M144,136 L140,134 L136,128 C134,138 134,150 136,160 L138,166 C142,162 144,156 146,148 C148,142 146,138 144,136 Z'
-    ]],
-
-    // --- TORSO ---
-    ['Core', [
-      'M90,106 L98,102 L98,118 L90,118 Z',
-      'M110,106 L102,102 L102,118 L110,118 Z'
-    ]],
-    ['Core', [
-      'M89,120 L98,120 L98,134 L88,134 Z',
-      'M111,120 L102,120 L102,134 L112,134 Z'
-    ]],
-    ['Core', [
-      'M88,136 L98,136 L98,150 L87,150 Z',
-      'M112,136 L102,136 L102,150 L113,150 Z'
-    ]],
-    ['Core', [
-      'M87,152 L98,152 L98,166 L86,166 Z',
-      'M113,152 L102,152 L102,166 L114,166 Z'
-    ]],
-    ['Core', [
-      'M74,120 L80,114 L82,118 L86,134 L86,154 L84,166 L80,168 C78,158 76,142 74,128 Z',
-      'M126,120 L120,114 L118,118 L114,134 L114,154 L116,166 L120,168 C122,158 124,142 126,128 Z'
-    ]],
-
-    // --- LEGS (solid quads — one shape per leg) ---
-    ['Quads', [
-      'M80,170 C76,182 74,198 74,216 C74,234 76,248 80,260 L88,266 L96,268 C96,254 96,238 96,224 C96,208 96,192 96,178 L88,174 Z',
-      'M120,170 C124,182 126,198 126,216 C126,234 124,248 120,260 L112,266 L104,268 C104,254 104,238 104,224 C104,208 104,192 104,178 L112,174 Z'
-    ]],
-    ['Hams/Glutes', [
-      'M96,178 L100,178 L104,178 C104,194 104,210 104,224 L100,228 L96,224 C96,210 96,194 96,178 Z'
-    ]],
-
-    // --- CALVES (solid — one shape per leg) ---
-    ['Calves', [
-      'M82,272 C80,282 78,294 78,308 C78,322 80,334 84,344 L90,346 C94,344 96,336 96,324 C96,310 94,294 92,272 Z',
-      'M118,272 C120,282 122,294 122,308 C122,322 120,334 116,344 L110,346 C106,344 104,336 104,324 C104,310 106,294 108,272 Z'
-    ]],
-  ];
-
-  // --- BACK VIEW: Clean — traps (leaf shapes from neck) + lats (V-wings) ---
-  const backRegions = [
-    // --- TRAPS: two leaf shapes fanning from neck outward & down ---
-    ['Upper Back', [
-      // Left trap — leaf from neck sweeping out-left to shoulder, curving back to mid-spine
-      'M98,58 C90,62 78,72 68,82 C62,90 64,100 72,106 C80,112 92,112 98,108 Z',
-      // Right trap — mirror
-      'M102,58 C110,62 122,72 132,82 C138,90 136,100 128,106 C120,112 108,112 102,108 Z'
-    ]],
-
-    // --- LATS: two large wing shapes — wide at armpit, narrow at waist ---
-    ['Lats', [
-      // Left lat — outer edge follows body contour, inner edge follows spine
-      'M62,86 C58,98 58,112 62,128 C66,142 74,154 86,162 L92,158 C82,148 74,136 70,122 C66,108 66,96 68,86 Z',
-      // Right lat — mirror
-      'M138,86 C142,98 142,112 138,128 C134,142 126,154 114,162 L108,158 C118,148 126,136 130,122 C134,108 134,96 132,86 Z'
-    ]],
-
-    // --- REAR DELTS ---
-    ['Side/Rear Delts', [
-      'M62,74 C58,72 54,74 54,80 C54,86 56,90 60,92 L64,88 C62,84 62,80 62,76 Z',
-      'M138,74 C142,72 146,74 146,80 C146,86 144,90 140,92 L136,88 C138,84 138,80 138,76 Z'
-    ]],
-
-    // --- ARMS ---
-    ['Triceps', [
-      'M56,90 L60,88 C58,100 56,114 56,126 C56,134 58,140 60,144 L54,146 C50,136 48,124 48,112 C48,104 50,96 56,90 Z',
-      'M144,90 L140,88 C142,100 144,114 144,126 C144,134 142,140 140,144 L146,146 C150,136 152,124 152,112 C152,104 150,96 144,90 Z'
-    ]],
-    ['Forearms', [
-      'M54,146 L60,144 C62,154 62,162 60,168 L58,172 C54,168 52,162 50,154 C50,150 52,148 54,146 Z',
-      'M146,146 L140,144 C138,154 138,162 140,168 L142,172 C146,168 148,162 150,154 C150,150 148,148 146,146 Z'
-    ]],
-
-    // --- LOWER BACK (erectors) ---
-    ['Core', [
-      'M90,112 L98,108 L98,166 L88,166 C88,152 88,134 90,120 Z',
-      'M110,112 L102,108 L102,166 L112,166 C112,152 112,134 110,120 Z'
-    ]],
-
-    // --- GLUTES & HAMSTRINGS ---
-    ['Hams/Glutes', [
-      // Glutes
-      'M82,166 L98,170 C96,180 92,188 86,194 C82,188 78,180 78,172 Z',
-      'M118,166 L102,170 C104,180 108,188 114,194 C118,188 122,180 122,172 Z',
-      // Hamstrings (solid per leg)
-      'M78,172 C76,186 74,202 74,220 C74,238 76,252 80,264 L96,268 C96,254 96,238 96,224 C96,208 96,194 98,182 L86,194 Z',
-      'M122,172 C124,186 126,202 126,220 C126,238 124,252 120,264 L104,268 C104,254 104,238 104,224 C104,208 104,194 102,182 L114,194 Z'
-    ]],
-
-    // --- CALVES (solid) ---
-    ['Calves', [
-      'M82,272 C80,282 78,294 78,308 C78,322 80,334 84,344 L90,346 C94,344 96,336 96,324 C96,310 94,294 92,272 Z',
-      'M118,272 C120,282 122,294 122,308 C122,322 120,334 116,344 L110,346 C106,344 104,336 104,324 C104,310 106,294 108,272 Z'
-    ]],
-  ];
-
-  function renderPaths(regions) {
-    let svg = `<path class="body-silhouette" d="${silhouette}"/>`;
-    for (const [group, dPaths] of regions) {
-      const fill = getMuscleFill(group, volumes, maxVal, mode);
-      for (const d of dPaths) svg += `<path class="body-region" d="${d}" fill="${fill}"/>`;
-    }
-    return svg;
-  }
-
-  const vb = '40 8 120 370';
-  const frontSvg = `<svg viewBox="${vb}" class="body-map">${renderPaths(frontRegions)}</svg>`;
-
-  return `<div class="body-map-side-by-side">
-    <div class="body-map-col">
-      ${frontSvg}
-    </div>
-  </div>`;
-}
-
 function buildWeightGraph(points) {
   if (!points || points.length < 2) return '';
   const pad = { top: 12, right: 8, bottom: 4, left: 8 };
@@ -8090,51 +8211,135 @@ function renderHistory() {
   const calendarHtml = buildSessionCalendar();
 
   // Body part volume
-  const bodyPartVolumes = calculateBodyPartVolume(filtered);
+  const bpPeriod = data.bpVolumePeriod || '1w';
+  const bpDaysMap = { '1w': 7, '1m': 30, '3m': 90 };
+  const bpFiltered = data.sessions.filter(s => daysAgo(s.date) <= (bpDaysMap[bpPeriod] || 7));
+  const bodyPartVolumes = calculateBodyPartVolume(bpFiltered);
   let bodyPartHtml = '';
   const bpGroups = Object.entries(bodyPartVolumes).filter(([g, d]) => (d.volume > 0 || d.sets > 0) && g !== 'Other');
   const viewMode = data.bodyPartViewMode || 'sets';
-  // Compute weeks in period for weekly avg
-  const bpWeeks = historyPeriod === '1w' ? 1 : historyPeriod === '1m' ? 4.3 : historyPeriod === '3m' ? 13 : (() => {
-    if (filtered.length < 2) return 1;
-    const dates = filtered.map(s => new Date(s.date + 'T12:00:00')).sort((a,b) => a-b);
-    return Math.max(1, (dates[dates.length-1] - dates[0]) / (7 * 24 * 3600 * 1000));
-  })();
+  const bpWeeks = bpPeriod === '1w' ? 1 : bpPeriod === '1m' ? 4.3 : 13;
   if (bpGroups.length > 0) {
-    if (viewMode === 'sets') {
-      bpGroups.sort((a, b) => b[1].sets - a[1].sets);
-    } else {
-      bpGroups.sort((a, b) => b[1].volume - a[1].volume);
-    }
-    const maxVol = bpGroups[0][1].volume;
-    const maxSets = bpGroups[0][1].sets;
-    const barsHtml = bpGroups.map(([name, d]) => {
-      if (viewMode === 'sets') {
-        const weeklyAvg = Math.round(d.sets / bpWeeks * 10) / 10;
-        const pct = (d.sets / maxSets * 100).toFixed(0);
-        const colorClass = getBarColorClass(name, weeklyAvg);
-        const targets = getSetTargets()[name];
-        const targetStr = targets ? ` / ${targets.min}-${targets.max}` : '';
-        const avgLabel = bpWeeks > 1.2 ? ` <span style="font-size:10px;color:var(--text-3);">(${weeklyAvg}/wk)</span>` : '';
-        return `<div class="bv-bar-row">
-          <div class="bv-bar-meta">
-            <span class="bv-bar-label">${name}</span>
-            <span class="bv-bar-value">${d.sets} sets${targetStr}${avgLabel}</span>
-          </div>
-          <div class="bv-bar-track"><div class="bv-bar-fill ${colorClass}" style="width:${pct}%"></div></div>
-        </div>`;
-      } else {
-        const pct = (d.volume / maxVol * 100).toFixed(0);
-        const volStr = d.volume >= 1000 ? (d.volume / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : Math.round(d.volume);
-        return `<div class="bv-bar-row">
-          <div class="bv-bar-meta">
-            <span class="bv-bar-label">${name}</span>
-            <span class="bv-bar-value">${volStr} ${unit}</span>
-          </div>
-          <div class="bv-bar-track"><div class="bv-bar-fill" style="width:${pct}%"></div></div>
-        </div>`;
+    bpGroups.sort((a, b) => {
+      const ia = HEAD_TO_TOE_ORDER.indexOf(a[0]);
+      const ib = HEAD_TO_TOE_ORDER.indexOf(b[0]);
+      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    });
+    const maxVol = Math.max(...bpGroups.map(([,d]) => d.volume), 1);
+    const maxWeeklyAvg = Math.max(...bpGroups.map(([,d]) => d.sets / bpWeeks), 1);
+    const barsHtml = (() => {
+      // Pro mode (sets view): collapsible parent → children groups
+      if (isPro() && viewMode === 'sets') {
+        const parentVals = Object.values(FREE_GROUP_MAP);
+        const grouped = {}; // parentName → { sets, volume, directSets, indirectSets, children[] }
+        const standaloneItems = [];
+        for (const [name, d] of bpGroups) {
+          const parent = FREE_GROUP_MAP[name];
+          if (parent) {
+            if (!grouped[parent]) grouped[parent] = { sets: 0, volume: 0, directSets: 0, indirectSets: 0, children: [] };
+            grouped[parent].sets += d.sets; grouped[parent].volume += d.volume;
+            grouped[parent].directSets += (d.directSets || 0); grouped[parent].indirectSets += (d.indirectSets || 0);
+            grouped[parent].children.push([name, d]);
+          } else if (parentVals.includes(name)) {
+            // Generic parent-name group (e.g. "Chest" from custom tags or edge cases)
+            // Add to parent bucket AND as a child so it appears in the expanded view
+            if (!grouped[name]) grouped[name] = { sets: 0, volume: 0, directSets: 0, indirectSets: 0, children: [] };
+            grouped[name].sets += d.sets; grouped[name].volume += d.volume;
+            grouped[name].directSets += (d.directSets || 0); grouped[name].indirectSets += (d.indirectSets || 0);
+            grouped[name].children.push([name + ' (General)', d]);
+          } else {
+            standaloneItems.push([name, d]);
+          }
+        }
+        // Parents with no real sub-group children → demote to standalone
+        for (const [pName, pData] of Object.entries(grouped)) {
+          if (pData.children.length === 0) {
+            standaloneItems.push([pName, pData]);
+            delete grouped[pName];
+          }
+        }
+        const displayItems = [
+          ...Object.entries(grouped).map(([name, data]) => ({ type: 'parent', name, data })),
+          ...standaloneItems.map(([name, data]) => ({ type: 'standalone', name, data }))
+        ].sort((a, b) => {
+          const ia = HEAD_TO_TOE_ORDER.indexOf(a.name), ib = HEAD_TO_TOE_ORDER.indexOf(b.name);
+          return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+        });
+        const maxS = Math.max(...displayItems.map(i => i.data.sets / bpWeeks), 1);
+        const wkSuffix = bpWeeks > 1 ? '/wk' : '';
+        return displayItems.map(item => {
+          const { name, data: d } = item;
+          const weeklyAvg = Math.round(d.sets / bpWeeks * 10) / 10;
+          const pct = (weeklyAvg / maxS * 100).toFixed(0);
+          const isParent = item.type === 'parent';
+          const presentChildren = isParent ? d.children.map(([n]) => n) : null;
+          const colorClass = isParent ? getParentBarColorClass(name, weeklyAvg, presentChildren) : getBarColorClass(name, weeklyAvg);
+          const targets = isParent ? (isPro() ? getProParentTarget(name, presentChildren) : getSetTargets()[name]) : getSetTargets()[name];
+          const targetStr = targets ? ` / ${targets.min}-${targets.max}` : '';
+          if (isParent) {
+            const key = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+            const childHtml = d.children.map(([cName, cData]) => {
+              const cAvg = Math.round(cData.sets / bpWeeks * 10) / 10;
+              const cPct = (cAvg / maxS * 100).toFixed(0);
+              const cColor = getBarColorClass(cName, cAvg);
+              const cTargets = getSetTargets()[cName];
+              const cTargetStr = cTargets ? ` / ${cTargets.min}-${cTargets.max}` : '';
+              return `<div class="bv-bar-row bv-child-row">
+                <div class="bv-bar-meta"><span class="bv-bar-label">${cName}</span><span class="bv-bar-value">${cAvg} sets${wkSuffix}${cTargetStr}</span></div>
+                <div class="bv-bar-track"><div class="bv-bar-fill ${cColor}" style="width:${cPct}%"></div></div>
+              </div>`;
+            }).join('');
+            return `<div class="bv-group">
+              <div class="bv-bar-row bv-parent-row" onclick="toggleBVGroup('${key}')">
+                <div class="bv-bar-meta"><span class="bv-bar-label">${name} <span class="bv-chevron" id="bvc-${key}">▸</span></span><span class="bv-bar-value">${weeklyAvg} sets${wkSuffix}${targetStr}</span></div>
+                <div class="bv-bar-track"><div class="bv-bar-fill ${colorClass}" style="width:${pct}%"></div></div>
+              </div>
+              <div class="bv-children" id="bv-ch-${key}" style="display:none">${childHtml}</div>
+            </div>`;
+          } else {
+            const directRounded = Math.round((d.directSets || d.sets) / bpWeeks * 10) / 10;
+            const indirectRounded = Math.round((d.indirectSets || 0) / bpWeeks * 10) / 10;
+            const indirectLabel = indirectRounded > 0
+              ? `<span style="font-size:10px;color:var(--text-3);display:block;margin-top:1px;">${directRounded} direct + ${indirectRounded} indirect${wkSuffix}</span>`
+              : '';
+            return `<div class="bv-bar-row">
+              <div class="bv-bar-meta"><span class="bv-bar-label">${name}</span><span class="bv-bar-value">${weeklyAvg} sets${wkSuffix}${targetStr}</span></div>
+              <div class="bv-bar-track"><div class="bv-bar-fill ${colorClass}" style="width:${pct}%"></div></div>
+              ${indirectLabel}
+            </div>`;
+          }
+        }).join('');
       }
-    }).join('');
+      // Flat rendering (free mode, or volume mode)
+      const wkSuffix = bpWeeks > 1 ? '/wk' : '';
+      return bpGroups.map(([name, d]) => {
+        if (viewMode === 'sets') {
+          const weeklyAvg = Math.round(d.sets / bpWeeks * 10) / 10;
+          const pct = (weeklyAvg / maxWeeklyAvg * 100).toFixed(0);
+          const colorClass = getBarColorClass(name, weeklyAvg);
+          const targets = getSetTargets()[name];
+          const targetStr = targets ? ` / ${targets.min}-${targets.max}` : '';
+          return `<div class="bv-bar-row">
+            <div class="bv-bar-meta">
+              <span class="bv-bar-label">${name}</span>
+              <span class="bv-bar-value">${weeklyAvg} sets${wkSuffix}${targetStr}</span>
+            </div>
+            <div class="bv-bar-track"><div class="bv-bar-fill ${colorClass}" style="width:${pct}%"></div></div>
+          </div>`;
+        } else {
+          const weeklyVol = Math.round(d.volume / bpWeeks);
+          const pct = (weeklyVol / (maxVol / bpWeeks) * 100).toFixed(0);
+          const volStr = weeklyVol >= 1000 ? (weeklyVol / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : weeklyVol;
+          return `<div class="bv-bar-row">
+            <div class="bv-bar-meta">
+              <span class="bv-bar-label">${name}</span>
+              <span class="bv-bar-value">${volStr} ${unit}${wkSuffix}</span>
+            </div>
+            <div class="bv-bar-track"><div class="bv-bar-fill" style="width:${pct}%"></div></div>
+          </div>`;
+        }
+      }).join('');
+    })();
     bodyPartHtml = `
       <div class="card fade-in stagger-2">
         <div class="bv-header">
@@ -8143,6 +8348,9 @@ function renderHistory() {
             <button class="unit-opt ${viewMode === 'sets' ? 'active' : ''}" onclick="setBodyPartView('sets')">Sets</button>
             <button class="unit-opt ${viewMode === 'volume' ? 'active' : ''}" onclick="setBodyPartView('volume')">Volume</button>
           </div>
+        </div>
+        <div class="period-row mt-8">
+          ${['1w','1m','3m'].map(p => `<button class="period-btn ${bpPeriod === p ? 'active' : ''}" onclick="setBpVolumePeriod('${p}')">${p.toUpperCase()}</button>`).join('')}
         </div>
         <div class="mt-12">
           <div class="body-volume-bars">${barsHtml}</div>
@@ -8943,16 +9151,26 @@ function removeCustomType(index) {
 function buildWeeklyPreview() {
   const days = ['M','T','W','T','F','S','S'];
   const dayNums = [1,2,3,4,5,6,0]; // Mon=1..Sat=6, Sun=0
-  let rotIdx = data.schedule.patternIndex;
+  const pat = data.schedule.pattern;
+  // Roll back patternIndex to what it was at the start of this week (Monday),
+  // so Mon/Wed/Fri labels stay consistent even after completing sessions mid-week.
+  const { from, to } = getWeekBounds();
+  const sessionsThisWeek = data.sessions.filter(s => s.date >= from && s.date <= to).length;
+  let rotIdx = ((data.schedule.patternIndex - sessionsThisWeek) % pat.length + pat.length) % pat.length;
+  const todayDow = new Date().getDay();
   return days.map((d, i) => {
     const dayNum = dayNums[i];
     const isTraining = data.schedule.trainingDays.includes(dayNum);
     let type = '';
     if (isTraining) {
-      type = getTypeLabel(data.schedule.pattern[rotIdx % data.schedule.pattern.length]);
+      type = getTypeLabel(pat[rotIdx % pat.length]);
       rotIdx++;
     }
-    return `<div class="week-day ${isTraining ? 'training' : ''}">
+    // Dim days that have already passed this week
+    const dayPos = dayNum === 0 ? 7 : dayNum;
+    const todayPos = todayDow === 0 ? 7 : todayDow;
+    const isPast = isTraining && dayPos < todayPos;
+    return `<div class="week-day ${isTraining ? 'training' : ''}" style="${isPast ? 'opacity:0.45;' : ''}">
       <span class="week-day-name">${d}</span>
       <span class="week-day-type">${isTraining ? type : 'Rest'}</span>
     </div>`;
@@ -8962,6 +9180,13 @@ function buildWeeklyPreview() {
 /* ═══════════════════════════════════════════════════════════
    SETTINGS OVERLAY
    ═══════════════════════════════════════════════════════════ */
+function toggleProMode() {
+  data.isPro = !data.isPro;
+  save();
+  renderSettings();
+  renderHistory();
+}
+
 function openSettings() {
   renderSettings();
   document.getElementById('settings-overlay').classList.add('active');
@@ -8977,6 +9202,18 @@ function renderSettings() {
   const st = getSetTargets();
 
   el.innerHTML = `
+    <p class="settings-section-label">Plan</p>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="toggle-row">
+        <div>
+          <span class="toggle-label">Detailed Muscle Tracking <span style="font-size:10px;font-weight:700;letter-spacing:0.06em;color:var(--accent);background:rgba(163,184,108,0.12);padding:2px 6px;border-radius:4px;margin-left:6px;">PRO</span></span>
+          <p class="text-xs text-dim mt-4">Go beyond broad muscle groups — track Front, Side and Rear Delts separately instead of just Shoulders; Upper and Lower Chest; Gastrocnemius vs Soleus; and more. Great for spotting imbalances and making sure no area gets neglected.</p>
+        </div>
+        <button class="toggle ${data.isPro ? 'on' : ''}" onclick="toggleProMode()" style="flex-shrink:0;margin-left:16px;"></button>
+      </div>
+      ${data.isPro ? `<p class="text-xs mt-8" style="color:var(--accent);margin:0;">Active — tracking ${PRO_GROUPS.length} muscle groups</p>` : `<p class="text-xs text-dim mt-8" style="margin:0;">Standard tracking — ${FREE_GROUPS.length} muscle groups</p>`}
+    </div>
+
     <p class="settings-section-label">Profile</p>
     <div class="card" style="margin-bottom:16px;">
       <span class="label">Biological Sex</span>
@@ -9030,7 +9267,9 @@ function renderSettings() {
       <span class="label">Weekly Set Targets</span>
       <p class="text-xs text-dim mt-8">Recommended sets per muscle group per week (Schoenfeld et al.). Start at the lower end and work up over time. More isn't necessarily better — adding volume faster than you can recover from leads to burnout and injury, not growth.</p>
       <div class="divider"></div>
-      ${Object.entries(st).map(([group, t]) => `
+      ${(isPro() ? PRO_GROUPS : FREE_GROUPS).map(group => {
+        const t = st[group] || { min: 0, max: 0 };
+        return `
         <div class="target-row">
           <span class="text-sm" style="color:var(--text-2);">${group}</span>
           <input type="number" class="target-input" value="${t.min}" min="0" max="30" inputmode="numeric"
@@ -9038,8 +9277,8 @@ function renderSettings() {
           <span class="target-to">to</span>
           <input type="number" class="target-input" value="${t.max}" min="0" max="40" inputmode="numeric"
             onchange="updateSetTarget('${group}','max',this.value)">
-        </div>
-      `).join('')}
+        </div>`;
+      }).join('')}
       ${data.setTargets ? `<button class="btn btn-ghost mt-8" onclick="resetSetTargets()" style="width:100%;font-size:12px;">Reset to Defaults</button>` : ''}
     </div>
 
@@ -9369,7 +9608,7 @@ function renderBuildEditForm(type, index, ex) {
           <div class="label" style="margin-bottom:4px;">Muscle Group</div>
           <select id="edit-muscle-group" style="width:100%;padding:8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none;">
             <option value="">Auto-detect</option>
-            ${ALL_GROUPS.map(g => `<option value="${g}"${g === displayMg ? ' selected' : ''}>${g}</option>`).join('')}
+            ${(isPro() ? PRO_GROUPS : FREE_GROUPS).map(g => `<option value="${g}"${g === displayMg ? ' selected' : ''}>${g}</option>`).join('')}
           </select>
           <p class="text-xs text-dim mt-8">Override the default muscle group for body part volume tracking.</p>
         </div>`;
@@ -9409,12 +9648,18 @@ function renderBuildEditForm(type, index, ex) {
             const g = classifyExercise(ex.name || '');
             const examples = {
               'Quads':         'e.g. Leg Press, Hack Squat…',
-              'Hams/Glutes':   'e.g. Romanian Deadlift, Hip Thrust…',
+              'Hamstrings':    'e.g. Romanian Deadlift, Leg Curl…',
+              'Glutes':        'e.g. Hip Thrust, Glute Bridge…',
               'Chest':         'e.g. Dumbbell Bench Press, Cable Fly…',
+              'Lower Chest':   'e.g. Flat Bench Press, Cable Fly…',
+              'Upper Abs':     'e.g. Cable Crunch, Sit Up…',
+              'Lower Abs':     'e.g. Hanging Leg Raise, Reverse Crunch…',
+              'Obliques':      'e.g. Russian Twist, Pallof Press…',
               'Lats':          'e.g. Lat Pulldown, Chin-Up…',
               'Upper Back':    'e.g. Dumbbell Row, Cable Row…',
               'Front Delts':   'e.g. Dumbbell Shoulder Press, Arnold Press…',
-              'Side/Rear Delts':'e.g. Lateral Raise, Rear Delt Fly…',
+              'Side Delts':    'e.g. Lateral Raise, Cable Lateral Raise…',
+              'Rear Delts':    'e.g. Rear Delt Fly, Reverse Pec Deck…',
               'Triceps':       'e.g. Rope Pushdown, Skull Crusher…',
               'Biceps':        'e.g. Hammer Curl, Preacher Curl…',
               'Core':          'e.g. Cable Crunch, Hanging Leg Raise…',
@@ -9645,6 +9890,21 @@ function setBodyPartView(mode) {
   data.bodyPartViewMode = mode;
   save();
   renderHistory();
+}
+
+function setBpVolumePeriod(p) {
+  data.bpVolumePeriod = p;
+  save();
+  renderHistory();
+}
+
+function toggleBVGroup(key) {
+  const el = document.getElementById('bv-ch-' + key);
+  const ch = document.getElementById('bvc-' + key);
+  if (!el) return;
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : '';
+  if (ch) ch.textContent = open ? '▸' : '▾';
 }
 
 function showBPVInfo() { document.getElementById('bpv-info-popup').classList.add('active'); }
