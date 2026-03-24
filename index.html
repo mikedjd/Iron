@@ -6417,11 +6417,15 @@ function completeSet(btnEl) {
     saveWorkoutState();
     setTimeout(() => showDoneScreen(), 300);
   } else if (isLastSet) {
+    // Save the index BEFORE incrementing so the rest timer RPE pills
+    // still target the exercise that was just completed, not the next one
+    workout.lastCompletedExerciseIndex = workout.currentExerciseIndex;
     workout.currentExerciseIndex++;
     workout.exerciseReady = false;
     saveWorkoutState();
     setTimeout(() => startRestTimer(() => renderExercise()), 300);
   } else {
+    workout.lastCompletedExerciseIndex = workout.currentExerciseIndex;
     saveWorkoutState();
     setTimeout(() => startRestTimer(() => renderExercise()), 300);
   }
@@ -6473,7 +6477,9 @@ function startRestTimer(onComplete, duration) {
 
   // Add note reminder + feedback input below context
   if (workout) {
-    const ex = workout.exercises[workout.currentExerciseIndex];
+    // Use the exercise that was just completed (index may have advanced to the next exercise)
+    const rpeIdx = workout.lastCompletedExerciseIndex ?? workout.currentExerciseIndex;
+    const ex = workout.exercises[rpeIdx];
     const noteHtml = ex.notes ? `<div class="timer-note">${ex.notes}</div>` : '';
     const lastRpe = ex.completedSets.length > 0 ? (ex.completedSets[ex.completedSets.length - 1].rpe || 0) : 0;
     const feedbackHtml = `
@@ -6556,7 +6562,10 @@ function getRpeDesc(rpe) {
 }
 function selectRpe(value) {
   if (!workout) return;
-  const ex = workout.exercises[workout.currentExerciseIndex];
+  // Always target the exercise whose set was just completed — currentExerciseIndex
+  // may already point to the next exercise when resting between exercises
+  const rpeIdx = workout.lastCompletedExerciseIndex ?? workout.currentExerciseIndex;
+  const ex = workout.exercises[rpeIdx];
   if (ex.completedSets.length > 0) {
     const set = ex.completedSets[ex.completedSets.length - 1];
     set.rpe = set.rpe === value ? 0 : value; // tap again to deselect
