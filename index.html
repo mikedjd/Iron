@@ -2947,11 +2947,11 @@
       padding: 2px 6px; border-radius: 4px;
       margin-left: 6px; white-space: nowrap;
     }
-    .strength-badge.beginner { background: rgba(153,153,153,0.15); color: #999; }
-    .strength-badge.novice { background: rgba(0,122,255,0.15); color: #007AFF; }
-    .strength-badge.intermediate { background: rgba(48,209,88,0.15); color: var(--good); }
-    .strength-badge.advanced { background: rgba(255,149,0,0.15); color: var(--warning); }
-    .strength-badge.elite { background: var(--accent-dim); color: var(--accent); }
+    .strength-badge.foundation { background: rgba(153,153,153,0.15); color: #999; }
+    .strength-badge.development { background: rgba(0,122,255,0.15); color: #007AFF; }
+    .strength-badge.performance { background: rgba(48,209,88,0.15); color: var(--good); }
+    .strength-badge.elite { background: rgba(255,149,0,0.15); color: var(--warning); }
+    .strength-badge.master { background: var(--accent-dim); color: var(--accent); }
 
     /* Unit toggle */
     .unit-toggle {
@@ -3360,7 +3360,8 @@ let data = {
   setTargets: null,
   bodyPartViewMode: 'sets',
   splitPreset: 'upper-lower',
-  archivedPrograms: {}
+  archivedPrograms: {},
+  programLock: null  // { locked: true, lockedAt: 'YYYY-MM-DD', lockedUntil: 'YYYY-MM-DD' }
 };
 
 let workout = null;   // active workout state
@@ -3497,6 +3498,19 @@ function switchTab(tab) {
   document.querySelectorAll('.nav-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.tab === tab);
   });
+  // Show PRO badge on Diet nav if not Pro
+  document.querySelectorAll('.nav-btn[data-tab="diet"] .pro-nav-badge').forEach(e => e.remove());
+  if (!isPro()) {
+    const dietBtn = document.querySelector('.nav-btn[data-tab="diet"]');
+    if (dietBtn && !dietBtn.querySelector('.pro-nav-badge')) {
+      const badge = document.createElement('span');
+      badge.className = 'pro-nav-badge';
+      badge.style.cssText = 'position:absolute;top:2px;right:8px;font-size:7px;font-weight:700;color:var(--accent);background:rgba(163,184,108,0.15);padding:1px 4px;border-radius:3px;letter-spacing:0.04em;';
+      badge.textContent = 'PRO';
+      dietBtn.style.position = 'relative';
+      dietBtn.appendChild(badge);
+    }
+  }
   if (tab === 'train') renderTrainHome();
   if (tab === 'diet') renderDiet();
   if (tab === 'history') renderHistory();
@@ -3937,6 +3951,100 @@ const EXERCISE_NAMES = Object.keys(EXERCISE_DB).sort();
  * data.isPro = true is set when user unlocks Pro (payment TBD).
  * ─────────────────────────────────────────────────────────────────────────── */
 function isPro() { return !!data.isPro; }
+
+function proUpsellCard(featureName, description) {
+  return `<div class="card fade-in" style="border:1px solid rgba(163,184,108,0.2);background:rgba(163,184,108,0.04);text-align:center;padding:24px;">
+    <span style="font-size:10px;font-weight:700;letter-spacing:0.06em;color:var(--accent);background:rgba(163,184,108,0.12);padding:2px 8px;border-radius:4px;">PRO</span>
+    <div style="font-family:'Teko',sans-serif;font-size:20px;font-weight:600;color:var(--text);margin-top:8px;">${featureName}</div>
+    <p class="text-xs text-dim mt-4">${description}</p>
+    <button class="btn btn-primary mt-12" onclick="showProUpgrade()" style="width:100%;">Unlock Pro</button>
+  </div>`;
+}
+
+function showProUpgrade() {
+  const overlay = document.createElement('div');
+  overlay.id = 'pro-upgrade-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px;';
+  overlay.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:360px;width:100%;">
+      <div style="text-align:center;margin-bottom:16px;">
+        <span style="font-size:10px;font-weight:700;letter-spacing:0.06em;color:var(--accent);background:rgba(163,184,108,0.12);padding:3px 10px;border-radius:4px;">PRO</span>
+      </div>
+      <div style="font-family:'Teko',sans-serif;font-size:28px;font-weight:700;text-transform:uppercase;color:var(--text);text-align:center;">Unlock Pro</div>
+      <div class="mt-12" style="font-size:13px;color:var(--text-2);line-height:1.6;">
+        <div style="padding:6px 0;border-bottom:1px solid var(--divider);">Muscle sub-group analytics</div>
+        <div style="padding:6px 0;border-bottom:1px solid var(--divider);">Body part volume tracking</div>
+        <div style="padding:6px 0;border-bottom:1px solid var(--divider);">Strength trend charts</div>
+        <div style="padding:6px 0;border-bottom:1px solid var(--divider);">Custom program builder</div>
+        <div style="padding:6px 0;border-bottom:1px solid var(--divider);">Performance insights</div>
+        <div style="padding:6px 0;">Diet & nutrition tracking</div>
+      </div>
+      <button class="btn btn-primary mt-16" style="width:100%;" onclick="data.isPro=true;save();document.getElementById('pro-upgrade-overlay').remove();switchTab(currentTab);showToast('Pro unlocked!');">Start Free Trial</button>
+      <p class="text-xs text-dim mt-8" style="text-align:center;">7-day free trial · then £6.99/mo</p>
+      <button class="btn btn-ghost mt-8" style="width:100%;font-size:13px;color:var(--text-3);" onclick="document.getElementById('pro-upgrade-overlay').remove();">Maybe later</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function isProgramLocked() {
+  if (!data.programLock || !data.programLock.locked) return false;
+  if (data.programLock.lockedUntil && new Date(data.programLock.lockedUntil + 'T23:59:59') < new Date()) {
+    data.programLock.locked = false; save(); return false;
+  }
+  return true;
+}
+
+function getProgramLockRemaining() {
+  if (!data.programLock || !data.programLock.lockedUntil) return '';
+  const end = new Date(data.programLock.lockedUntil + 'T23:59:59');
+  const days = Math.ceil((end - new Date()) / 86400000);
+  if (days <= 0) return '';
+  const weeks = Math.floor(days / 7);
+  return weeks > 0 ? `${weeks}w ${days % 7}d` : `${days}d`;
+}
+
+function showProgramLockPrompt() {
+  const overlay = document.createElement('div');
+  overlay.id = 'program-lock-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px;';
+  overlay.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:360px;width:100%;">
+      <div style="font-family:'Teko',sans-serif;font-size:24px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text);">Lock it in</div>
+      <p class="text-sm text-dim mt-8">Commit to this program. Exercises can't be swapped while locked — but you can still adjust sets and reps. Consistency beats optimisation.</p>
+      <div id="lock-duration-opts" class="type-selector mt-12" style="flex-wrap:wrap;">
+        <button class="type-opt" onclick="document.querySelectorAll('#lock-duration-opts .type-opt').forEach(b=>b.classList.remove('active'));this.classList.add('active');" data-weeks="4">4 weeks</button>
+        <button class="type-opt active" onclick="document.querySelectorAll('#lock-duration-opts .type-opt').forEach(b=>b.classList.remove('active'));this.classList.add('active');" data-weeks="6">6 weeks</button>
+        <button class="type-opt" onclick="document.querySelectorAll('#lock-duration-opts .type-opt').forEach(b=>b.classList.remove('active'));this.classList.add('active');" data-weeks="8">8 weeks</button>
+        <button class="type-opt" onclick="document.querySelectorAll('#lock-duration-opts .type-opt').forEach(b=>b.classList.remove('active'));this.classList.add('active');" data-weeks="12">12 weeks</button>
+      </div>
+      <button class="btn btn-primary mt-16" style="width:100%;" onclick="confirmProgramLock()">Lock Program</button>
+      <button class="btn btn-ghost mt-8" style="width:100%;font-size:13px;color:var(--text-3);" onclick="document.getElementById('program-lock-overlay').remove();">Skip for now</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function confirmProgramLock() {
+  const active = document.querySelector('#lock-duration-opts .type-opt.active');
+  const weeks = active ? parseInt(active.dataset.weeks) : 6;
+  const lockUntil = new Date();
+  lockUntil.setDate(lockUntil.getDate() + weeks * 7);
+  data.programLock = {
+    locked: true,
+    lockedAt: today(),
+    lockedUntil: lockUntil.toISOString().split('T')[0]
+  };
+  save();
+  document.getElementById('program-lock-overlay')?.remove();
+  showToast(`Program locked for ${weeks} weeks`);
+  renderBuild();
+}
+
+function unlockProgram() {
+  data.programLock = null;
+  save();
+  showToast('Program unlocked');
+  renderSettings();
+}
 
 /* Granular sub-group classifications available to Pro users only */
 const PRO_EXERCISE_DB = {
@@ -4535,11 +4643,11 @@ function getStrengthLevel(exerciseName, liftWeight, bodyweight) {
   const std = standards[exerciseName];
   if (!std) return null;
   const ratio = liftWeight / bodyweight;
-  if (ratio >= std.elite) return 'elite';
-  if (ratio >= std.adv) return 'advanced';
-  if (ratio >= std.int) return 'intermediate';
-  if (ratio >= std.nov) return 'novice';
-  return 'beginner';
+  if (ratio >= std.elite) return 'master';
+  if (ratio >= std.adv) return 'elite';
+  if (ratio >= std.int) return 'performance';
+  if (ratio >= std.nov) return 'development';
+  return 'foundation';
 }
 
 /* Auto-progression recommendation */
@@ -6305,6 +6413,10 @@ function swapExercise(targetIdx) {
 
 function showSwapExercise() {
   if (!workout) return;
+  if (isProgramLocked()) {
+    showToast(`Program locked until ${data.programLock.lockedUntil} — no swapping`);
+    return;
+  }
   const remaining = workout.exercises.slice(workout.currentExerciseIndex + 1);
   if (remaining.length === 0) return;
   const bodyEl = document.getElementById('workout-body');
@@ -6893,6 +7005,13 @@ function renderDietNoScroll() {
 
 function renderDiet() {
   const el = document.getElementById('diet-content');
+  if (!isPro()) {
+    el.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;padding:24px;">
+        ${proUpsellCard('Diet & Nutrition', 'Track calories, macros, and food intake. Get personalised recommendations based on your training and goals.')}
+      </div>`;
+    return;
+  }
   const macros = getMacroTargets();
   const proteinGrams = macros.protein;
   const carbGrams = macros.carbs;
@@ -8090,6 +8209,103 @@ function setStrengthPeriod(p) { data._strengthPeriod=p; _syncPills('s-period-pil
 function setChartExercise(name) { data._chartExercise=name; drawStrengthTrendChart(); }
 // ────────────────────────────────────────────────────────────
 
+/* ─── Estimated 1RM ──────────────────────────────────────────────────────── */
+const ORM_LIFTS = ['Bench Press', 'Back Squat', 'Deadlift', 'Overhead Press', 'Barbell Row'];
+const ORM_NAME_MAP = {
+  'barbell bench press': 'Bench Press', 'bench press': 'Bench Press', 'flat bench press': 'Bench Press',
+  'barbell squat': 'Back Squat', 'back squat': 'Back Squat', 'squat': 'Back Squat',
+  'deadlift': 'Deadlift', 'conventional deadlift': 'Deadlift', 'barbell deadlift': 'Deadlift',
+  'overhead press': 'Overhead Press', 'ohp': 'Overhead Press', 'barbell overhead press': 'Overhead Press', 'military press': 'Overhead Press', 'standing overhead press': 'Overhead Press',
+  'barbell row': 'Barbell Row', 'bent over row': 'Barbell Row', 'bent-over row': 'Barbell Row', 'pendlay row': 'Barbell Row',
+};
+
+function normalizeToOrmLift(name) {
+  const key = name.toLowerCase().trim();
+  return ORM_NAME_MAP[key] || (ORM_LIFTS.includes(name) ? name : null);
+}
+
+function calculate1RMHistory() {
+  const history = {}; // { liftName: [{ date, e1rm, weight, reps }] }
+  for (const s of data.sessions || []) {
+    for (const ex of s.exercises || []) {
+      const lift = normalizeToOrmLift(ex.name);
+      if (!lift) continue;
+      let bestE1rm = 0, bestW = 0, bestR = 0;
+      for (const set of ex.sets || []) {
+        const ns = normalizeSet(set);
+        if (ns.skipped) continue;
+        const w = ns.weight || 0;
+        const r = ns.reps || 0;
+        if (w <= 0 || r < 2 || r > 10) continue;
+        const e1rm = w * (1 + r / 30);
+        if (e1rm > bestE1rm) { bestE1rm = e1rm; bestW = w; bestR = r; }
+      }
+      if (bestE1rm > 0) {
+        if (!history[lift]) history[lift] = [];
+        history[lift].push({ date: s.date, e1rm: bestE1rm, weight: bestW, reps: bestR });
+      }
+    }
+  }
+  return history;
+}
+
+function render1RMCard() {
+  const history = calculate1RMHistory();
+  const lifts = ORM_LIFTS.filter(l => history[l] && history[l].length > 0);
+  if (lifts.length === 0) return '';
+
+  const bw = getCurrentBodyweight();
+  const unit = weightLabel();
+
+  const rows = lifts.map(lift => {
+    const pts = history[lift];
+    const latest = pts[pts.length - 1];
+    const best = pts.reduce((b, p) => p.e1rm > b.e1rm ? p : b, pts[0]);
+    const level = bw ? getStrengthLevel(lift, latest.e1rm, bw) : null;
+    const _la = { foundation:'FND', development:'DEV', performance:'PRF', elite:'ELT', master:'MST' };
+    const badge = level ? `<span class="strength-badge ${level}" style="margin-left:auto;">${_la[level]}</span>` : '';
+
+    // Sparkline SVG (last 10 data points)
+    const sparkPts = pts.slice(-10);
+    let sparkSvg = '';
+    if (sparkPts.length >= 2) {
+      const minV = Math.min(...sparkPts.map(p => p.e1rm)) * 0.95;
+      const maxV = Math.max(...sparkPts.map(p => p.e1rm)) * 1.05;
+      const range = maxV - minV || 1;
+      const w = 60, h = 20;
+      const points = sparkPts.map((p, i) => {
+        const x = (i / (sparkPts.length - 1)) * w;
+        const y = h - ((p.e1rm - minV) / range) * h;
+        return `${x},${y}`;
+      }).join(' ');
+      sparkSvg = `<svg width="${w}" height="${h}" style="flex-shrink:0;"><polyline points="${points}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    }
+
+    const delta = pts.length >= 2 ? latest.e1rm - pts[0].e1rm : 0;
+    const deltaStr = delta !== 0 ? `<span style="font-size:11px;color:${delta > 0 ? 'var(--good)' : 'var(--danger)'}">${delta > 0 ? '+' : ''}${displayWeight(delta)}${unit}</span>` : '';
+
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--divider);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);">${lift}</div>
+          <div style="font-size:11px;color:var(--text-3);margin-top:2px;">
+            ${displayWeight(latest.e1rm)}${unit} est · ${latest.weight}${unit} × ${latest.reps}
+            ${deltaStr}
+          </div>
+        </div>
+        ${sparkSvg}
+        ${badge}
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="card fade-in stagger-2">
+      <span class="label">Estimated 1RM</span>
+      <p class="text-xs text-dim mt-4">Epley formula · sets of 2-10 reps</p>
+      <div class="mt-8">${rows}</div>
+    </div>`;
+}
+
 function renderHistory() {
   const el = document.getElementById('history-content');
 
@@ -8214,7 +8430,8 @@ function renderHistory() {
               cls = classifyProgress(p.delta, false);
             }
             const level = bw && p.currentWeight ? getStrengthLevel(p.name, p.currentWeight, bw) : null;
-            const levelBadge = level ? ` <span class="strength-badge ${level}">${level.substring(0,3).toUpperCase()}</span>` : '';
+            const _levelAbbr = { foundation:'FND', development:'DEV', performance:'PRF', elite:'ELT', master:'MST' };
+            const levelBadge = level ? ` <span class="strength-badge ${level}">${_levelAbbr[level] || level.substring(0,3).toUpperCase()}</span>` : '';
             const isPinned = pinnedExercises.includes(p.name);
             return `
               <div class="progress-row" onclick="showExerciseChart('${p.name.replace(/'/g, "\\'")}')" style="cursor:pointer;display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:8px;">
@@ -8236,7 +8453,7 @@ function renderHistory() {
   // Session calendar
   const calendarHtml = buildSessionCalendar();
 
-  // Body part volume
+  // Body part volume (Pro)
   const bpPeriod = data.bpVolumePeriod || '1w';
   const bpDaysMap = { '1w': 7, '1m': 30, '3m': 90 };
   const bpFiltered = data.sessions.filter(s => daysAgo(s.date) <= (bpDaysMap[bpPeriod] || 7));
@@ -8366,7 +8583,7 @@ function renderHistory() {
         }
       }).join('');
     })();
-    bodyPartHtml = `
+    bodyPartHtml = !isPro() ? proUpsellCard('Body Part Volume', 'Track weekly sets per muscle group with target ranges. See which muscles need more work.') : `
       <div class="card fade-in stagger-2">
         <div class="bv-header">
           <span class="label">Body Part Volume <button class="bv-info-btn" onclick="showBPVInfo()">i</button></span>
@@ -8462,10 +8679,13 @@ function renderHistory() {
       </div>`;
   }
 
-  // Strength trend chart
+  // Strength trend chart (Pro)
   let strengthHtml = '';
+  if (!isPro()) {
+    strengthHtml = proUpsellCard('Strength Trends', 'Track your lifts over time with interactive charts. See progress across all exercises.');
+  }
   const allChartEx = [...new Set((data.sessions||[]).flatMap(s => (s.exercises||[]).map(e => e.name)))];
-  if (allChartEx.length > 0) {
+  if (isPro() && allChartEx.length > 0) {
     if (!data._chartExercise || !allChartEx.includes(data._chartExercise)) {
       data._chartExercise = (data.pinnedExercises||[]).find(p => allChartEx.includes(p)) || allChartEx[0];
     }
@@ -8499,6 +8719,7 @@ function renderHistory() {
       </div>
     </div>
     ${streakHtml}
+    ${render1RMCard()}
     ${bodyPartHtml}
     ${weightHtml}
     ${caloriesHtml}
@@ -8922,8 +9143,11 @@ function renderBuild() {
             ${previewRows}
           </button>`;
         }).join('')}
-        <button class="split-template-btn ${currentPreset === 'custom' ? 'active' : ''}" onclick="selectSplit('custom')">
-          <span class="split-tmpl-name">Custom</span>
+        <button class="split-template-btn ${currentPreset === 'custom' ? 'active' : ''}" onclick="${isPro() ? "selectSplit('custom')" : 'showProUpgrade()'}">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="split-tmpl-name">Custom</span>
+            ${!isPro() ? '<span style="font-size:10px;font-weight:700;letter-spacing:0.06em;color:var(--accent);background:rgba(163,184,108,0.12);padding:2px 6px;border-radius:4px;">PRO</span>' : ''}
+          </div>
           <span class="split-tmpl-desc">Build your own split.</span>
         </button>
       </div>
@@ -8976,11 +9200,23 @@ function renderBuild() {
     }
   }
 
+  const lockBannerHtml = isProgramLocked() ? `
+    <div class="card fade-in" style="margin-bottom:16px;border:1px solid rgba(163,184,108,0.3);background:rgba(163,184,108,0.06);">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <span class="label" style="color:var(--accent);">Program Locked</span>
+          <p class="text-xs text-dim mt-4">${getProgramLockRemaining()} remaining · sets & reps still adjustable</p>
+        </div>
+        <button class="btn btn-ghost" onclick="if(confirm('Unlock program early?')){unlockProgram();renderBuild();}" style="font-size:12px;color:var(--text-3);padding:6px 10px;">Unlock</button>
+      </div>
+    </div>` : '';
+
   el.innerHTML = `
+    ${lockBannerHtml}
     ${splitTemplateHtml}
     ${scheduleHtml}
     ${programCards}
-    ${data.programs ? `
+    ${!isProgramLocked() && data.programs ? `
       <button class="btn btn-ghost mt-8 fade-in" onclick="resetPrograms()" style="color:var(--danger);">Reset to Defaults</button>
     ` : ''}
   `;
@@ -9097,6 +9333,10 @@ function showToast(msg, duration) {
 
 function selectSplit(presetKey) {
   if (presetKey === data.splitPreset) return;
+  if (isProgramLocked()) {
+    if (!confirm(`Program locked until ${data.programLock.lockedUntil}. Unlock and change split?`)) return;
+    data.programLock = null;
+  }
 
   // Silently archive current programs before switching
   if (data.programs && Object.keys(data.programs).length > 0) {
@@ -9132,6 +9372,7 @@ function selectSplit(presetKey) {
   save();
   renderBuild();
   showToast('Split updated — previous program saved');
+  setTimeout(() => showProgramLockPrompt(), 600);
 }
 
 function addCustomType() {
@@ -9250,6 +9491,16 @@ function renderSettings() {
       </div>
     </div>
 
+    ${isProgramLocked() ? `
+    <div class="card" style="margin-bottom:16px;border:1px solid rgba(163,184,108,0.3);background:rgba(163,184,108,0.06);">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <span class="label" style="color:var(--accent);">Program Locked</span>
+          <p class="text-xs text-dim mt-4">Locked since ${data.programLock.lockedAt} · ${getProgramLockRemaining()} remaining</p>
+        </div>
+        <button class="btn btn-ghost" onclick="unlockProgram()" style="font-size:12px;color:var(--danger);padding:6px 10px;">Unlock</button>
+      </div>
+    </div>` : ''}
     <p class="settings-section-label">Training</p>
     <div class="card" style="margin-bottom:16px;">
       <span class="label">Deload</span>
@@ -9532,9 +9783,10 @@ function setDeloadInterval(val) {
 function renderBuildProgram(type, exercises) {
   const label = getTypeLabel(type);
   const totalSets = exercises.reduce((s, e) => s + e.sets, 0);
+  const locked = isProgramLocked();
 
   let rows = exercises.map((ex, i) => {
-    if (buildEditing && buildEditing.type === type && buildEditing.index === i) {
+    if (!locked && buildEditing && buildEditing.type === type && buildEditing.index === i) {
       return renderBuildEditForm(type, i, ex);
     }
     // Type badges
@@ -9569,19 +9821,19 @@ function renderBuildProgram(type, exercises) {
       : '';
 
     return `
-      <div class="build-exercise" draggable="true" data-type="${type}" data-index="${i}"
+      <div class="build-exercise" ${!locked ? `draggable="true" data-type="${type}" data-index="${i}"
         ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondragend="onDragEnd(event)" ondrop="onDrop(event)"
-        ontouchstart="onTouchDragStart(event)" ontouchmove="onTouchDragMove(event)" ontouchend="onTouchDragEnd(event)">
-        <span class="drag-handle">☰</span>
+        ontouchstart="onTouchDragStart(event)" ontouchmove="onTouchDragMove(event)" ontouchend="onTouchDragEnd(event)"` : ''}>
+        ${!locked ? '<span class="drag-handle">☰</span>' : ''}
         <div style="flex:1;min-width:0;">
           <span class="ex-name">${ex.name} ${badge}</span>
           ${altHtml}
         </div>
         <span class="ex-detail">${ex.sets} × ${ex.reps}${weightStr}</span>
-        <div class="build-actions">
+        ${!locked ? `<div class="build-actions">
           <button class="build-icon-btn" onclick="editExercise('${type}', ${i})" title="Edit">✎</button>
           <button class="build-icon-btn delete" onclick="deleteExercise('${type}', ${i})" title="Delete">×</button>
-        </div>
+        </div>` : ''}
       </div>${connectorHtml}`;
   }).join('');
 
@@ -9604,9 +9856,9 @@ function renderBuildProgram(type, exercises) {
       <span class="text-sm text-dim">${exercises.length} exercises \u00b7 ${totalSets} sets \u00b7 ~${estMins} min</span>
       <div class="divider"></div>
       ${rows}
-      ${buildAdding !== type ? `
+      ${locked ? '' : (buildAdding !== type ? `
         <button class="btn btn-secondary mt-12" onclick="addExercise('${type}')" style="font-size:16px;">+ Add Exercise</button>
-      ` : ''}
+      ` : '')}
     </div>`;
 }
 
