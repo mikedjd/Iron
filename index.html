@@ -3772,8 +3772,8 @@ function togglePreviewDetail(name, element) {
   if (!last) return;
   const bw = getCurrentBodyweight();
   let suggestionHtml = '';
-  if (bw && last.weight) {
-    const rec = getProgressionRec(name, last.weight, bw);
+  if (last.weight) {
+    const rec = getProgressionRec(name, bw);
     if (rec.badge) {
       const suggestionBadge = escapeHtml(rec.badge);
       suggestionHtml = `<div class="preview-detail-row"><span class="label">Suggested</span><span>${displayWeight(rec.suggestedWeight)}${weightLabel()} (${suggestionBadge})</span></div>`;
@@ -4533,10 +4533,10 @@ function getRpeTargetRange() {
   return ranges[data.trainingStyle] || ranges.balanced;
 }
 
-/* Double progression: hit target reps → add weight.
-   RPE-aware: adjust increment based on effort vs target range.
-   Works for all levels — no strength-level gating. */
-function getProgressionRec(exerciseName, currentWeight, bodyweight) {
+/* Double progression: hit target reps on best set → add weight next session.
+   Always anchors to the actual last-logged weight, never a stale program value.
+   RPE-aware: hold weight if RPE spiked above target range. */
+function getProgressionRec(exerciseName, bodyweight) {
   const eqType = getEquipmentType(exerciseName);
   let inc;
   if (eqType === 'dumbbell') {
@@ -4548,12 +4548,12 @@ function getProgressionRec(exerciseName, currentWeight, bodyweight) {
     inc = data.weightUnit === 'lbs' ? 5 : (data.machineIncrement || 2.5);
   }
 
-  // Check last session: did they hit target reps on all sets?
+  // Always use the actual last-logged peak weight, not a stale program value
   const last = getExerciseLastSession(exerciseName);
-  if (!last) {
-    // No history — suggest same weight, no badge
-    return { suggestedWeight: currentWeight, strategy: 'first', badge: null };
+  if (!last || !last.weight) {
+    return { suggestedWeight: null, strategy: 'first', badge: null };
   }
+  const baseWeight = last.weight;
 
   // Find the target reps for this exercise from the current program
   let targetReps = null;
@@ -4562,32 +4562,29 @@ function getProgressionRec(exerciseName, currentWeight, bodyweight) {
     const match = programs[type].find(e => e.name === exerciseName);
     if (match) { targetReps = match.reps; break; }
   }
-  if (!targetReps) targetReps = last.setReps.length > 0 ? Math.max(...last.setReps) : 8;
+  // Fallback to 8 — never use max-reps-ever as the bar (creates an impossible target)
+  if (!targetReps) targetReps = 8;
 
-  // Only check working sets (top weight) — ignore back-off sets at lighter weight
+  // Progress if the BEST working set hit target — first set is freshest, fatigue drop is expected
   const repsToCheck = last.workingSetReps || last.setReps;
-  const hitAllTargets = repsToCheck.length > 0 && repsToCheck.every(r => r >= targetReps);
+  const bestReps = repsToCheck.length > 0 ? Math.max(...repsToCheck) : 0;
+  const hitTarget = bestReps >= targetReps;
 
   // Check average RPE from last session for this exercise
   const avgRpe = getExerciseAvgRpe(exerciseName);
-  const [rpeMin, rpeMax] = getRpeTargetRange();
+  const [, rpeMax] = getRpeTargetRange();
 
-  if (hitAllTargets) {
-    // Double progression: target reps achieved → add weight
-    if (avgRpe > 0 && avgRpe < rpeMin) {
-      // RPE well below target — could handle a bigger jump
-      return { suggestedWeight: currentWeight + inc, strategy: 'weight', badge: `+${displayWeight(inc)}` };
-    }
+  if (hitTarget) {
     if (avgRpe > rpeMax) {
       // Hit reps but RPE was very high — hold weight, consolidate
-      return { suggestedWeight: currentWeight, strategy: 'hold', badge: 'hold' };
+      return { suggestedWeight: baseWeight, strategy: 'hold', badge: 'hold', lastWeight: baseWeight };
     }
-    // Normal progression
-    return { suggestedWeight: currentWeight + inc, strategy: 'weight', badge: `+${displayWeight(inc)}` };
+    // Normal progression: add one increment to actual last weight
+    return { suggestedWeight: baseWeight + inc, strategy: 'weight', badge: `+${displayWeight(inc)}`, lastWeight: baseWeight };
   }
 
-  // Didn't hit target reps — stay at same weight
-  return { suggestedWeight: currentWeight, strategy: 'reps', badge: null };
+  // Best set didn't reach target reps — stay at same weight
+  return { suggestedWeight: baseWeight, strategy: 'reps', badge: null, lastWeight: baseWeight };
 }
 
 /* Get average RPE for an exercise from the last session */
@@ -5592,18 +5589,22 @@ function startWorkout() {
         activeName = altState === 0 ? ex.name : ex.alternate;
       }
 
-      let w = ex.weight || getLastWeight(activeName) || 0;
+      // Always anchor weight to actual last-logged session, fall back to program value
+      const lastSessionData = getExerciseLastSession(activeName);
+      let w = (lastSessionData ? lastSessionData.weight : null) || ex.weight || 0;
       let progressionBadge = null;
       let previousWeight = w;
-      // Auto-progression: double progression — add weight when target reps achieved
-      if (w && !isDeload && !ex.isBodyweight) {
-        const rec = getProgressionRec(activeName, w, bw);
-        if (rec.suggestedWeight > w) {
-          previousWeight = w;
+      // Auto-progression: add weight if best set hit target reps last session
+      if (!isDeload && !ex.isBodyweight) {
+        const rec = getProgressionRec(activeName, bw);
+        if (rec.suggestedWeight !== null && rec.suggestedWeight > (rec.lastWeight || 0)) {
+          previousWeight = rec.lastWeight || w;
           w = rec.suggestedWeight;
           progressionBadge = rec.badge;
         } else if (rec.badge === 'hold') {
           progressionBadge = 'hold';
+        } else if (rec.lastWeight) {
+          w = rec.lastWeight; // stay at actual last weight, not stale program value
         }
       }
       if (isDeload && w) w = Math.round(w * 0.6 * 2) / 2;
