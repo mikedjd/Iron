@@ -4554,27 +4554,14 @@ function getRpeTargetRange() {
    RPE-aware: hold weight if RPE spiked above target range. */
 function getProgressionRec(exerciseName, bodyweight) {
   const eqType = getEquipmentType(exerciseName);
-  const isolation = isIsolationExercise(exerciseName);
   let inc;
   if (eqType === 'dumbbell') {
-    // Isolation (curl, lateral raise, fly…): 1kg / 2.5lb — a 2kg jump per dumbbell
-    // is a huge relative increase on a 12kg curl or a 10kg lateral raise
-    inc = isolation
-      ? (data.weightUnit === 'lbs' ? 2.5 : 1)
-      : (data.weightUnit === 'lbs' ? 5 : (data.dumbbellIncrement || 2));
+    inc = data.weightUnit === 'lbs' ? 5 : (data.dumbbellIncrement || 2);
   } else if (eqType === 'barbell') {
     const barbellInc = data.weightUnit === 'lbs' ? 5 : (data.barbellIncrement || 2.5);
-    if (isolation) {
-      // EZ bar curl, skull crusher etc — smallest plate available (1.25kg / 2.5lb)
-      inc = data.weightUnit === 'lbs' ? 2.5 : 1.25;
-    } else {
-      inc = isUpperExercise(exerciseName) ? barbellInc : barbellInc * 2;
-    }
+    inc = isUpperExercise(exerciseName) ? barbellInc : barbellInc * 2;
   } else {
-    // Cable / machine — isolation (pushdown, leg curl, pec deck): smaller pin jump
-    inc = isolation
-      ? (data.weightUnit === 'lbs' ? 2.5 : 1.25)
-      : (data.weightUnit === 'lbs' ? 5 : (data.machineIncrement || 2.5));
+    inc = data.weightUnit === 'lbs' ? 5 : (data.machineIncrement || 2.5);
   }
 
   // Always use the actual last-logged peak weight, not a stale program value
