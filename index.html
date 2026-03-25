@@ -635,6 +635,27 @@
       to { opacity: 1; transform: translateX(-50%) translateY(0); }
     }
     @keyframes slideUp {
+      from { opacity: 0; transform: translateY(40px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .options-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 14px 4px;
+      background: none;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      text-align: left;
+      cursor: pointer;
+    }
+    .options-row:last-child { border-bottom: none; }
+    .options-chev { color: var(--text-3); font-size: 18px; }
+    @keyframes slideUp {
       from { transform: translateX(-50%) translateY(20px); }
       to { transform: translateX(-50%) translateY(0); }
     }
@@ -3390,7 +3411,10 @@ function createDefaultData() {
     lastSyncTime: 0,
     lastLocalEditAt: 0,
     syncConflict: null,
-    programLock: null  // { locked: true, lockedAt: 'YYYY-MM-DD', lockedUntil: 'YYYY-MM-DD' }
+    programLock: null, // { locked: true, lockedAt: 'YYYY-MM-DD', lockedUntil: 'YYYY-MM-DD' }
+    showPrepScreen: false,
+    showWarmupScreen: false,
+    showWeightWarning: false
   };
 }
 
@@ -6435,11 +6459,7 @@ function renderExercise() {
   let setLabel = `Set ${currentSet} of ${ex.targetSets}`;
   // Last set motivational message
   const lastSetMessages = [
-    'Final set. Dig deep.',
-    'Last one. Empty the tank.',
-    'Last set. Get after it.',
-    'Last set. Finish strong.',
-    'Final set. Focus.'
+    'Final set. Dig deep.'
   ];
   if (currentSet === ex.targetSets && ex.targetSets > 1) {
     const msgIdx = Math.floor(Math.random() * lastSetMessages.length);
@@ -6471,13 +6491,17 @@ function renderExercise() {
     }
     weightHtml = `
       <div class="weight-adjuster">
-        <button class="weight-adj-btn" onclick="adjustWeight(-1)">−</button>
+        <button class="weight-adj-btn"
+          onmousedown="startLongPress(()=>adjustWeight(-1))" onmouseup="stopLongPress()" onmouseleave="stopLongPress()"
+          ontouchstart="startLongPress(()=>adjustWeight(-1));event.preventDefault()" ontouchend="stopLongPress()" ontouchcancel="stopLongPress()">−</button>
         <div style="text-align:center">
           <div class="weight-display" onclick="tapToEditWeight()" style="cursor:pointer;">${displayWeight(ex.currentWeight)}</div>
           <div class="weight-display-label">${weightLabel()}</div>
           ${progBadge}
         </div>
-        <button class="weight-adj-btn" onclick="adjustWeight(1)">+</button>
+        <button class="weight-adj-btn"
+          onmousedown="startLongPress(()=>adjustWeight(1))" onmouseup="stopLongPress()" onmouseleave="stopLongPress()"
+          ontouchstart="startLongPress(()=>adjustWeight(1));event.preventDefault()" ontouchend="stopLongPress()" ontouchcancel="stopLongPress()">+</button>
       </div>`;
   }
 
@@ -6581,7 +6605,7 @@ function renderExercise() {
       ${prepPlateHtml}
       ${warmupLogHtml}
       ${prepNoteDisplay}
-      ${!ex.isBodyweight ? `<button class="done-btn" onclick="startWarmup()" style="margin-top:32px;background:var(--surface-2);color:var(--text);">Warm Up</button>` : ''}
+      ${!ex.isBodyweight && data.showWarmupScreen ? `<button class="done-btn" onclick="startWarmup()" style="margin-top:32px;background:var(--surface-2);color:var(--text);">Warm Up</button>` : ''}
       <button class="done-btn" onclick="exerciseReady()" style="margin-top:${ex.isBodyweight ? '32' : '12'}px;">Working Sets</button>
       <div class="prep-actions" style="display:flex;gap:10px;margin-top:12px;">
         <button class="skip-btn" onclick="showSwapExercise()" style="flex:1;">Swap</button>
@@ -6622,70 +6646,97 @@ function renderExercise() {
     <div class="exercise-label">Exercise ${workout.currentExerciseIndex + 1} of ${totalExercises}</div>
     <div class="exercise-name">${escapeHtml(ex.name)}</div>
     <div class="set-indicator">${setLabel}</div>
-    ${notesHtml}
+    ${lastSessionHtml}
     ${weightHtml}
     <div class="rep-adjuster">
-      <button class="rep-btn" onclick="adjustReps(-1)">−</button>
+      <button class="rep-btn"
+        onmousedown="startLongPress(()=>adjustReps(-1))" onmouseup="stopLongPress()" onmouseleave="stopLongPress()"
+        ontouchstart="startLongPress(()=>adjustReps(-1));event.preventDefault()" ontouchend="stopLongPress()" ontouchcancel="stopLongPress()">−</button>
       <div style="text-align:center">
         <div class="rep-count" onclick="tapToEditReps()" style="cursor:pointer;">${ex.currentReps}</div>
         <div class="rep-label">reps</div>
       </div>
-      <button class="rep-btn" onclick="adjustReps(1)">+</button>
+      <button class="rep-btn"
+        onmousedown="startLongPress(()=>adjustReps(1))" onmouseup="stopLongPress()" onmouseleave="stopLongPress()"
+        ontouchstart="startLongPress(()=>adjustReps(1));event.preventDefault()" ontouchend="stopLongPress()" ontouchcancel="stopLongPress()">+</button>
     </div>
-    ${lastSessionHtml}
     <button class="done-btn" onclick="completeSet(this)" style="width:100%;border-radius:16px;">Done</button>
     <div class="workout-actions">
       ${(workout.currentExerciseIndex > 0 || ex.completedSets.length > 0) ? '<button class="back-btn" onclick="goBackSet()">Back</button>' : ''}
       <button class="skip-btn" onclick="skipSet()">Skip Set</button>
       <button class="add-set-btn" onclick="addSetDuringWorkout()">+ Set</button>
+      <button class="skip-btn" onclick="showOptionsMenu()" style="font-size:18px;padding:6px 14px;">⋯</button>
     </div>
-    ${workout.exercises.length > workout.currentExerciseIndex + 1 && ex.completedSets.length === 0 ? `<button class="skip-btn" onclick="showSwapExercise()" style="margin-top:8px;width:100%;font-size:12px;">↕ Swap Exercise</button>` : ''}
   `;
 
-  // Up next
-  const remaining = workout.exercises.slice(workout.currentExerciseIndex + 1, workout.currentExerciseIndex + 2);
-  if (remaining.length > 0) {
-    upnextEl.innerHTML = `
-      <div class="up-next-label">Up next <span style="font-size:10px;color:var(--text-3);font-weight:400;text-transform:none;letter-spacing:0;">(tap to swap)</span></div>
-      ${remaining.map((e, ri) => {
-        const wStr = e.currentWeight ? ` @ ${displayWeight(e.currentWeight)}` : '';
-        const swapIdx = workout.currentExerciseIndex + 1 + ri;
-        return `
-        <div class="up-next-item" onclick="swapExercise(${swapIdx})" style="cursor:pointer;"
-          <span class="name">${e.name}</span>
-          <span class="info">${e.targetSets} × ${e.targetReps}${wStr}</span>
-        </div>`;
-      }).join('')}
-    `;
-    upnextEl.style.display = '';
-  } else {
-    upnextEl.innerHTML = `<div class="up-next-label" style="text-align:center;color:var(--accent);">Final exercise</div>`;
-  }
+  upnextEl.innerHTML = '';
+  upnextEl.style.display = 'none';
 }
 
 function tapToEditWeight() {
   if (!workout) return;
   const ex = workout.exercises[workout.currentExerciseIndex];
-  const val = prompt('Enter weight:', ex.currentWeight || 0);
-  if (val === null) return;
-  const num = parseFloat(val);
-  if (isNaN(num) || num < 0) return;
-  ex.currentWeight = Math.round(num * 100) / 100; // accept any value, no snapping
-  ex.progressionBadge = null;
-  saveWorkoutState();
-  renderExercise();
+  const el = document.querySelector('.weight-display');
+  if (!el || el.querySelector('input')) return;
+  const current = ex.currentWeight || 0;
+  el.innerHTML = `<input type="number" inputmode="decimal" step="any" value="${current}"
+    style="width:80px;font-size:inherit;font-family:inherit;font-weight:inherit;color:var(--accent);
+    background:transparent;border:none;border-bottom:2px solid var(--accent);text-align:center;outline:none;
+    -moz-appearance:textfield;" id="weight-edit-input">`;
+  const input = el.querySelector('input');
+  input.focus();
+  input.select();
+  function confirm() {
+    const num = parseFloat(input.value);
+    if (!isNaN(num) && num >= 0) {
+      ex.currentWeight = Math.round(num * 100) / 100;
+      ex.progressionBadge = null;
+      saveWorkoutState();
+    }
+    renderExercise();
+  }
+  input.addEventListener('blur', confirm);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); input.blur(); } });
 }
 
 function tapToEditReps() {
   if (!workout) return;
   const ex = workout.exercises[workout.currentExerciseIndex];
-  const val = prompt('Enter reps:', ex.currentReps || 1);
-  if (val === null) return;
-  const num = parseInt(val);
-  if (isNaN(num) || num < 1) return;
-  ex.currentReps = num;
-  saveWorkoutState();
-  renderExercise();
+  const el = document.querySelector('.rep-count');
+  if (!el || el.querySelector('input')) return;
+  const current = ex.currentReps || 1;
+  el.innerHTML = `<input type="number" inputmode="numeric" step="1" min="1" value="${current}"
+    style="width:60px;font-size:inherit;font-family:inherit;font-weight:inherit;color:var(--accent);
+    background:transparent;border:none;border-bottom:2px solid var(--accent);text-align:center;outline:none;
+    -moz-appearance:textfield;" id="reps-edit-input">`;
+  const input = el.querySelector('input');
+  input.focus();
+  input.select();
+  function confirm() {
+    const num = parseInt(input.value);
+    if (!isNaN(num) && num >= 1) {
+      ex.currentReps = num;
+      saveWorkoutState();
+    }
+    renderExercise();
+  }
+  input.addEventListener('blur', confirm);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); input.blur(); } });
+}
+
+// Long-press acceleration for ± buttons
+let _lpTimer = null, _lpInterval = null;
+function startLongPress(fn) {
+  fn(); // fire immediately on first press
+  _lpTimer = setTimeout(() => {
+    _lpInterval = setInterval(fn, 80);
+  }, 450);
+}
+function stopLongPress() {
+  clearTimeout(_lpTimer);
+  clearInterval(_lpInterval);
+  _lpTimer = null;
+  _lpInterval = null;
 }
 
 function adjustWeight(delta) {
@@ -6698,8 +6749,8 @@ function adjustWeight(delta) {
   const el = document.querySelector('.weight-display');
   if (el) el.textContent = displayWeight(ex.currentWeight);
 
-  // Warning if weight increased >10% above session start
-  if (ex.startWeight && ex.startWeight > 0) {
+  // Warning if weight increased >10% above session start (opt-in setting)
+  if (data.showWeightWarning && ex.startWeight && ex.startWeight > 0) {
     const increase = (ex.currentWeight - ex.startWeight) / ex.startWeight;
     if (increase > 0.10) {
       showWeightWarning();
@@ -6732,6 +6783,54 @@ function updateWorkoutNote(val) {
     if (match) { match.notes = ex.notes; save(); }
   }
   saveWorkoutState();
+}
+
+function showOptionsMenu() {
+  if (!workout) return;
+  const ex = workout.exercises[workout.currentExerciseIndex];
+  const existing = document.getElementById('options-sheet');
+  if (existing) { existing.remove(); return; }
+
+  const canWarmup = !data.showWarmupScreen && ex.completedSets.length === 0 && !ex.warmingUp && !ex.isBodyweight;
+  const wwLabel = data.showWeightWarning ? 'On' : 'Off';
+  const wuLabel = data.showWarmupScreen ? 'On' : 'Off';
+
+  const sheet = document.createElement('div');
+  sheet.id = 'options-sheet';
+  sheet.style.cssText = `
+    position:fixed;left:0;right:0;bottom:0;z-index:9999;
+    background:var(--surface);border-top:1px solid var(--border);
+    border-radius:20px 20px 0 0;padding:20px 16px 36px;
+    box-shadow:0 -8px 40px rgba(0,0,0,0.4);
+    animation:slideUp 0.22s ease;
+  `;
+  sheet.innerHTML = `
+    <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;"></div>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-3);margin-bottom:12px;">Options</div>
+    <button class="options-row" onclick="document.getElementById('options-sheet').remove();workoutNotesExpanded=true;renderExercise();">
+      <span>📝 Notes</span><span class="options-chev">›</span>
+    </button>
+    <button class="options-row" onclick="document.getElementById('options-sheet').remove();showSwapExercise();">
+      <span>↕ Swap Exercise</span><span class="options-chev">›</span>
+    </button>
+    ${canWarmup ? `<button class="options-row" onclick="document.getElementById('options-sheet').remove();startWarmup();">
+      <span>🔥 Start Warm-up</span><span class="options-chev">›</span>
+    </button>` : ''}
+    <div style="height:1px;background:var(--border);margin:8px 0;"></div>
+    <button class="options-row" onclick="data.showWeightWarning=!data.showWeightWarning;save();document.getElementById('options-sheet').remove();renderExercise();">
+      <span>⚠️ Weight warning</span><span style="font-size:13px;color:var(--text-3);">${wwLabel}</span>
+    </button>
+    <button class="options-row" onclick="data.showWarmupScreen=!data.showWarmupScreen;save();document.getElementById('options-sheet').remove();renderExercise();">
+      <span>🏋 Warm-up sets</span><span style="font-size:13px;color:var(--text-3);">${wuLabel}</span>
+    </button>
+  `;
+
+  // Dismiss on backdrop tap
+  const backdrop = document.createElement('div');
+  backdrop.style.cssText = 'position:fixed;inset:0;z-index:9998;';
+  backdrop.onclick = () => { sheet.remove(); backdrop.remove(); };
+  document.body.appendChild(backdrop);
+  document.body.appendChild(sheet);
 }
 
 function togglePrepNote() {
@@ -10132,9 +10231,21 @@ function renderSettings() {
     <div class="card" style="margin-bottom:16px;">
       <div class="toggle-row" style="display:flex;align-items:center;justify-content:space-between;">
         <span class="text-sm">Show prep screen</span>
-        <button class="toggle ${data.showPrepScreen !== false ? 'on' : ''}" onclick="data.showPrepScreen=!(data.showPrepScreen!==false);save();renderSettings()"></button>
+        <button class="toggle ${data.showPrepScreen ? 'on' : ''}" onclick="data.showPrepScreen=!data.showPrepScreen;save();renderSettings()"></button>
       </div>
       <p class="text-xs text-dim mt-8">Show exercise details before each new exercise. Turn off to jump straight into sets.</p>
+      <div class="divider"></div>
+      <div class="toggle-row" style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="text-sm">Warm-up sets</span>
+        <button class="toggle ${data.showWarmupScreen ? 'on' : ''}" onclick="data.showWarmupScreen=!data.showWarmupScreen;save();renderSettings()"></button>
+      </div>
+      <p class="text-xs text-dim mt-8">Show a warm-up flow before working sets. Good for beginners or heavy compound lifts.</p>
+      <div class="divider"></div>
+      <div class="toggle-row" style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="text-sm">Weight increase warning</span>
+        <button class="toggle ${data.showWeightWarning ? 'on' : ''}" onclick="data.showWeightWarning=!data.showWeightWarning;save();renderSettings()"></button>
+      </div>
+      <p class="text-xs text-dim mt-8">Alert when you increase weight more than 10% above where you started the session.</p>
     </div>
 
     <p class="settings-section-label">Schedule</p>
