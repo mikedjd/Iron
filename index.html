@@ -4041,19 +4041,7 @@ function switchTab(tab) {
   document.querySelectorAll('.nav-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.tab === tab);
   });
-  // Show PRO badge on Diet nav if not Pro
   document.querySelectorAll('.nav-btn[data-tab="diet"] .pro-nav-badge').forEach(e => e.remove());
-  if (!isPro()) {
-    const dietBtn = document.querySelector('.nav-btn[data-tab="diet"]');
-    if (dietBtn && !dietBtn.querySelector('.pro-nav-badge')) {
-      const badge = document.createElement('span');
-      badge.className = 'pro-nav-badge';
-      badge.style.cssText = 'position:absolute;top:2px;right:8px;font-size:7px;font-weight:700;color:var(--accent);background:rgba(232,160,48,0.15);padding:1px 4px;border-radius:3px;letter-spacing:0.04em;';
-      badge.textContent = 'PRO';
-      dietBtn.style.position = 'relative';
-      dietBtn.appendChild(badge);
-    }
-  }
   if (tab === 'train') renderTrainHome();
   if (tab === 'diet') renderDiet();
   if (tab === 'history') renderHistory();
@@ -7642,13 +7630,6 @@ function renderDietNoScroll() {
 
 function renderDiet() {
   const el = document.getElementById('diet-content');
-  if (!isPro()) {
-    el.innerHTML = `
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;padding:24px;">
-        ${proUpsellCard('Diet & Nutrition', 'Track calories, macros, and food intake. Get personalised recommendations based on your training and goals.')}
-      </div>`;
-    return;
-  }
   const macros = getMacroTargets();
   const proteinGrams = macros.protein;
   const carbGrams = macros.carbs;
@@ -9780,10 +9761,9 @@ function renderBuild() {
             ${previewRows}
           </button>`;
         }).join('')}
-        <button class="split-template-btn ${currentPreset === 'custom' ? 'active' : ''}" onclick="${isPro() ? "selectSplit('custom')" : 'showProUpgrade()'}">
+        <button class="split-template-btn ${currentPreset === 'custom' ? 'active' : ''}" onclick="selectSplit('custom')">
           <div style="display:flex;align-items:center;gap:6px;">
             <span class="split-tmpl-name">Custom</span>
-            ${!isPro() ? '<span style="font-size:10px;font-weight:700;letter-spacing:0.06em;color:var(--accent);background:rgba(232,160,48,0.12);padding:2px 6px;border-radius:4px;">PRO</span>' : ''}
           </div>
           <span class="split-tmpl-desc">Build your own split.</span>
         </button>
