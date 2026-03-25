@@ -6843,7 +6843,6 @@ function showOptionsMenu() {
   if (existing) { existing.remove(); return; }
 
   const canWarmup = !data.showWarmupScreen && ex.completedSets.length === 0 && !ex.warmingUp && !ex.isBodyweight;
-  const wwLabel = data.showWeightWarning ? 'On' : 'Off';
   const wuLabel = data.showWarmupScreen ? 'On' : 'Off';
 
   const sheet = document.createElement('div');
@@ -6868,9 +6867,6 @@ function showOptionsMenu() {
       <span>🔥 Start Warm-up</span><span class="options-chev">›</span>
     </button>` : ''}
     <div style="height:1px;background:var(--border);margin:8px 0;"></div>
-    <button class="options-row" onclick="data.showWeightWarning=!data.showWeightWarning;save();document.getElementById('options-sheet').remove();renderExercise();">
-      <span>⚠️ Weight warning</span><span style="font-size:13px;color:var(--text-3);">${wwLabel}</span>
-    </button>
     <button class="options-row" onclick="data.showWarmupScreen=!data.showWarmupScreen;save();document.getElementById('options-sheet').remove();renderExercise();">
       <span>🏋 Warm-up sets</span><span style="font-size:13px;color:var(--text-3);">${wuLabel}</span>
     </button>
