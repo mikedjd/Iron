@@ -4010,7 +4010,8 @@ function showProgramLockPrompt() {
   overlay.innerHTML = `
     <div style="background:#1c1c1e;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:24px;max-width:360px;width:100%;">
       <div style="font-family:'Teko',sans-serif;font-size:24px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text);">Lock it in</div>
-      <p class="text-sm text-dim mt-8">Commit to this program. Exercises can't be swapped while locked — but you can still adjust sets and reps. Consistency beats optimisation.</p>
+      <p class="text-sm text-dim mt-8">Don't be tempted by every new exercise you see on socials. The best progress comes from committing to a program and putting in the work — consistently. One of the biggest predictors of success is your ability to lock in and see it through.</p>
+      <p class="text-xs text-dim mt-8" style="color:var(--text-3);">Exercises are locked. Sets and reps stay adjustable.</p>
       <div id="lock-duration-opts" class="type-selector mt-12" style="flex-wrap:wrap;">
         <button class="type-opt" onclick="document.querySelectorAll('#lock-duration-opts .type-opt').forEach(b=>b.classList.remove('active'));this.classList.add('active');" data-weeks="4">4 weeks</button>
         <button class="type-opt active" onclick="document.querySelectorAll('#lock-duration-opts .type-opt').forEach(b=>b.classList.remove('active'));this.classList.add('active');" data-weeks="6">6 weeks</button>
