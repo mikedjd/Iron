@@ -740,7 +740,7 @@
       text-transform: uppercase;
       cursor: pointer;
       transition: all 0.15s ease;
-      box-shadow: 0 0 40px var(--accent-glow), 0 0 80px rgba(163, 184, 108, 0.1);
+      box-shadow: 0 0 24px rgba(212,175,55,0.2);
       -webkit-tap-highlight-color: transparent;
       position: relative;
       overflow: hidden;
@@ -2690,18 +2690,21 @@
     }
     .skip-btn:active { border-color: var(--text-3); }
 
-    /* Workout action row (skip + add set) */
+    /* Workout action row (back + skip + add set + options) */
     .workout-actions {
       display: flex;
-      gap: 12px;
+      gap: 8px;
       margin-top: 16px;
-      justify-content: center;
     }
     .workout-actions .skip-btn,
     .workout-actions .add-set-btn,
-    .workout-actions .back-btn { margin-top: 0; }
+    .workout-actions .back-btn {
+      flex: 1;
+      margin-top: 0;
+      padding: 10px 0;
+      text-align: center;
+    }
     .back-btn {
-      padding: 10px 24px;
       border: 1px solid var(--border);
       border-radius: 10px;
       background: transparent;
@@ -2714,7 +2717,6 @@
     }
     .back-btn:active { border-color: var(--text-2); color: var(--text-2); }
     .add-set-btn {
-      padding: 10px 24px;
       border: 1px solid var(--border);
       border-radius: 10px;
       background: transparent;
@@ -6697,7 +6699,7 @@ function renderExercise() {
       ${(workout.currentExerciseIndex > 0 || ex.completedSets.length > 0) ? '<button class="back-btn" onclick="goBackSet()">Back</button>' : ''}
       <button class="skip-btn" onclick="skipSet()">Skip Set</button>
       <button class="add-set-btn" onclick="addSetDuringWorkout()">+ Set</button>
-      <button class="skip-btn" onclick="showOptionsMenu()" style="font-size:18px;padding:6px 14px;">⋯</button>
+      <button class="skip-btn" onclick="showOptionsMenu()">⋯</button>
     </div>
   `;
 
@@ -6831,9 +6833,9 @@ function showOptionsMenu() {
   sheet.id = 'options-sheet';
   sheet.style.cssText = `
     position:fixed;left:0;right:0;bottom:0;z-index:9999;
-    background:var(--surface);border-top:1px solid var(--border);
+    background:#242424;border-top:1px solid var(--border);
     border-radius:20px 20px 0 0;padding:20px 16px 36px;
-    box-shadow:0 -8px 40px rgba(0,0,0,0.4);
+    box-shadow:0 -8px 40px rgba(0,0,0,0.6);
     animation:slideUp 0.22s ease;
   `;
   sheet.innerHTML = `
