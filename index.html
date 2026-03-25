@@ -3964,11 +3964,11 @@ function proUpsellCard(featureName, description) {
 function showProUpgrade() {
   const overlay = document.createElement('div');
   overlay.id = 'pro-upgrade-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px;';
+  overlay.style.cssText = 'position:fixed;inset:0;background:#0a0a0a;z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px;';
   overlay.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:360px;width:100%;">
+    <div style="background:#1c1c1e;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:24px;max-width:360px;width:100%;">
       <div style="text-align:center;margin-bottom:16px;">
-        <span style="font-size:10px;font-weight:700;letter-spacing:0.06em;color:var(--accent);background:rgba(163,184,108,0.12);padding:3px 10px;border-radius:4px;">PRO</span>
+        <span style="font-size:10px;font-weight:700;letter-spacing:0.06em;color:var(--accent);background:rgba(163,184,108,0.15);padding:3px 10px;border-radius:4px;">PRO</span>
       </div>
       <div style="font-family:'Teko',sans-serif;font-size:28px;font-weight:700;text-transform:uppercase;color:var(--text);text-align:center;">Unlock Pro</div>
       <div class="mt-12" style="font-size:13px;color:var(--text-2);line-height:1.6;">
@@ -4006,9 +4006,9 @@ function getProgramLockRemaining() {
 function showProgramLockPrompt() {
   const overlay = document.createElement('div');
   overlay.id = 'program-lock-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px;';
+  overlay.style.cssText = 'position:fixed;inset:0;background:#0a0a0a;z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px;';
   overlay.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:360px;width:100%;">
+    <div style="background:#1c1c1e;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:24px;max-width:360px;width:100%;">
       <div style="font-family:'Teko',sans-serif;font-size:24px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text);">Lock it in</div>
       <p class="text-sm text-dim mt-8">Commit to this program. Exercises can't be swapped while locked — but you can still adjust sets and reps. Consistency beats optimisation.</p>
       <div id="lock-duration-opts" class="type-selector mt-12" style="flex-wrap:wrap;">
