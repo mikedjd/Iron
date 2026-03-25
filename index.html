@@ -691,8 +691,8 @@
     .rep-btn {
       width: 52px;
       height: 52px;
-      border-radius: 50%;
-      border: 2px solid var(--border-light);
+      border-radius: 14px;
+      border: 1px solid var(--border-light);
       background: var(--surface);
       color: var(--text);
       font-size: 24px;
@@ -2704,10 +2704,24 @@
       margin-top: 0;
       padding: 10px 0;
       text-align: center;
-      font-size: 11px;
+      font-size: 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      line-height: 1;
+    }
+    .workout-actions .skip-btn .act-lbl,
+    .workout-actions .add-set-btn .act-lbl,
+    .workout-actions .back-btn .act-lbl {
+      font-size: 9px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      color: var(--text-3);
+      letter-spacing: 0.03em;
     }
     .workout-actions .skip-btn:last-child {
-      flex: 0 0 42px;
+      flex: 0 0 52px;
       padding: 10px 0;
     }
     .back-btn {
@@ -6700,12 +6714,12 @@ function renderExercise() {
         onmousedown="startLongPress(()=>adjustReps(1))" onmouseup="stopLongPress()" onmouseleave="stopLongPress()"
         ontouchstart="startLongPress(()=>adjustReps(1));event.preventDefault()" ontouchend="stopLongPress()" ontouchcancel="stopLongPress()">+</button>
     </div>
-    <button class="done-btn" onclick="completeSet(this)" style="width:100%;border-radius:16px;">Done</button>
+    <button class="done-btn" onclick="completeSet(this)" style="width:100%;border-radius:20px;">Done</button>
     <div class="workout-actions">
-      ${(workout.currentExerciseIndex > 0 || ex.completedSets.length > 0) ? '<button class="back-btn" onclick="goBackSet()">Back</button>' : ''}
-      <button class="skip-btn" onclick="skipSet()">Skip Set</button>
-      <button class="add-set-btn" onclick="addSetDuringWorkout()">+ Set</button>
-      <button class="skip-btn" onclick="showOptionsMenu()">⋯</button>
+      ${(workout.currentExerciseIndex > 0 || ex.completedSets.length > 0) ? '<button class="back-btn" onclick="goBackSet()">←<span class="act-lbl">Back</span></button>' : ''}
+      <button class="skip-btn" onclick="skipSet()">⏭<span class="act-lbl">Skip</span></button>
+      <button class="add-set-btn" onclick="addSetDuringWorkout()">＋<span class="act-lbl">Set</span></button>
+      <button class="skip-btn" onclick="showOptionsMenu()">⋯<span class="act-lbl">More</span></button>
     </div>
   `;
 
