@@ -467,15 +467,12 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: safe center;
-      padding: 20px;
+      justify-content: flex-start;
+      padding: 16px 20px 20px;
       text-align: center;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       min-height: 0;
-    }
-    @supports not (justify-content: safe center) {
-      .workout-body { justify-content: flex-start; padding-top: 40px; }
     }
     .exercise-label {
       font-size: 13px;
@@ -691,7 +688,7 @@
     .rep-btn {
       width: 52px;
       height: 52px;
-      border-radius: 14px;
+      border-radius: 50%;
       border: 1px solid var(--border-light);
       background: var(--surface);
       color: var(--text);
@@ -2621,13 +2618,13 @@
       margin-bottom: 24px;
     }
     .weight-adj-btn {
-      width: 40px;
-      height: 40px;
+      width: 52px;
+      height: 52px;
       border-radius: 50%;
       border: 1px solid var(--border-light);
       background: var(--surface);
       color: var(--text-2);
-      font-size: 18px;
+      font-size: 22px;
       display: flex;
       align-items: center;
       justify-content: center;
