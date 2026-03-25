@@ -3327,42 +3327,74 @@ function resetCustomMacros() {
 /* ═══════════════════════════════════════════════════════════
    STATE
    ═══════════════════════════════════════════════════════════ */
-let data = {
-  sessions: [],
-  weights: [],
-  nextType: 'upper',
-  targetCalories: 2500,
-  autoAdjust: true,
-  dietGoal: 'lean-bulk', // 'cut-aggressive', 'cut', 'recomp', 'lean-bulk', 'bulk'
-  programs: null,  // null = use defaults, otherwise { upper: [...], lower: [...] }
-  weightUnit: 'kg',
-  schedule: {
-    trainingDays: [1, 3, 5], // 0=Sun..6=Sat
-    pattern: ['upper', 'lower'],
-    patternIndex: 0
-  },
-  deload: {
-    mode: 'auto',
-    programmedInterval: 4,
-    lastDeloadDate: null,
-    dismissedUntilSession: null
-  },
-  calorieRecommendation: null,
-  foodLog: [],
-  cardioLog: [],
-  cardioWeeklyCap: 150,
-  distanceUnit: 'km',
-  cardioIntensity: { run: 'moderate', cycle: 'moderate', swim: 'moderate', hiit: 'vigorous', class: 'vigorous' },
-  addActivityCalories: false,
-  streak: { current: 0, longest: 0, lastTrainingDate: null },
-  notifications: { enabled: false, reminderTime: '08:00' },
-  customExerciseTags: {},
-  setTargets: null,
-  bodyPartViewMode: 'sets',
-  splitPreset: 'upper-lower',
-  archivedPrograms: {},
-  programLock: null  // { locked: true, lockedAt: 'YYYY-MM-DD', lockedUntil: 'YYYY-MM-DD' }
-};
+const GUEST_DATA_STORAGE_KEY = 'iron_data_guest';
+const GUEST_WORKOUT_STORAGE_KEY = 'iron_workout_guest';
+const USER_DATA_STORAGE_PREFIX = 'iron_data_user_';
+const USER_WORKOUT_STORAGE_PREFIX = 'iron_workout_user_';
+const LEGACY_DATA_STORAGE_KEY = 'iron_data';
+const LEGACY_WORKOUT_STORAGE_KEY = 'iron_workout';
+const LAST_USER_STORAGE_KEY = 'iron_last_user_id';
+const PENDING_AUTH_SEED_KEY = 'iron_pending_seed';
+
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function createDefaultData() {
+  return {
+    sessions: [],
+    weights: [],
+    nextType: 'upper',
+    targetCalories: 2500,
+    autoAdjust: true,
+    trainingStyle: 'balanced',
+    primaryGoal: 'build-muscle',
+    experienceLevel: 'beginner',
+    dietGoal: 'lean-bulk', // 'cut-aggressive', 'cut', 'recomp', 'lean-bulk', 'bulk'
+    programs: null,  // null = use defaults, otherwise { upper: [...], lower: [...] }
+    weightUnit: 'kg',
+    heightCm: null,
+    schedule: {
+      trainingDays: [1, 3, 5], // 0=Sun..6=Sat
+      pattern: ['upper', 'lower'],
+      patternIndex: 0,
+      preferredTime: ''
+    },
+    deload: {
+      mode: 'auto',
+      programmedInterval: 4,
+      lastDeloadDate: null,
+      dismissedUntilSession: null
+    },
+    calorieRecommendation: null,
+    foodLog: [],
+    cardioLog: [],
+    cardioWeeklyCap: 150,
+    distanceUnit: 'km',
+    cardioIntensity: { run: 'moderate', cycle: 'moderate', swim: 'moderate', hiit: 'vigorous', class: 'vigorous' },
+    addActivityCalories: false,
+    streak: { current: 0, longest: 0, lastTrainingDate: null },
+    dietStreak: { current: 0, longest: 0 },
+    notifications: { enabled: false, reminderTime: '08:00' },
+    sex: 'male',
+    customExerciseTags: {},
+    setTargets: null,
+    bodyPartViewMode: 'sets',
+    splitPreset: 'upper-lower',
+    archivedPrograms: {},
+    customFoods: [],
+    pinnedExercises: [],
+    alternateState: {},
+    combinedStreak: false,
+    missedDayDismissed: null,
+    lastSyncTime: 0,
+    lastLocalEditAt: 0,
+    syncConflict: null,
+    programLock: null  // { locked: true, lockedAt: 'YYYY-MM-DD', lockedUntil: 'YYYY-MM-DD' }
+  };
+}
+
+let data = createDefaultData();
 
 let workout = null;   // active workout state
 let timerInterval = null;
@@ -3404,85 +3436,528 @@ function supportsSecureFeatures() {
     || location.hostname === '127.0.0.1';
 }
 
+function getPendingAuthSeed() {
+  try {
+    const raw = localStorage.getItem(PENDING_AUTH_SEED_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const email = String(parsed?.email || '').trim().toLowerCase();
+    const createdAt = Number(parsed?.createdAt || 0);
+    if (!email || !createdAt || Date.now() - createdAt > 30 * 60 * 1000) {
+      localStorage.removeItem(PENDING_AUTH_SEED_KEY);
+      return null;
+    }
+    return { email, createdAt };
+  } catch (e) {
+    localStorage.removeItem(PENDING_AUTH_SEED_KEY);
+    return null;
+  }
+}
+
+function setPendingAuthSeed(email) {
+  localStorage.setItem(PENDING_AUTH_SEED_KEY, JSON.stringify({
+    email: String(email || '').trim().toLowerCase(),
+    createdAt: Date.now()
+  }));
+}
+
+function clearPendingAuthSeed() {
+  localStorage.removeItem(PENDING_AUTH_SEED_KEY);
+}
+
 /* ═══════════════════════════════════════════════════════════
    PERSISTENCE
    ═══════════════════════════════════════════════════════════ */
-function save() {
-  localStorage.setItem('iron_data', JSON.stringify(data));
+function getDataStorageKey(userId = currentUser?.id) {
+  return userId ? `${USER_DATA_STORAGE_PREFIX}${userId}` : GUEST_DATA_STORAGE_KEY;
 }
 
-function load() {
-  const saved = localStorage.getItem('iron_data');
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      data = { ...data, ...parsed };
-    } catch (e) { /* use defaults */ }
-  }
-  // Migration: schedule
-  if (!data.schedule) {
-    data.schedule = {
-      trainingDays: [1, 3, 5],
-      pattern: ['upper', 'lower'],
-      patternIndex: data.nextType === 'upper' ? 0 : 1
-    };
-  }
-  // Migration: deload
-  if (!data.deload) {
-    data.deload = { mode: 'auto', programmedInterval: 4, lastDeloadDate: null, dismissedUntilSession: null };
-  }
-  // Migration: training style (RPE target range)
-  if (!data.trainingStyle) data.trainingStyle = 'balanced';
-  // Migration: weightUnit
-  if (!data.weightUnit) data.weightUnit = 'kg';
-  // Migration: dietGoal
-  if (!data.dietGoal) data.dietGoal = 'lean-bulk';
-  // Migration: calorieRecommendation
-  if (data.calorieRecommendation === undefined) data.calorieRecommendation = null;
-  // Migration: foodLog
-  if (!data.foodLog) data.foodLog = [];
-  // Migration: cardio
-  if (!data.cardioLog) data.cardioLog = [];
-  if (!data.cardioWeeklyCap) data.cardioWeeklyCap = 150;
-  if (!data.distanceUnit) data.distanceUnit = 'km';
-  if (!data.cardioIntensity) data.cardioIntensity = { run: 'moderate', cycle: 'moderate', swim: 'moderate', hiit: 'vigorous', class: 'vigorous' };
-  if (data.addActivityCalories === undefined) data.addActivityCalories = false;
-  // Migration: streak & notifications
-  if (!data.streak) data.streak = { current: 0, longest: 0, lastTrainingDate: null };
-  if (!data.dietStreak) data.dietStreak = { current: 0, longest: 0 };
-  if (!data.sex) data.sex = 'male';
-  if (data.combinedStreak === undefined) data.combinedStreak = false;
-  if (!data.notifications) data.notifications = { enabled: false, reminderTime: '08:00' };
-  // Migration: preferred training time
-  if (!data.schedule.preferredTime) data.schedule.preferredTime = '';
-  // Migration: missed day tracking
-  if (!data.missedDayDismissed) data.missedDayDismissed = null;
-  // Migration: alternating exercises state
-  if (!data.alternateState) data.alternateState = {};
-  // Migration: exercise DB + set targets
-  if (!data.customExerciseTags) data.customExerciseTags = {};
-  if (data.setTargets === undefined) data.setTargets = null;
-  if (!data.bodyPartViewMode) data.bodyPartViewMode = 'sets';
-  // Migration: split presets
-  if (!data.splitPreset) data.splitPreset = 'custom'; // existing users keep their setup
-  if (!data.archivedPrograms) data.archivedPrograms = {};
-  // Keep nextType in sync
-  data.nextType = data.schedule.pattern[data.schedule.patternIndex % data.schedule.pattern.length];
+function getWorkoutStorageKey(userId = currentUser?.id) {
+  return userId ? `${USER_WORKOUT_STORAGE_PREFIX}${userId}` : GUEST_WORKOUT_STORAGE_KEY;
+}
 
-  // Check for interrupted workout
-  const savedWorkout = localStorage.getItem('iron_workout');
-  if (savedWorkout) {
-    try {
-      workout = JSON.parse(savedWorkout);
-    } catch (e) { workout = null; }
+function readStoredJson(key) {
+  const raw = localStorage.getItem(key);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
   }
+}
+
+function writeStoredJson(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+function toFiniteNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function toClampedInt(value, min, max, fallback) {
+  const n = Math.round(Number(value));
+  return Number.isFinite(n) && n >= min && n <= max ? n : fallback;
+}
+
+function toTrimmedString(value, maxLength = 120) {
+  if (typeof value !== 'string') return '';
+  return value.trim().slice(0, maxLength);
+}
+
+function isIsoDateString(value) {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function normalizeDateString(value, fallback = null) {
+  return isIsoDateString(value) ? value : fallback;
+}
+
+function normalizeTimeString(value, fallback = '00:00') {
+  return typeof value === 'string' && /^\d{2}:\d{2}$/.test(value) ? value : fallback;
+}
+
+function normalizeWorkoutTypeKey(value) {
+  return toTrimmedString(value, 48)
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '_')
+    .replace(/[_-]{2,}/g, '_')
+    .replace(/^[_-]+|[_-]+$/g, '');
+}
+
+function normalizeMuscleGroupTag(value) {
+  const tag = toTrimmedString(value, 64);
+  if (!tag) return '';
+  const validGroups = new Set([...FREE_GROUPS, ...PRO_GROUPS]);
+  return validGroups.has(tag) ? tag : '';
+}
+
+function normalizeCustomExerciseTags(tags) {
+  if (!tags || typeof tags !== 'object' || Array.isArray(tags)) return {};
+  return Object.fromEntries(
+    Object.entries(tags).flatMap(([exerciseName, tag]) => {
+      const safeName = toTrimmedString(exerciseName, 120);
+      const safeTag = normalizeMuscleGroupTag(tag);
+      return safeName && safeTag ? [[safeName, safeTag]] : [];
+    })
+  );
+}
+
+function normalizeCustomFoodEntry(entry) {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
+  const name = toTrimmedString(entry.name, 80);
+  if (!name) return null;
+  const cal = toClampedInt(entry.cal, 1, 5000, null);
+  if (!cal) return null;
+  const serv = toTrimmedString(entry.serv, 40);
+  const next = {
+    name,
+    cal,
+    pro: toClampedInt(entry.pro, 0, 500, 0),
+    carb: toClampedInt(entry.carb, 0, 1000, 0),
+    fat: toClampedInt(entry.fat, 0, 500, 0),
+    cat: 'custom'
+  };
+  if (serv) next.serv = serv;
+  return next;
+}
+
+function normalizeProgramExercise(ex) {
+  if (!ex || typeof ex !== 'object' || Array.isArray(ex)) return null;
+  const name = String(ex.name || '').trim();
+  if (!name) return null;
+  const next = {
+    name,
+    sets: toClampedInt(ex.sets, 1, 20, 3),
+    reps: toClampedInt(ex.reps, 1, 100, 10)
+  };
+  const weight = toFiniteNumber(ex.weight);
+  if (weight && weight > 0) next.weight = weight;
+  const restDuration = toClampedInt(ex.restDuration, 15, 600, null);
+  if (restDuration) next.restDuration = restDuration;
+  if (typeof ex.notes === 'string' && ex.notes.trim()) next.notes = ex.notes.trim();
+  if (typeof ex.alternate === 'string' && ex.alternate.trim()) next.alternate = ex.alternate.trim();
+  if (ex.supersetNext) next.supersetNext = true;
+  if (ex.restPause) next.restPause = true;
+  return next;
+}
+
+function normalizeProgramMap(programs) {
+  if (!programs || typeof programs !== 'object' || Array.isArray(programs)) return null;
+  const next = {};
+  for (const [rawKey, exercises] of Object.entries(programs)) {
+    const key = normalizeWorkoutTypeKey(rawKey);
+    if (!key) continue;
+    next[key] = Array.isArray(exercises) ? exercises.map(normalizeProgramExercise).filter(Boolean) : [];
+  }
+  return next;
+}
+
+function normalizeTrainingDays(days) {
+  if (!Array.isArray(days)) return [1, 3, 5];
+  const unique = [...new Set(days.map(Number).filter(d => Number.isInteger(d) && d >= 0 && d <= 6))];
+  return unique.length ? unique.sort((a, b) => a - b) : [1, 3, 5];
+}
+
+function normalizeCardioEntry(entry, fallbackUnit = 'km') {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
+  const next = { ...entry };
+  next.id = toClampedInt(next.id, 1, Number.MAX_SAFE_INTEGER, Date.now() + Math.floor(Math.random() * 1000));
+  next.type = VALID_CARDIO_TYPES.includes(next.type) ? next.type : 'run';
+  next.duration = toFiniteNumber(next.duration);
+  next.duration = next.duration && next.duration > 0 ? next.duration : 0;
+  next.caloriesBurned = toFiniteNumber(next.caloriesBurned);
+  next.caloriesBurned = next.caloriesBurned != null && next.caloriesBurned >= 0 ? next.caloriesBurned : null;
+  next.date = normalizeDateString(next.date, today());
+  next.intensity = next.intensity === 'vigorous' ? 'vigorous' : 'moderate';
+  next.distance = toFiniteNumber(next.distance);
+  next.distance = next.distance && next.distance > 0 ? next.distance : null;
+  if (next.distanceKm == null && next.distance > 0) {
+    const sourceUnit = next.distanceUnit || fallbackUnit || 'km';
+    next.distanceKm = sourceUnit === 'mi' ? next.distance * 1.60934 : next.distance;
+  }
+  next.distanceKm = toFiniteNumber(next.distanceKm);
+  next.distanceKm = next.distanceKm && next.distanceKm > 0 ? next.distanceKm : null;
+  next.distanceUnit = next.distanceUnit === 'mi' ? 'mi' : 'km';
+  return next;
+}
+
+function normalizeSessionExercise(entry) {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
+  const name = toTrimmedString(entry.name, 120);
+  if (!name) return null;
+  return {
+    name,
+    sets: Array.isArray(entry.sets) ? entry.sets.map(normalizeSet) : []
+  };
+}
+
+function normalizeSessionEntry(entry) {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
+  const date = normalizeDateString(entry.date, null);
+  if (!date) return null;
+  const exercises = Array.isArray(entry.exercises)
+    ? entry.exercises.map(normalizeSessionExercise).filter(Boolean)
+    : [];
+  const next = {
+    date,
+    exercises,
+    type: normalizeWorkoutTypeKey(entry.type) || 'upper'
+  };
+  const duration = toFiniteNumber(entry.duration);
+  if (duration != null && duration >= 0) next.duration = duration;
+  const rating = toClampedInt(entry.rating, 1, 5, null);
+  if (rating) next.rating = rating;
+  const notes = toTrimmedString(entry.notes, 1000);
+  if (notes) next.notes = notes;
+  if (entry.isDeload) next.isDeload = true;
+  return next;
+}
+
+function normalizeWeightEntry(entry) {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
+  const date = normalizeDateString(entry.date, null);
+  const weight = toFiniteNumber(entry.weight);
+  if (!date || !(weight > 0)) return null;
+  return { date, weight };
+}
+
+function normalizeFoodLogEntry(entry) {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
+  const date = normalizeDateString(entry.date, null);
+  if (!date) return null;
+  const protein = toClampedInt(entry.protein, 0, 1000, 0);
+  const carbs = toClampedInt(entry.carbs, 0, 2000, 0);
+  const fats = toClampedInt(entry.fats, 0, 1000, 0);
+  let calories = toClampedInt(entry.calories, 0, 20000, 0);
+  if (!calories) calories = (protein * 4) + (carbs * 4) + (fats * 9);
+  if (!(calories > 0)) return null;
+  const next = {
+    id: toClampedInt(entry.id, 1, Number.MAX_SAFE_INTEGER, Date.now() + Math.floor(Math.random() * 1000)),
+    date,
+    calories,
+    protein,
+    carbs,
+    fats,
+    time: normalizeTimeString(entry.time)
+  };
+  const name = toTrimmedString(entry.name, 120);
+  if (name) next.name = name;
+  return next;
+}
+
+function normalizeWarmupStepEntry(entry, fallbackPct = 50, fallbackReps = 5) {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
+  const pct = toClampedInt(entry.pct, 0, 95, fallbackPct);
+  const reps = toClampedInt(entry.reps, 1, 20, fallbackReps);
+  return { pct, reps };
+}
+
+function normalizeWarmupSteps(steps) {
+  if (!Array.isArray(steps)) return null;
+  const normalized = steps
+    .map((entry, index) => normalizeWarmupStepEntry(entry, index === 0 ? 0 : 50, index === 0 ? 12 : 5))
+    .filter(Boolean)
+    .slice(0, 5);
+  return normalized.length ? normalized : null;
+}
+
+function normalizeWarmupSetEntry(entry) {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
+  const reps = toClampedInt(entry.reps, 1, 50, null);
+  if (reps == null) return null;
+  const weight = toFiniteNumber(entry.weight);
+  return {
+    reps,
+    weight: weight != null && weight >= 0 ? weight : 0
+  };
+}
+
+function normalizeWorkoutExerciseEntry(entry) {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
+  const name = toTrimmedString(entry.name, 120);
+  if (!name) return null;
+  const targetSets = toClampedInt(entry.targetSets, 1, 30, 3);
+  const targetReps = toClampedInt(entry.targetReps, 1, 100, 10);
+  const currentWeight = toFiniteNumber(entry.currentWeight);
+  const previousWeight = toFiniteNumber(entry.previousWeight);
+  const startWeight = toFiniteNumber(entry.startWeight);
+  const warmupWeight = toFiniteNumber(entry._warmupWeight);
+  const warmupReps = toClampedInt(entry._warmupReps, 1, 50, null);
+  const normalized = {
+    name,
+    targetSets,
+    targetReps,
+    completedSets: Array.isArray(entry.completedSets) ? entry.completedSets.map(normalizeSet) : [],
+    warmupSets: Array.isArray(entry.warmupSets) ? entry.warmupSets.map(normalizeWarmupSetEntry).filter(Boolean) : [],
+    warmingUp: !!entry.warmingUp,
+    currentReps: toClampedInt(entry.currentReps, 1, 100, targetReps),
+    currentWeight: currentWeight != null && currentWeight >= 0 ? currentWeight : 0,
+    previousWeight: previousWeight != null && previousWeight >= 0 ? previousWeight : (currentWeight != null && currentWeight >= 0 ? currentWeight : 0),
+    supersetNext: !!entry.supersetNext,
+    restPause: !!entry.restPause,
+    notes: toTrimmedString(entry.notes, 1000),
+    isBodyweight: !!entry.isBodyweight,
+    startWeight: startWeight != null && startWeight >= 0 ? startWeight : (currentWeight != null && currentWeight >= 0 ? currentWeight : 0),
+    weightWarningShown: !!entry.weightWarningShown
+  };
+  const progressionBadge = toTrimmedString(entry.progressionBadge, 120);
+  if (progressionBadge) normalized.progressionBadge = progressionBadge;
+  const alternateKey = toTrimmedString(entry.alternateKey, 120);
+  if (alternateKey) normalized.alternateKey = alternateKey;
+  const warmupLabel = toTrimmedString(entry._warmupLabel, 120);
+  if (warmupLabel) normalized._warmupLabel = warmupLabel;
+  if (warmupWeight != null && warmupWeight >= 0) normalized._warmupWeight = warmupWeight;
+  if (warmupReps != null) normalized._warmupReps = warmupReps;
+  return normalized;
+}
+
+function normalizeWorkoutState(state) {
+  if (!state || typeof state !== 'object' || Array.isArray(state)) return null;
+  const exercises = Array.isArray(state.exercises)
+    ? state.exercises.map(normalizeWorkoutExerciseEntry).filter(Boolean)
+    : [];
+  if (!exercises.length) return null;
+  const normalized = {
+    type: normalizeWorkoutTypeKey(state.type) || 'upper',
+    isDeload: !!state.isDeload,
+    exercises,
+    currentExerciseIndex: toClampedInt(state.currentExerciseIndex, 0, exercises.length - 1, 0),
+    startTime: Number.isFinite(state.startTime) && state.startTime > 0 ? state.startTime : Date.now(),
+    restPausePhase: toClampedInt(state.restPausePhase, 0, 2, 0),
+    restPauseAccum: Array.isArray(state.restPauseAccum)
+      ? state.restPauseAccum.map(value => toClampedInt(value, 1, 100, null)).filter(value => value != null)
+      : [],
+    exerciseReady: !!state.exerciseReady
+  };
+  const lastCompletedExerciseIndex = toClampedInt(state.lastCompletedExerciseIndex, 0, exercises.length - 1, null);
+  if (lastCompletedExerciseIndex != null) normalized.lastCompletedExerciseIndex = lastCompletedExerciseIndex;
+  return normalized;
+}
+
+function normalizeData(raw) {
+  const base = createDefaultData();
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) raw = {};
+
+  const next = { ...base, ...raw };
+  next.sessions = Array.isArray(raw.sessions)
+    ? raw.sessions.map(normalizeSessionEntry).filter(Boolean).sort((a, b) => a.date.localeCompare(b.date))
+    : base.sessions;
+  next.weights = Array.isArray(raw.weights)
+    ? raw.weights.map(normalizeWeightEntry).filter(Boolean).sort((a, b) => a.date.localeCompare(b.date))
+    : base.weights;
+  next.foodLog = Array.isArray(raw.foodLog)
+    ? raw.foodLog.map(normalizeFoodLogEntry).filter(Boolean).sort((a, b) => {
+        const dateCmp = a.date.localeCompare(b.date);
+        return dateCmp || a.time.localeCompare(b.time);
+      })
+    : base.foodLog;
+  next.cardioLog = Array.isArray(raw.cardioLog)
+    ? raw.cardioLog.map(entry => normalizeCardioEntry(entry, raw.distanceUnit || next.distanceUnit)).filter(Boolean)
+    : base.cardioLog;
+  next.customFoods = Array.isArray(raw.customFoods)
+    ? raw.customFoods.map(normalizeCustomFoodEntry).filter(Boolean)
+    : base.customFoods;
+  next.pinnedExercises = Array.isArray(raw.pinnedExercises) ? raw.pinnedExercises : base.pinnedExercises;
+  next.schedule = {
+    ...base.schedule,
+    ...(raw.schedule && typeof raw.schedule === 'object' && !Array.isArray(raw.schedule) ? raw.schedule : {})
+  };
+  next.deload = {
+    ...base.deload,
+    ...(raw.deload && typeof raw.deload === 'object' && !Array.isArray(raw.deload) ? raw.deload : {})
+  };
+  next.cardioIntensity = {
+    ...base.cardioIntensity,
+    ...(raw.cardioIntensity && typeof raw.cardioIntensity === 'object' && !Array.isArray(raw.cardioIntensity) ? raw.cardioIntensity : {})
+  };
+  next.streak = {
+    ...base.streak,
+    ...(raw.streak && typeof raw.streak === 'object' && !Array.isArray(raw.streak) ? raw.streak : {})
+  };
+  next.dietStreak = {
+    ...base.dietStreak,
+    ...(raw.dietStreak && typeof raw.dietStreak === 'object' && !Array.isArray(raw.dietStreak) ? raw.dietStreak : {})
+  };
+  next.notifications = {
+    ...base.notifications,
+    ...(raw.notifications && typeof raw.notifications === 'object' && !Array.isArray(raw.notifications) ? raw.notifications : {})
+  };
+  next.customExerciseTags = normalizeCustomExerciseTags(raw.customExerciseTags);
+  next.alternateState = raw.alternateState && typeof raw.alternateState === 'object' && !Array.isArray(raw.alternateState)
+    ? raw.alternateState
+    : base.alternateState;
+  next.archivedPrograms = raw.archivedPrograms && typeof raw.archivedPrograms === 'object' && !Array.isArray(raw.archivedPrograms)
+    ? normalizeProgramMap(raw.archivedPrograms)
+    : base.archivedPrograms;
+  next.programs = raw.programs && typeof raw.programs === 'object' && !Array.isArray(raw.programs)
+    ? normalizeProgramMap(raw.programs)
+    : base.programs;
+
+  next.trainingStyle = next.trainingStyle || 'balanced';
+  next.primaryGoal = next.primaryGoal || 'build-muscle';
+  next.experienceLevel = next.experienceLevel || 'beginner';
+  next.weightUnit = next.weightUnit === 'lbs' ? 'lbs' : 'kg';
+  next.distanceUnit = next.distanceUnit === 'mi' ? 'mi' : 'km';
+  next.dietGoal = next.dietGoal || 'lean-bulk';
+  next.calorieRecommendation = next.calorieRecommendation ?? null;
+  next.targetCalories = toFiniteNumber(next.targetCalories);
+  next.targetCalories = next.targetCalories && next.targetCalories > 0 ? next.targetCalories : base.targetCalories;
+  next.customProtein = toFiniteNumber(next.customProtein);
+  next.customProtein = next.customProtein && next.customProtein > 0 ? next.customProtein : null;
+  next.customCarbs = toFiniteNumber(next.customCarbs);
+  next.customCarbs = next.customCarbs && next.customCarbs > 0 ? next.customCarbs : null;
+  next.customFats = toFiniteNumber(next.customFats);
+  next.customFats = next.customFats && next.customFats > 0 ? next.customFats : null;
+  next.weightGoal = toFiniteNumber(next.weightGoal);
+  next.weightGoal = next.weightGoal && next.weightGoal > 0 ? next.weightGoal : null;
+  next.cardioWeeklyCap = toFiniteNumber(next.cardioWeeklyCap);
+  next.cardioWeeklyCap = next.cardioWeeklyCap && next.cardioWeeklyCap > 0 ? next.cardioWeeklyCap : 150;
+  next.addActivityCalories = !!next.addActivityCalories;
+  next.sex = next.sex === 'female' ? 'female' : 'male';
+  next.heightCm = toFiniteNumber(next.heightCm);
+  next.heightCm = next.heightCm && next.heightCm > 0 ? next.heightCm : null;
+  next.combinedStreak = !!next.combinedStreak;
+  next.missedDayDismissed = next.missedDayDismissed || null;
+  next.setTargets = next.setTargets && typeof next.setTargets === 'object' && !Array.isArray(next.setTargets)
+    ? Object.fromEntries(
+        Object.entries(next.setTargets).map(([key, value]) => {
+          const min = Number.isFinite(value?.min) && value.min >= 0 ? value.min : 0;
+          const max = Number.isFinite(value?.max) && value.max >= min ? value.max : min;
+          return [key, { min, max }];
+        })
+      )
+    : null;
+  next.bodyPartViewMode = next.bodyPartViewMode || 'sets';
+  next.splitPreset = next.splitPreset || 'custom';
+  next.schedule.trainingDays = normalizeTrainingDays(next.schedule.trainingDays);
+  next.schedule.pattern = Array.isArray(next.schedule.pattern)
+    ? [...new Set(next.schedule.pattern.map(normalizeWorkoutTypeKey).filter(Boolean))]
+    : base.schedule.pattern;
+  next.schedule.pattern = next.schedule.pattern.length ? next.schedule.pattern : base.schedule.pattern;
+  next.schedule.patternIndex = Number.isInteger(next.schedule.patternIndex) ? next.schedule.patternIndex : 0;
+  next.schedule.patternIndex = ((next.schedule.patternIndex % next.schedule.pattern.length) + next.schedule.pattern.length) % next.schedule.pattern.length;
+  next.schedule.preferredTime = typeof next.schedule.preferredTime === 'string' && /^\d{2}:\d{2}$/.test(next.schedule.preferredTime)
+    ? next.schedule.preferredTime
+    : '';
+  next.nextType = next.schedule.pattern[next.schedule.patternIndex] || base.nextType;
+  next.deload.mode = ['auto', 'programmed', 'off'].includes(next.deload.mode) ? next.deload.mode : base.deload.mode;
+  next.deload.programmedInterval = toClampedInt(next.deload.programmedInterval, 2, 12, base.deload.programmedInterval);
+  next.restDuration = toClampedInt(next.restDuration, 15, 600, null);
+  next.restDurationIsolation = toClampedInt(next.restDurationIsolation, 15, 600, null);
+  next.barbellIncrement = toFiniteNumber(next.barbellIncrement);
+  next.dumbbellIncrement = toFiniteNumber(next.dumbbellIncrement);
+  next.machineIncrement = toFiniteNumber(next.machineIncrement);
+  next.warmupSteps = normalizeWarmupSteps(raw.warmupSteps);
+  next.notifications.enabled = !!next.notifications.enabled;
+  next.notifications.reminderTime = typeof next.notifications.reminderTime === 'string' && /^\d{2}:\d{2}$/.test(next.notifications.reminderTime)
+    ? next.notifications.reminderTime
+    : base.notifications.reminderTime;
+  next.lastSyncTime = Number.isFinite(next.lastSyncTime) ? next.lastSyncTime : 0;
+  next.lastLocalEditAt = Number.isFinite(next.lastLocalEditAt) ? next.lastLocalEditAt : 0;
+  next.syncConflict = next.syncConflict && typeof next.syncConflict === 'object' ? next.syncConflict : null;
+  // Preserve programLock from existing data
+  next.programLock = raw.programLock && typeof raw.programLock === 'object' ? raw.programLock : null;
+  return next;
+}
+
+function getLegacyDataCandidate(userId) {
+  const legacy = readStoredJson(LEGACY_DATA_STORAGE_KEY);
+  if (!legacy) return null;
+  const lastUserId = localStorage.getItem(LAST_USER_STORAGE_KEY);
+  if (!userId && !lastUserId) return legacy;
+  if (userId && lastUserId === userId) return legacy;
+  return null;
+}
+
+function getLegacyWorkoutCandidate(userId) {
+  const legacy = readStoredJson(LEGACY_WORKOUT_STORAGE_KEY);
+  if (!legacy) return null;
+  const lastUserId = localStorage.getItem(LAST_USER_STORAGE_KEY);
+  if (!userId && !lastUserId) return legacy;
+  if (userId && lastUserId === userId) return legacy;
+  return null;
+}
+
+function load(userId = currentUser?.id) {
+  const dataKey = getDataStorageKey(userId);
+  const workoutKey = getWorkoutStorageKey(userId);
+  let parsed = readStoredJson(dataKey);
+  if (!parsed) {
+    parsed = getLegacyDataCandidate(userId);
+    if (parsed) writeStoredJson(dataKey, parsed);
+  }
+  data = normalizeData(parsed);
+
+  let savedWorkout = readStoredJson(workoutKey);
+  if (!savedWorkout) {
+    savedWorkout = getLegacyWorkoutCandidate(userId);
+    if (savedWorkout) writeStoredJson(workoutKey, savedWorkout);
+  }
+  workout = normalizeWorkoutState(savedWorkout);
+}
+
+function save(options = {}) {
+  if (options.trackEdit !== false) {
+    data.lastLocalEditAt = Date.now();
+  }
+  if (options.clearConflict) data.syncConflict = null;
+  writeStoredJson(getDataStorageKey(), data);
 }
 
 function saveWorkoutState() {
+  const key = getWorkoutStorageKey();
   if (workout) {
-    localStorage.setItem('iron_workout', JSON.stringify(workout));
+    const normalizedWorkout = normalizeWorkoutState(workout);
+    if (normalizedWorkout) {
+      workout = normalizedWorkout;
+      writeStoredJson(key, normalizedWorkout);
+    } else {
+      workout = null;
+      localStorage.removeItem(key);
+    }
   } else {
-    localStorage.removeItem('iron_workout');
+    localStorage.removeItem(key);
   }
 }
 
@@ -3546,9 +4021,27 @@ function daysAgo(dateStr) {
 
 /* Normalize old set format (number) to new format (object) */
 function normalizeSet(s) {
-  if (s && typeof s === 'object' && !Array.isArray(s)) return s;
-  if (Array.isArray(s)) return { reps: s, weight: null, skipped: false };
-  return { reps: s, weight: null, skipped: false };
+  const source = (s && typeof s === 'object' && !Array.isArray(s))
+    ? s
+    : { reps: s, weight: null, skipped: false };
+  let reps;
+  if (Array.isArray(source.reps)) {
+    const repArray = source.reps
+      .map(value => toClampedInt(value, 1, 100, null))
+      .filter(value => value != null);
+    reps = repArray.length ? repArray : 0;
+  } else {
+    reps = toClampedInt(source.reps, 0, 100, 0);
+  }
+  const weight = toFiniteNumber(source.weight);
+  const normalized = {
+    reps,
+    weight: weight != null && weight >= 0 ? weight : null,
+    skipped: !!source.skipped
+  };
+  const rpe = toClampedInt(source.rpe, 0, 10, null);
+  if (rpe != null) normalized.rpe = rpe;
+  return normalized;
 }
 
 /* Get reps from a set (handles both old and new format) */
@@ -10575,10 +11068,232 @@ let currentUser = null;
 let syncInFlight = false;
 let syncTimer = null;
 
+let authBooting = true;
+
 // --- Onboarding / Auth UI ---
 let onboardingStep = 1;
-const ONBOARDING_TOTAL = 5;
-let onboardingData = { weightUnit: 'kg', bodyWeight: '', sex: 'male', trainingDays: [1,3,5], split: 'upper-lower', trainingStyle: 'balanced', preferredTime: '' };
+const ONBOARDING_TOTAL = 6;
+let onboardingData = {
+  weightUnit: 'kg',
+  bodyWeight: '',
+  height: '',
+  sex: 'male',
+  goal: 'build-muscle',
+  experience: 'beginner',
+  trainingDays: [1, 3, 5],
+  split: 'upper-lower',
+  trainingStyle: 'balanced',
+  preferredTime: '',
+  showAdvancedPlan: false,
+  manualSplit: false,
+  manualTrainingStyle: false
+};
+
+function formatOnboardingNumber(value, decimals = 1) {
+  if (!(value > 0)) return '';
+  return value.toFixed(decimals).replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
+}
+
+function setOnboardingWeightUnit(unit) {
+  if (onboardingData.weightUnit === unit) return;
+  const oldUnit = onboardingData.weightUnit;
+  const weight = parseFloat(onboardingData.bodyWeight);
+  const height = parseFloat(onboardingData.height);
+  if (weight > 0) {
+    const weightKg = oldUnit === 'lbs' ? weight / KG_TO_LBS : weight;
+    onboardingData.bodyWeight = unit === 'lbs'
+      ? formatOnboardingNumber(weightKg * KG_TO_LBS)
+      : formatOnboardingNumber(weightKg);
+  }
+  if (height > 0) {
+    const heightCm = oldUnit === 'lbs' ? height * 2.54 : height;
+    onboardingData.height = unit === 'lbs'
+      ? formatOnboardingNumber(heightCm / 2.54)
+      : formatOnboardingNumber(heightCm);
+  }
+  onboardingData.weightUnit = unit;
+  renderOnboardingStep(2);
+}
+
+function getOnboardingWeightKg() {
+  const weight = parseFloat(onboardingData.bodyWeight);
+  if (!(weight > 0)) return null;
+  return onboardingData.weightUnit === 'lbs' ? weight / KG_TO_LBS : weight;
+}
+
+function getOnboardingHeightCm() {
+  const height = parseFloat(onboardingData.height);
+  if (!(height > 0)) return null;
+  return onboardingData.weightUnit === 'lbs' ? height * 2.54 : height;
+}
+
+function estimateLeanBodyMassKg(weightKg, heightCm, sex) {
+  if (!(weightKg > 0) || !(heightCm > 0)) return null;
+  if (sex === 'female') return Math.max(0, 0.252 * weightKg + 0.473 * heightCm - 48.3);
+  return Math.max(0, 0.407 * weightKg + 0.267 * heightCm - 19.2);
+}
+
+function getOnboardingCalibration() {
+  const days = Math.max(1, onboardingData.trainingDays.length);
+  const sex = onboardingData.sex || 'male';
+  const weightKg = getOnboardingWeightKg();
+  const heightCm = getOnboardingHeightCm();
+  const lbmKg = estimateLeanBodyMassKg(weightKg, heightCm, sex);
+  const lbmi = lbmKg && heightCm ? lbmKg / ((heightCm / 100) ** 2) : null;
+  let effectiveExperience = onboardingData.experience;
+  let note = '';
+  if (onboardingData.experience === 'advanced') {
+    const lbmiThreshold = sex === 'female' ? 14.5 : 17.5;
+    if (days <= 3) {
+      effectiveExperience = 'intermediate';
+      note = 'You can still customize everything, but with your current schedule a simpler base plan is more likely to drive progress.';
+    }
+    if (lbmi && lbmi < lbmiThreshold) {
+      effectiveExperience = 'intermediate';
+      note = 'Your body-data signals suggest a simpler base plan is the better place to restart progress right now.';
+    }
+  } else if (onboardingData.experience === 'intermediate' && days <= 2) {
+    effectiveExperience = 'beginner';
+    note = 'With only a couple of training days, simpler programming usually works better than more advanced complexity.';
+  }
+  return { effectiveExperience, note, weightKg, heightCm, lbmKg, lbmi };
+}
+
+function getOnboardingGoalLabel(goal) {
+  return { 'build-muscle': 'Build Muscle', 'lose-fat': 'Lose Fat', 'get-stronger': 'Get Stronger', 'stay-consistent': 'Stay Consistent' }[goal] || 'Build Muscle';
+}
+
+function getOnboardingExperienceLabel(level) {
+  return { beginner: 'New to lifting', intermediate: 'Some experience', advanced: 'Experienced' }[level] || 'New to lifting';
+}
+
+function getOnboardingDietGoal(goal) {
+  return { 'build-muscle': 'lean-bulk', 'lose-fat': 'cut', 'get-stronger': 'recomp', 'stay-consistent': 'recomp' }[goal] || 'lean-bulk';
+}
+
+function getOnboardingTrainingStyleMeta(style) {
+  return { volume: { label: 'Volume', detail: 'More sets, a little further from failure.' }, balanced: { label: 'Balanced', detail: 'Strong default for most lifters.' }, intensity: { label: 'Intensity', detail: 'Fewer sets, harder efforts, closer to failure.' } }[style] || { label: 'Balanced', detail: 'Strong default for most lifters.' };
+}
+
+function getOnboardingSplitChoices() {
+  const choices = [
+    { key: 'full-body', name: 'Full Body', desc: 'Simple, repeatable, and ideal for building consistency.' },
+    { key: 'upper-lower', name: 'Upper / Lower', desc: 'Balanced split with good recovery and progression.' },
+    { key: 'ppl', name: 'Push / Pull / Legs', desc: 'Great when you can train more often.' }
+  ];
+  if (onboardingData.experience === 'advanced') {
+    choices.push({ key: 'bro-split', name: 'Bro Split', desc: 'High-volume specialization for experienced lifters.' });
+  }
+  return choices;
+}
+
+function getOnboardingRecommendation() {
+  const days = Math.max(1, onboardingData.trainingDays.length);
+  const goal = onboardingData.goal;
+  const calibration = getOnboardingCalibration();
+  const experience = calibration.effectiveExperience;
+  let split = 'upper-lower';
+  let trainingStyle = 'balanced';
+  let summary = 'A balanced place to start.';
+  let reason = 'We picked this to match your goal without making recovery harder than it needs to be.';
+  if (experience === 'beginner') {
+    trainingStyle = 'balanced';
+    if (days <= 3) {
+      split = 'full-body';
+      summary = 'Simple full-body sessions to help you learn movements fast and stay consistent.';
+      reason = 'Beginners usually progress fastest with simpler training they can repeat and recover from.';
+    } else {
+      split = 'upper-lower';
+      summary = 'A balanced upper/lower split with enough frequency to build momentum.';
+      reason = 'This gives you structure without overwhelming you with too many different session types.';
+    }
+    if (goal === 'lose-fat') summary = 'A straightforward plan built to preserve muscle while you lean out.';
+    else if (goal === 'get-stronger') summary = 'A simple strength-friendly plan that lets technique and consistency do the work first.';
+  } else {
+    if (goal === 'lose-fat') {
+      split = days <= 3 ? 'full-body' : 'upper-lower';
+      trainingStyle = 'balanced';
+      summary = 'Enough volume to hold onto muscle while cutting, without crushing recovery.';
+      reason = 'Fat-loss phases work best when training quality stays high and recovery is protected.';
+    } else if (goal === 'get-stronger') {
+      split = days >= 4 ? 'upper-lower' : 'full-body';
+      trainingStyle = experience === 'advanced' ? 'intensity' : 'balanced';
+      summary = 'A strength-focused setup built around repeat exposure to the main lifts.';
+      reason = 'You will get more from high-quality hard sets than from adding unnecessary exercise variety.';
+    } else if (goal === 'stay-consistent') {
+      split = days <= 3 ? 'full-body' : 'upper-lower';
+      trainingStyle = 'balanced';
+      summary = 'A sustainable setup designed to make showing up feel easy.';
+      reason = 'The best plan for consistency is one you can repeat even on busy weeks.';
+    } else {
+      if (days >= 5 && experience === 'advanced') {
+        split = 'ppl';
+        trainingStyle = 'volume';
+        summary = 'A higher-frequency hypertrophy split with enough room to push volume.';
+        reason = 'You have the training age and schedule to benefit from more specialized sessions.';
+      } else if (days <= 3) {
+        split = 'full-body';
+        trainingStyle = 'balanced';
+        summary = 'A muscle-building setup that covers everything without wasting sessions.';
+        reason = 'With fewer training days, full body tends to deliver the most return per workout.';
+      } else {
+        split = 'upper-lower';
+        trainingStyle = experience === 'advanced' ? 'volume' : 'balanced';
+        summary = 'A proven muscle-building split with strong recovery and progression potential.';
+        reason = 'This is a strong default when your goal is size and you can train consistently each week.';
+      }
+    }
+  }
+  if (calibration.note) reason = `${calibration.note} ${reason}`;
+  return { split, trainingStyle, summary, reason };
+}
+
+function applyOnboardingRecommendationDefaults() {
+  const recommendation = getOnboardingRecommendation();
+  if (!onboardingData.manualSplit) onboardingData.split = recommendation.split;
+  if (!onboardingData.manualTrainingStyle) onboardingData.trainingStyle = recommendation.trainingStyle;
+  return recommendation;
+}
+
+function setOnboardingGoal(goal) {
+  onboardingData.goal = goal;
+  onboardingData.manualSplit = false;
+  onboardingData.manualTrainingStyle = false;
+  renderOnboardingStep(3);
+}
+
+function setOnboardingExperience(level) {
+  onboardingData.experience = level;
+  onboardingData.showAdvancedPlan = level !== 'beginner';
+  onboardingData.manualSplit = false;
+  onboardingData.manualTrainingStyle = false;
+  renderOnboardingStep(3);
+}
+
+function selectOnboardingSplit(split) {
+  onboardingData.split = split;
+  onboardingData.manualSplit = true;
+  renderOnboardingStep(5);
+}
+
+function selectOnboardingTrainingStyle(style) {
+  onboardingData.trainingStyle = style;
+  onboardingData.manualTrainingStyle = true;
+  renderOnboardingStep(5);
+}
+
+function showOnboardingPlanCustomization() {
+  onboardingData.showAdvancedPlan = true;
+  renderOnboardingStep(5);
+}
+
+function nextOnboardingSchedule() {
+  if (!onboardingData.trainingDays.length) {
+    alert('Choose at least one training day to continue.');
+    return;
+  }
+  renderOnboardingStep(5);
+}
 
 function renderOnboardingDots(step) {
   const dots = document.getElementById('onboarding-dots');
@@ -10599,19 +11314,19 @@ function renderOnboardingStep(step) {
     title.style.fontSize = '64px';
     el.innerHTML = `
       <div class="onboarding-step">
-        <p style="text-align:center;color:var(--text-3);font-size:13px;letter-spacing:1.5px;margin-bottom:36px;">TRACK. TRAIN. TRANSFORM.</p>
+        <p style="text-align:center;color:var(--text-3);font-size:13px;letter-spacing:1.5px;margin-bottom:36px;">START FREE. BUILD MOMENTUM.</p>
         <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:36px;">
           <div class="onboarding-feature">
             <div class="onboarding-feature-icon">🏋️</div>
-            <div><h3>Smart Training</h3><p>Log workouts with auto-generated progressive overload to keep you moving forward</p></div>
+            <div><h3>Smart Training</h3><p>Get a plan that matches your goal, your level, and the days you can actually train.</p></div>
           </div>
           <div class="onboarding-feature">
             <div class="onboarding-feature-icon">🤖</div>
-            <div><h3>Smart Diet Coach</h3><p>Adjusts your calories based on your weight trends and goals — log weigh-ins regularly for best results</p></div>
+            <div><h3>Progress That Adapts</h3><p>Log workouts, build streaks, and unlock deeper coaching as you use the app.</p></div>
           </div>
           <div class="onboarding-feature">
             <div class="onboarding-feature-icon">📊</div>
-            <div><h3>Track Everything</h3><p>PRs, volume trends, streaks, body weight and cardio — all in one place</p></div>
+            <div><h3>Free To Start</h3><p>Start free with core logging and progression. Upgrade later if you want deeper insights.</p></div>
           </div>
         </div>
         <button class="btn btn-primary" onclick="renderOnboardingStep(2)">Get Started</button>
@@ -10620,42 +11335,36 @@ function renderOnboardingStep(step) {
         </p>
       </div>`;
   } else if (step === 2) {
-    // Basic setup
-    title.textContent = 'SETUP';
+    // Body setup
+    title.textContent = 'BODY SETUP';
     title.style.fontSize = '36px';
-    const days = ['S','M','T','W','T','F','S'];
     el.innerHTML = `
       <div class="onboarding-step">
-        <p style="color:var(--text-2);font-size:14px;text-align:center;margin-bottom:28px;">Let's get the basics right.</p>
+        <p style="color:var(--text-2);font-size:14px;text-align:center;margin-bottom:28px;">Start with the basics. This helps us estimate calories and keep your first plan grounded in reality.</p>
 
-        <label style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);margin-bottom:8px;display:block;">Biological sex</label>
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);margin-bottom:8px;display:block;">Body profile</label>
         <div style="display:flex;gap:8px;margin-bottom:16px;">
           <button class="btn ${onboardingData.sex === 'male' ? 'btn-primary' : 'btn-secondary'}" onclick="onboardingData.sex='male';renderOnboardingStep(2);" style="flex:1;">Male</button>
           <button class="btn ${onboardingData.sex === 'female' ? 'btn-primary' : 'btn-secondary'}" onclick="onboardingData.sex='female';renderOnboardingStep(2);" style="flex:1;">Female</button>
         </div>
-        <p style="font-size:10px;color:var(--text-3);margin:-10px 0 20px;text-align:center;">Used for calorie estimates and strength benchmarks</p>
+        <p style="font-size:10px;color:var(--text-3);margin:-10px 0 20px;text-align:center;">Used for calorie estimates and to gently calibrate your starting setup.</p>
 
         <label style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);margin-bottom:8px;display:block;">Units</label>
-        <div style="display:flex;gap:8px;margin-bottom:24px;">
-          <button class="btn ${onboardingData.weightUnit === 'kg' ? 'btn-primary' : 'btn-secondary'}" onclick="onboardingData.weightUnit='kg';renderOnboardingStep(2);" style="flex:1;">kg</button>
-          <button class="btn ${onboardingData.weightUnit === 'lbs' ? 'btn-primary' : 'btn-secondary'}" onclick="onboardingData.weightUnit='lbs';renderOnboardingStep(2);" style="flex:1;">lbs</button>
+        <div style="display:flex;gap:8px;margin-bottom:20px;">
+          <button class="btn ${onboardingData.weightUnit === 'kg' ? 'btn-primary' : 'btn-secondary'}" onclick="setOnboardingWeightUnit('kg')" style="flex:1;">kg / cm</button>
+          <button class="btn ${onboardingData.weightUnit === 'lbs' ? 'btn-primary' : 'btn-secondary'}" onclick="setOnboardingWeightUnit('lbs')" style="flex:1;">lbs / in</button>
         </div>
 
         <label style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);margin-bottom:8px;display:block;">Body weight <span style="color:var(--text-3);text-transform:none;letter-spacing:0;">(optional)</span></label>
         <input type="number" id="ob-weight" placeholder="${onboardingData.weightUnit === 'kg' ? 'e.g. 80' : 'e.g. 176'}" value="${onboardingData.bodyWeight}"
           oninput="onboardingData.bodyWeight=this.value"
-          style="width:100%;padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif;margin-bottom:24px;box-sizing:border-box;">
+          style="width:100%;padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif;margin-bottom:16px;box-sizing:border-box;">
 
-        <label style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);margin-bottom:10px;display:block;">Training Days</label>
-        <div class="onboarding-day-toggle" style="margin-bottom:20px;">
-          ${days.map((d, i) => `<button class="day-pill ${onboardingData.trainingDays.includes(i) ? 'active' : ''}" onclick="toggleOnboardingDay(${i})">${d}</button>`).join('')}
-        </div>
-
-        <label style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);margin-bottom:8px;display:block;">Usual training time <span style="color:var(--text-3);text-transform:none;letter-spacing:0;">(optional)</span></label>
-        <input type="time" id="ob-time" value="${onboardingData.preferredTime || ''}"
-          oninput="onboardingData.preferredTime=this.value"
-          style="width:100%;padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif;margin-bottom:8px;box-sizing:border-box;">
-        <p style="font-size:10px;color:var(--text-3);margin:0 0 24px;text-align:center;">Used for smarter reminders and calendar sync</p>
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);margin-bottom:8px;display:block;">Height <span style="color:var(--text-3);text-transform:none;letter-spacing:0;">(optional)</span></label>
+        <input type="number" id="ob-height" placeholder="${onboardingData.weightUnit === 'kg' ? 'e.g. 180 cm' : 'e.g. 71 in'}" value="${onboardingData.height}"
+          oninput="onboardingData.height=this.value"
+          style="width:100%;padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif;margin-bottom:10px;box-sizing:border-box;">
+        <p style="font-size:10px;color:var(--text-3);margin:0 0 24px;text-align:center;">If you add both height and weight, we can make a better first recommendation. You can always change it later.</p>
 
         <div style="display:flex;gap:10px;">
           <button class="btn btn-secondary" onclick="renderOnboardingStep(1)" style="flex:0.4;">Back</button>
@@ -10663,76 +11372,155 @@ function renderOnboardingStep(step) {
         </div>
       </div>`;
   } else if (step === 3) {
-    // Choose split
-    title.textContent = 'YOUR SPLIT';
+    // Goal + experience
+    title.textContent = 'YOUR STARTING POINT';
     title.style.fontSize = '36px';
-    const splits = [
-      { key: 'upper-lower', name: 'Upper / Lower', desc: '4 sessions per week, balanced push & pull', tags: ['Upper','Lower','Upper','Lower'] },
-      { key: 'ppl', name: 'Push / Pull / Legs', desc: '3–6 sessions, high volume per muscle', tags: ['Push','Pull','Legs'] },
-      { key: 'full-body', name: 'Full Body', desc: '3 sessions, hit everything each time', tags: ['Full','Full','Full'] },
-      ...(onboardingData.sex === 'female' ? [{ key: 'lower-focus', name: 'Lower Body Focus', desc: 'Glutes & legs priority with balanced upper body. Great for building shape.', tags: ['Lower A','Upper','Lower B'] }] : []),
-      { key: 'bro-split', name: 'Bro Split', desc: '5 sessions, one muscle group per day', tags: ['Chest','Back','Shoulders','Arms','Legs'] }
-    ];
     el.innerHTML = `
       <div class="onboarding-step">
-        <p style="color:var(--text-2);font-size:14px;text-align:center;margin-bottom:20px;">Pick a programme. You can change this later.</p>
-        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:28px;">
-          ${splits.map(s => `
-            <div class="split-card ${onboardingData.split === s.key ? 'selected' : ''}" onclick="onboardingData.split='${s.key}';renderOnboardingStep(3);">
-              <h3>${s.name}</h3>
-              <p>${s.desc}</p>
-              <div class="split-tags">${s.tags.map(t => `<span class="split-tag">${t}</span>`).join('')}</div>
+        <p style="color:var(--text-2);font-size:14px;text-align:center;margin-bottom:28px;">Tell us what you want and how much control you want from day one.</p>
+
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);margin-bottom:10px;display:block;">Main goal</label>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">
+          ${[
+            { key: 'build-muscle', name: 'Build Muscle', desc: 'Prioritise size, shape, and steady hypertrophy.' },
+            { key: 'lose-fat', name: 'Lose Fat', desc: 'Lean out while keeping training quality high.' },
+            { key: 'get-stronger', name: 'Get Stronger', desc: 'Focus on better performance and heavier lifts.' },
+            { key: 'stay-consistent', name: 'Stay Consistent', desc: 'Build a routine you can actually keep.' }
+          ].map(goal => `
+            <div class="split-card ${onboardingData.goal === goal.key ? 'selected' : ''}" onclick="setOnboardingGoal('${goal.key}')">
+              <h3>${goal.name}</h3>
+              <p>${goal.desc}</p>
             </div>
           `).join('')}
         </div>
+
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);margin-bottom:10px;display:block;">Training experience</label>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">
+          ${[
+            { key: 'beginner', name: 'New to lifting', desc: 'Keep it simple and guide me to the right setup.' },
+            { key: 'intermediate', name: 'Some experience', desc: 'I know the basics and want a solid recommendation.' },
+            { key: 'advanced', name: 'Experienced', desc: 'Give me a recommendation, but let me tune it.' }
+          ].map(level => `
+            <div class="split-card ${onboardingData.experience === level.key ? 'selected' : ''}" onclick="setOnboardingExperience('${level.key}')">
+              <h3>${level.name}</h3>
+              <p>${level.desc}</p>
+            </div>
+          `).join('')}
+        </div>
+
         <div style="display:flex;gap:10px;">
           <button class="btn btn-secondary" onclick="renderOnboardingStep(2)" style="flex:0.4;">Back</button>
           <button class="btn btn-primary" onclick="renderOnboardingStep(4)" style="flex:1;">Next</button>
         </div>
       </div>`;
   } else if (step === 4) {
-    // Training style
-    title.textContent = 'HOW YOU TRAIN';
+    // Schedule
+    title.textContent = 'YOUR SCHEDULE';
     title.style.fontSize = '36px';
-    const styles = [
-      { key: 'volume', name: 'Volume', rpe: 'RPE 7-8', rir: '2-3 reps in reserve',
-        desc: 'More sets, further from failure. Build up work capacity and accumulate volume before adding weight.',
-        who: 'Hypertrophy blocks, RP-style training' },
-      { key: 'balanced', name: 'Balanced', rpe: 'RPE 8-9', rir: '1-2 reps in reserve',
-        desc: 'Hard enough to drive adaptation, manageable enough to recover from. The default for most programs.',
-        who: 'Most lifters, most of the time' },
-      { key: 'intensity', name: 'Intensity', rpe: 'RPE 9-10', rir: '0-1 reps in reserve',
-        desc: 'Fewer sets, closer to failure. Maximise stimulus per set with lower total volume.',
-        who: 'HIT, rest-pause, strength peaking' }
-    ];
+    const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
     el.innerHTML = `
       <div class="onboarding-step">
-        <p style="color:var(--text-2);font-size:14px;text-align:center;margin-bottom:20px;">TENSILE uses RPE (Rate of Perceived Exertion) to auto-regulate your training. Pick the style that matches how you like to train.</p>
-        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
-          ${styles.map(s => `
-            <div class="split-card ${onboardingData.trainingStyle === s.key ? 'selected' : ''}" onclick="onboardingData.trainingStyle='${s.key}';renderOnboardingStep(4);">
-              <h3>${s.name} <span style="font-weight:400;font-size:12px;color:var(--text-3);">${s.rpe} · ${s.rir}</span></h3>
-              <p>${s.desc}</p>
-              <p style="font-size:11px;color:var(--accent);margin-top:4px;">${s.who}</p>
-            </div>
-          `).join('')}
+        <p style="color:var(--text-2);font-size:14px;text-align:center;margin-bottom:20px;">We'll build around what you can realistically stick to.</p>
+
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);margin-bottom:10px;display:block;">Training days</label>
+        <div class="onboarding-day-toggle" style="margin-bottom:12px;">
+          ${days.map((d, i) => `<button class="day-pill ${onboardingData.trainingDays.includes(i) ? 'active' : ''}" onclick="toggleOnboardingDay(${i})">${d}</button>`).join('')}
         </div>
-        <div style="padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:10px;margin-bottom:20px;">
-          <p style="font-size:12px;color:var(--text-3);margin:0;"><strong style="color:var(--text-2);">How it works</strong><br>After each set you can log your RPE. TENSILE compares this to your target range — if effort creeps above it for 3+ sessions, it flags fatigue and suggests a deload. When you hit your target reps, it suggests adding weight next session.</p>
-          <p style="font-size:12px;color:var(--text-3);margin:8px 0 0;"><strong style="color:var(--text-2);">Everyone is different</strong><br>There is no single correct approach — research supports all three (Helms et al., Zourdos et al.). Experiment and let your data guide you. One common mistake is combining high intensity with high volume — pick one to emphasise per block. Start at the lower end of your volume targets and work up. Adding volume faster than you can recover from leads to burnout and injury, not growth.</p>
-        </div>
+        <p style="font-size:10px;color:var(--text-3);margin:0 0 20px;text-align:center;">Choose the days you can hit most weeks, not your perfect week.</p>
+
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);margin-bottom:8px;display:block;">Usual training time <span style="color:var(--text-3);text-transform:none;letter-spacing:0;">(optional)</span></label>
+        <input type="time" id="ob-time" value="${escapeHtml(onboardingData.preferredTime || '')}"
+          oninput="onboardingData.preferredTime=this.value"
+          style="width:100%;padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif;margin-bottom:8px;box-sizing:border-box;">
+        <p style="font-size:10px;color:var(--text-3);margin:0 0 24px;text-align:center;">Used for smarter reminders and to make the app feel more personal.</p>
+
         <div style="display:flex;gap:10px;">
           <button class="btn btn-secondary" onclick="renderOnboardingStep(3)" style="flex:0.4;">Back</button>
-          <button class="btn btn-primary" onclick="renderOnboardingStep(5)" style="flex:1;">Next</button>
+          <button class="btn btn-primary" onclick="nextOnboardingSchedule()" style="flex:1;">Next</button>
         </div>
       </div>`;
   } else if (step === 5) {
+    // Recommendation
+    title.textContent = 'YOUR STARTING PLAN';
+    title.style.fontSize = '36px';
+    const recommendation = applyOnboardingRecommendationDefaults();
+    const splitChoices = getOnboardingSplitChoices();
+    const advancedVisible = onboardingData.showAdvancedPlan || onboardingData.experience !== 'beginner';
+    const currentSplit = SPLIT_PRESETS[onboardingData.split];
+    const currentStyle = getOnboardingTrainingStyleMeta(onboardingData.trainingStyle);
+    const styles = [
+      { key: 'volume', name: 'Volume', detail: 'More sets and more hypertrophy emphasis.' },
+      { key: 'balanced', name: 'Balanced', detail: 'The best default for most users.' },
+      { key: 'intensity', name: 'Intensity', detail: 'Harder efforts with lower total volume.' }
+    ];
+    const calibration = getOnboardingCalibration();
+    el.innerHTML = `
+      <div class="onboarding-step">
+        <p style="color:var(--text-2);font-size:14px;text-align:center;margin-bottom:20px;">Based on your goal, schedule, and the body data you gave us, here's the plan we'd start you on.</p>
+        <div class="split-card selected" style="margin-bottom:18px;">
+          <h3>${currentSplit ? currentSplit.label : 'Recommended Plan'}</h3>
+          <p>${recommendation.summary}</p>
+          <div class="split-tags" style="margin-top:10px;">
+            <span class="split-tag">${getOnboardingGoalLabel(onboardingData.goal)}</span>
+            <span class="split-tag">${getOnboardingExperienceLabel(onboardingData.experience)}</span>
+            <span class="split-tag">${Math.max(1, onboardingData.trainingDays.length)} day${Math.max(1, onboardingData.trainingDays.length) === 1 ? '' : 's'} / week</span>
+          </div>
+          <p style="font-size:12px;color:var(--accent);margin-top:10px;">${recommendation.reason}</p>
+        </div>
+
+        ${calibration.lbmi ? `
+          <div style="padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:10px;margin-bottom:18px;">
+            <p style="font-size:12px;color:var(--text-3);margin:0;"><strong style="color:var(--text-2);">Smart calibration</strong><br>We do not blindly trust labels like "advanced." Your schedule plus current body data help us keep the starting plan practical.</p>
+          </div>
+        ` : ''}
+
+        ${advancedVisible ? `
+          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px;">
+            <label style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);display:block;">Plan options</label>
+            ${splitChoices.map(choice => `
+              <div class="split-card ${onboardingData.split === choice.key ? 'selected' : ''}" onclick="selectOnboardingSplit('${choice.key}')">
+                <h3>${choice.name}</h3>
+                <p>${choice.desc}</p>
+              </div>
+            `).join('')}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+            <label style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);display:block;">Training style</label>
+            ${styles.map(style => `
+              <div class="split-card ${onboardingData.trainingStyle === style.key ? 'selected' : ''}" onclick="selectOnboardingTrainingStyle('${style.key}')">
+                <h3>${style.name}</h3>
+                <p>${style.detail}</p>
+              </div>
+            `).join('')}
+          </div>
+        ` : `
+          <div style="padding:14px 16px;background:rgba(255,255,255,0.03);border-radius:12px;margin-bottom:20px;">
+            <div style="font-size:11px;color:var(--text-3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">Training style</div>
+            <div style="font-size:18px;font-family:'Teko',sans-serif;color:var(--text);letter-spacing:0.05em;">${currentStyle.label}</div>
+            <p style="font-size:12px;color:var(--text-3);margin:6px 0 0;">${currentStyle.detail}</p>
+          </div>
+          <button class="btn btn-secondary" onclick="showOnboardingPlanCustomization()" style="margin-bottom:20px;">Customize Plan</button>
+        `}
+
+        <div style="padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:10px;margin-bottom:20px;">
+          <p style="font-size:12px;color:var(--text-3);margin:0;"><strong style="color:var(--text-2);">Free to start</strong><br>Your first workouts, progression tracking, and streaks are all available on the free tier. Premium is there if you want deeper insights later.</p>
+        </div>
+
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-secondary" onclick="renderOnboardingStep(4)" style="flex:0.4;">Back</button>
+          <button class="btn btn-primary" onclick="renderOnboardingStep(6)" style="flex:1;">Next</button>
+        </div>
+      </div>`;
+  } else if (step === 6) {
     // Account
-    title.textContent = 'YOUR ACCOUNT';
+    title.textContent = 'SAVE YOUR PROGRESS';
     title.style.fontSize = '36px';
     el.innerHTML = `
       <div class="onboarding-step">
-        <p style="color:var(--text-2);font-size:14px;text-align:center;margin-bottom:24px;">Create an account to sync across devices and never lose your data.</p>
+        <p style="color:var(--text-2);font-size:14px;text-align:center;margin-bottom:24px;">Create a free account to sync across devices and keep your data safe. You can also start without one.</p>
+        <div style="padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:10px;margin-bottom:20px;">
+          <p style="font-size:12px;color:var(--text-3);margin:0;"><strong style="color:var(--text-2);">Premium later, not now</strong><br>Free gets you logging, progression, and core tracking. Premium is for deeper analytics, smarter coaching, and richer insights once you are up and running.</p>
+        </div>
         <div style="display:flex;flex-direction:column;gap:12px;">
           <input type="email" id="auth-email" placeholder="Email" autocomplete="email"
             style="padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif;">
@@ -10740,13 +11528,13 @@ function renderOnboardingStep(step) {
             style="padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif;">
           <div id="auth-error" style="color:var(--danger);font-size:13px;min-height:20px;"></div>
           <button onclick="finishOnboarding('signup')" id="auth-submit-btn" class="btn btn-primary">
-            Create Account
+            Create Free Account
           </button>
           <p style="text-align:center;color:var(--text-3);font-size:13px;margin-top:4px;">
             Already have an account? <a href="#" onclick="showLoginScreen();return false;" style="color:var(--accent);">Log in</a>
           </p>
           <div style="display:flex;gap:10px;margin-top:4px;">
-            <button class="btn btn-secondary" onclick="renderOnboardingStep(4)" style="flex:0.4;">Back</button>
+            <button class="btn btn-secondary" onclick="renderOnboardingStep(5)" style="flex:0.4;">Back</button>
             <button class="btn btn-ghost" onclick="finishOnboarding('skip')" style="flex:1;border:1px solid var(--border);">Continue without account</button>
           </div>
         </div>
@@ -10764,13 +11552,17 @@ function toggleOnboardingDay(day) {
   if (idx > -1) onboardingData.trainingDays.splice(idx, 1);
   else onboardingData.trainingDays.push(day);
   onboardingData.trainingDays.sort((a, b) => a - b);
-  renderOnboardingStep(2);
+  renderOnboardingStep(4);
 }
 
 function applyOnboardingSettings() {
   data.weightUnit = onboardingData.weightUnit;
   data.trainingStyle = onboardingData.trainingStyle;
   data.sex = onboardingData.sex;
+  data.primaryGoal = onboardingData.goal;
+  data.experienceLevel = onboardingData.experience;
+  data.dietGoal = getOnboardingDietGoal(onboardingData.goal);
+  data.heightCm = getOnboardingHeightCm();
   data.schedule.trainingDays = onboardingData.trainingDays;
   if (onboardingData.preferredTime) {
     data.schedule.preferredTime = onboardingData.preferredTime;
@@ -10782,7 +11574,7 @@ function applyOnboardingSettings() {
     data.notifications.reminderTime = `${rH}:${rM}`;
   }
   if (onboardingData.bodyWeight) {
-    const w = parseFloat(onboardingData.bodyWeight);
+    const w = getOnboardingWeightKg();
     if (w > 0) {
       if (!data.weights) data.weights = [];
       data.weights.push({ date: new Date().toISOString().slice(0, 10), weight: w });
@@ -10800,7 +11592,7 @@ function applyOnboardingSettings() {
     data.nextType = data.schedule.pattern[0];
     data.splitPreset = onboardingData.split;
   }
-  // Estimate TDEE based on body weight + sex (now that weight is saved)
+  // Estimate TDEE based on body weight, sex, and height
   data.targetCalories = estimateTDEE();
   localStorage.setItem('iron_onboarded', '1');
   save();
@@ -10815,6 +11607,7 @@ async function finishOnboarding(action) {
     const btn = document.getElementById('auth-submit-btn');
     if (!email || !password) { errorEl.textContent = 'Email and password required.'; return; }
     if (password.length < 6) { errorEl.textContent = 'Password must be at least 6 characters.'; return; }
+    setPendingAuthSeed(email);
     errorEl.textContent = '';
     btn.textContent = 'Creating account…';
     btn.disabled = true;
@@ -10822,15 +11615,17 @@ async function finishOnboarding(action) {
       const result = await sb.auth.signUp({ email, password });
       if (result.error) {
         errorEl.textContent = result.error.message;
-        btn.textContent = 'Create Account';
+        btn.textContent = 'Create Free Account';
         btn.disabled = false;
+        clearPendingAuthSeed();
         return;
       }
       // handleAuthStateChange will hide the screen and sync
     } catch (e) {
       errorEl.textContent = 'Connection failed. Try again.';
-      btn.textContent = 'Create Account';
+      btn.textContent = 'Create Free Account';
       btn.disabled = false;
+      clearPendingAuthSeed();
     }
   } else {
     skipAuth();
@@ -10873,6 +11668,31 @@ function renderAuthScreen(mode = 'login') {
   else renderOnboardingStep(1);
 }
 
+function showAuthBlockingState(message, detail = '') {
+  const authScreen = document.getElementById('auth-screen');
+  const el = document.getElementById('auth-form');
+  const title = document.getElementById('onboarding-title');
+  const dots = document.getElementById('onboarding-dots');
+  authScreen.style.display = 'flex';
+  title.textContent = 'TENSILE';
+  title.style.fontSize = '64px';
+  dots.innerHTML = '';
+  el.innerHTML = `
+    <div class="onboarding-step">
+      <p style="text-align:center;color:var(--text-2);font-size:15px;margin-bottom:12px;">${escapeHtml(message)}</p>
+      ${detail ? `<p style="text-align:center;color:var(--text-3);font-size:13px;">${escapeHtml(detail)}</p>` : ''}
+    </div>`;
+}
+
+function renderCurrentTab() {
+  if (currentTab === 'train') renderTrainHome();
+  else if (currentTab === 'diet') renderDiet();
+  else if (currentTab === 'history') renderHistory();
+  else if (currentTab === 'build') renderBuild();
+  else if (currentTab === 'cardio') renderCardio();
+  else renderTrainHome();
+}
+
 async function handleAuth(mode) {
   const email = document.getElementById('auth-email')?.value.trim();
   const password = document.getElementById('auth-password')?.value;
@@ -10883,7 +11703,6 @@ async function handleAuth(mode) {
   errorEl.textContent = '';
   btn.textContent = mode === 'login' ? 'Logging in…' : 'Creating account…';
   btn.disabled = true;
-
   try {
     let result;
     if (mode === 'signup') {
@@ -10893,14 +11712,14 @@ async function handleAuth(mode) {
     }
     if (result.error) {
       errorEl.textContent = result.error.message;
-      btn.textContent = mode === 'login' ? 'Log In' : 'Create Account';
+      btn.textContent = mode === 'login' ? 'Log In' : 'Create Free Account';
       btn.disabled = false;
       return;
     }
     // Auth state change listener handles the rest
   } catch (e) {
     errorEl.textContent = 'Connection failed. Try again.';
-    btn.textContent = mode === 'login' ? 'Log In' : 'Create Account';
+    btn.textContent = mode === 'login' ? 'Log In' : 'Create Free Account';
     btn.disabled = false;
   }
 }
@@ -10911,40 +11730,82 @@ function skipAuth() {
 }
 
 async function handleAuthStateChange(event, session) {
+  if (authBooting && event === 'INITIAL_SESSION') return;
+  clearTimeout(syncTimer);
   if (session?.user) {
+    showAuthBlockingState('Syncing your data…');
+    const userId = session.user.id;
     currentUser = session.user;
-    document.getElementById('auth-screen').style.display = 'none';
+    const pendingSeed = getPendingAuthSeed();
+    const canSeedGuestData = !!pendingSeed
+      && !!session.user.email
+      && session.user.email.toLowerCase() === pendingSeed.email;
+    const hadUserLocalData = !!readStoredJson(getDataStorageKey(userId));
+    const guestDataSnapshot = canSeedGuestData ? normalizeData(readStoredJson(GUEST_DATA_STORAGE_KEY) || data) : null;
+    const guestWorkoutSnapshot = canSeedGuestData ? (readStoredJson(GUEST_WORKOUT_STORAGE_KEY) || workout) : null;
     localStorage.removeItem('iron_skip_auth');
     localStorage.setItem('iron_onboarded', '1');
-    // Pull cloud data on login
-    await cloudPull();
+    localStorage.setItem(LAST_USER_STORAGE_KEY, userId);
+
+    if (canSeedGuestData && !hadUserLocalData && guestDataSnapshot) {
+      data = normalizeData(guestDataSnapshot);
+      writeStoredJson(getDataStorageKey(userId), data);
+      workout = guestWorkoutSnapshot && typeof guestWorkoutSnapshot === 'object' && !Array.isArray(guestWorkoutSnapshot)
+        ? guestWorkoutSnapshot
+        : null;
+      saveWorkoutState();
+    } else {
+      load(userId);
+    }
+
+    try {
+      await cloudPull();
+    } finally {
+      clearPendingAuthSeed();
+      document.getElementById('auth-screen').style.display = 'none';
+      renderCurrentTab();
+    }
   } else {
     currentUser = null;
-    // Show auth screen if not skipped
+    syncInFlight = false;
+    load();
+    hideWorkoutScreen();
+    renderCurrentTab();
+    getPendingAuthSeed();
+    if (event === 'SIGNED_OUT') localStorage.removeItem('iron_skip_auth');
     if (!localStorage.getItem('iron_skip_auth')) {
       document.getElementById('auth-screen').style.display = 'flex';
       renderAuthScreen('login');
+    } else {
+      document.getElementById('auth-screen').style.display = 'none';
     }
   }
 }
 
 // --- Cloud Sync (Supabase) ---
 function getSyncData() {
-  const { syncApiKey, syncBinId, lastSyncTime, ...rest } = data;
+  const { syncApiKey, syncBinId, lastSyncTime, lastLocalEditAt, syncConflict, ...rest } = data;
   return rest;
 }
 
-async function cloudPush() {
+async function cloudPush(force = false) {
   if (!currentUser || syncInFlight) return;
+  if (data.syncConflict && !force) return;
   syncInFlight = true;
   try {
     const payload = { data: getSyncData(), updated_at: new Date().toISOString() };
-    const { error } = await sb
+    const { data: row, error } = await sb
       .from('user_data')
-      .upsert({ user_id: currentUser.id, ...payload }, { onConflict: 'user_id' });
+      .upsert({ user_id: currentUser.id, ...payload }, { onConflict: 'user_id' })
+      .select('updated_at')
+      .single();
     if (!error) {
-      data.lastSyncTime = Date.now();
-      localStorage.setItem('iron_data', JSON.stringify(data));
+      const syncedAt = row?.updated_at ? new Date(row.updated_at).getTime() : Date.now();
+      data.lastSyncTime = syncedAt;
+      data.lastLocalEditAt = syncedAt;
+      data.syncConflict = null;
+      save({ trackEdit: false });
+      if (force) showToast('Local data pushed to cloud.');
     }
   } catch (e) { /* silent fail */ }
   syncInFlight = false;
@@ -10957,7 +11818,7 @@ async function autoSyncPull() {
   await cloudPull(true);
 }
 
-async function cloudPull(silent = false) {
+async function cloudPull(silent = false, force = false) {
   if (!currentUser || syncInFlight) return;
   syncInFlight = true;
   try {
@@ -10975,23 +11836,31 @@ async function cloudPull(silent = false) {
     }
     if (error || !row?.data) { syncInFlight = false; return; }
 
-    const cloud = row.data;
+    const cloud = normalizeData(row.data);
     const cloudTime = new Date(row.updated_at).getTime();
     const localTime = data.lastSyncTime || 0;
+    const localDirtyTime = data.lastLocalEditAt || 0;
+    const hasUnsyncedLocalChanges = localDirtyTime > localTime;
 
-    // If cloud is newer, merge it
-    if (cloudTime > localTime) {
-      Object.assign(data, cloud, { lastSyncTime: Date.now() });
-      localStorage.setItem('iron_data', JSON.stringify(data));
-      load();
-      if (currentTab === 'train') renderTrainHome();
-      else if (currentTab === 'build') renderBuild();
-      else if (currentTab === 'diet') renderDiet();
-      else if (currentTab === 'history') renderHistory?.();
-    } else if (!silent) {
-      // Local is newer or same — push up
+    if (cloudTime > localTime && hasUnsyncedLocalChanges && !force) {
+      data.syncConflict = { cloudUpdatedAt: row.updated_at, detectedAt: Date.now() };
+      save({ trackEdit: false });
+      if (!silent) showToast('Sync paused: newer cloud data exists. Review before continuing on another device.');
       syncInFlight = false;
-      await cloudPush();
+      return;
+    }
+
+    if (cloudTime > localTime) {
+      data = normalizeData({ ...cloud, lastSyncTime: cloudTime, lastLocalEditAt: cloudTime, syncConflict: null });
+      save({ trackEdit: false });
+      load(currentUser?.id);
+      renderCurrentTab();
+      if (force) showToast('Cloud data pulled to this device.');
+    } else if (force) {
+      showToast('This device already has the newest synced copy.');
+    } else if (!silent) {
+      syncInFlight = false;
+      await cloudPush(force);
       return;
     }
   } catch (e) { /* silent fail */ }
@@ -10999,8 +11868,13 @@ async function cloudPull(silent = false) {
 }
 
 async function logoutUser() {
+  save({ trackEdit: false });
+  saveWorkoutState();
+  hideWorkoutScreen();
   await sb.auth.signOut();
   currentUser = null;
+  load();
+  renderTrainHome();
   document.getElementById('auth-screen').style.display = 'flex';
   renderAuthScreen('login');
   closeSettings();
@@ -11008,8 +11882,8 @@ async function logoutUser() {
 
 // Auto-sync: debounced push after every save
 const _origSave = save;
-save = function() {
-  _origSave();
+save = function(options = {}) {
+  _origSave(options);
   if (currentUser) {
     clearTimeout(syncTimer);
     syncTimer = setTimeout(cloudPush, 3000);
@@ -11019,6 +11893,8 @@ save = function() {
 /* ═══════════════════════════════════════════════════════════
    CARDIO TAB
    ═══════════════════════════════════════════════════════════ */
+
+const VALID_CARDIO_TYPES = ['run', 'cycle', 'swim', 'hiit', 'class'];
 
 const CARDIO_TYPES = [
   { key: 'run', label: 'Run', icon: '🏃' },
@@ -11404,9 +12280,7 @@ function renderCardio(quick) {
 /* ═══════════════════════════════════════════════════════════
    INIT
    ═══════════════════════════════════════════════════════════ */
-load();
-renderTrainHome();
-scheduleNotificationChecks();
+showAuthBlockingState('Loading TENSILE…');
 
 // Supabase auth: listen for login/logout
 sb.auth.onAuthStateChange(handleAuthStateChange);
@@ -11416,16 +12290,28 @@ sb.auth.onAuthStateChange(handleAuthStateChange);
   const { data: { session } } = await sb.auth.getSession();
   if (session?.user) {
     currentUser = session.user;
-    autoSyncPull();
-  } else if (!localStorage.getItem('iron_skip_auth') && !localStorage.getItem('iron_onboarded')) {
-    // Brand new user — show onboarding
-    document.getElementById('auth-screen').style.display = 'flex';
-    renderOnboardingStep(1);
-  } else if (!localStorage.getItem('iron_skip_auth') && localStorage.getItem('iron_onboarded')) {
-    // Onboarded but not logged in and didn't skip — show login
-    document.getElementById('auth-screen').style.display = 'flex';
-    showLoginScreen();
+    load(session.user.id);
+    renderCurrentTab();
+    await cloudPull();
+    document.getElementById('auth-screen').style.display = 'none';
+  } else {
+    currentUser = null;
+    load();
+    renderCurrentTab();
+    if (!localStorage.getItem('iron_skip_auth') && !localStorage.getItem('iron_onboarded')) {
+      // Brand new user — show onboarding
+      document.getElementById('auth-screen').style.display = 'flex';
+      renderOnboardingStep(1);
+    } else if (!localStorage.getItem('iron_skip_auth') && localStorage.getItem('iron_onboarded')) {
+      // Onboarded but not logged in and didn't skip — show login
+      document.getElementById('auth-screen').style.display = 'flex';
+      showLoginScreen();
+    } else {
+      document.getElementById('auth-screen').style.display = 'none';
+    }
   }
+  authBooting = false;
+  scheduleNotificationChecks();
 })();
 
 // Re-check on tab focus
@@ -11433,7 +12319,7 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {
     autoSyncPull();
     checkAndFireNotifications();
-    renderTrainHome();
+    renderCurrentTab();
   }
 });
 
