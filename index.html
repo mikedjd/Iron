@@ -2694,15 +2694,21 @@
     .workout-actions {
       display: flex;
       gap: 8px;
-      margin-top: 16px;
+      margin-top: 10px;
+      width: 100%;
     }
     .workout-actions .skip-btn,
     .workout-actions .add-set-btn,
     .workout-actions .back-btn {
       flex: 1;
       margin-top: 0;
-      padding: 10px 0;
+      padding: 14px 0;
       text-align: center;
+      font-size: 14px;
+    }
+    .workout-actions .skip-btn:last-child {
+      flex: 0 0 52px;
+      padding: 14px 0;
     }
     .back-btn {
       border: 1px solid var(--border);
