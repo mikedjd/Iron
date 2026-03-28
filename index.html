@@ -21,6 +21,10 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     /* Prevent iOS zoom on input focus */
     input, select, textarea { font-size: 16px !important; }
+    /* Workout number edit inputs — large display size, iOS zoom already prevented by 16px rule above but we override here */
+    input.workout-num-input { font-size: 72px !important; font-family: 'Teko', sans-serif !important; font-weight: 700 !important; line-height: 1 !important; }
+    input.workout-num-input::-webkit-outer-spin-button,
+    input.workout-num-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     :root {
       --bg: #1c1c1c;
       --surface: rgba(255,255,255,0.05);
@@ -301,6 +305,24 @@
       margin-top: 4px;
     }
 
+    .workout-more-btn {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-3);
+      font-size: 22px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      letter-spacing: 1px;
+    }
     .workout-exit {
       position: absolute;
       top: 16px;
@@ -439,6 +461,10 @@
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       touch-action: manipulation;
+      padding: 0;
+      border: none;
+      box-shadow: none;
+      outline: none;
     }
     #workout-screen.active { display: flex; }
     body.workout-active { overflow: hidden; }
@@ -463,37 +489,55 @@
 
     /* Exercise display */
     .workout-body {
-      flex: 1;
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      justify-content: space-between;
-      padding: 12px 20px 20px;
+      padding: 24px 20px;
       text-align: center;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       min-height: 0;
+      background: transparent;
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
+      outline: none;
+      margin: auto 20px;
     }
     .set-top-section { text-align: center; }
-    .set-mid-section { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
-    .set-bottom-section { text-align: center; padding-bottom: env(safe-area-inset-bottom, 8px); }
+    .set-mid-section { display: flex; flex-direction: column; align-items: center; padding-top: 0; }
+    .set-info-group { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .set-pills-tray {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      padding: 12px 14px;
+      background: rgba(0,0,0,0.18);
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.06);
+      box-shadow: 0 0 30px rgba(163,184,108,0.18), 0 0 60px rgba(163,184,108,0.1), 0 0 90px rgba(163,184,108,0.05);
+    }
+    .set-controls-group { display: flex; flex-direction: column; align-items: center; gap: 24px; margin-top: 28px; }
+    .set-bottom-section { text-align: center; margin-top: 72px; padding-bottom: env(safe-area-inset-bottom, 8px); }
     .exercise-label {
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 600;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--text-3);
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
     .exercise-name {
       font-family: 'Teko', sans-serif;
       font-weight: 700;
-      font-size: clamp(28px, 8vw, 36px);
+      font-size: clamp(32px, 8vw, 48px);
       line-height: 1.1;
       max-width: 100%;
       text-transform: uppercase;
       letter-spacing: 0.02em;
-      margin-bottom: 8px;
+      margin-bottom: 0;
     }
     .prep-note {
       font-size: 17px;
@@ -642,6 +686,12 @@
       from { opacity: 0; transform: scale(0.96); }
       to { opacity: 1; transform: scale(1); }
     }
+    @keyframes bump-pulse {
+      0%   { transform: scale(1); }
+      35%  { transform: scale(1.10); }
+      100% { transform: scale(1); }
+    }
+    .bumping { animation: bump-pulse 0.13s ease-out; }
     .options-row {
       display: flex;
       align-items: center;
@@ -667,58 +717,81 @@
     .set-indicator {
       font-family: 'Teko', sans-serif;
       font-weight: 500;
-      font-size: 20px;
+      font-size: 16px;
       color: var(--text-2);
       letter-spacing: 0.06em;
       text-transform: uppercase;
+      margin-top: 6px;
       margin-bottom: 4px;
     }
     .last-session-line {
-      font-size: 11px;
-      color: var(--text-3);
-      margin-bottom: 8px;
+      font-size: 12px;
+      color: var(--text-2);
       letter-spacing: 0.02em;
       text-align: center;
-      padding: 8px 12px;
-      background: rgba(255,255,255,0.03);
-      border-radius: 8px;
+      padding: 6px 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      font-weight: 500;
     }
-    .last-session-line span { color: var(--text-3); font-weight: 500; }
+    .target-line {
+      font-size: 12px;
+      color: var(--accent);
+      letter-spacing: 0.02em;
+      text-align: center;
+      padding: 6px 16px;
+      background: rgba(163,184,108,0.1);
+      border: 1px solid rgba(163,184,108,0.3);
+      border-radius: 20px;
+      font-weight: 600;
+    }
 
     /* Rep adjuster */
     .rep-adjuster {
       display: flex;
       align-items: center;
-      gap: 24px;
-      margin-bottom: 24px;
+      justify-content: center;
+      gap: 19px;
     }
+    .rep-adjuster > div { flex: 1; }
     .rep-btn {
-      width: 52px;
-      height: 52px;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
-      border: 1px solid var(--border-light);
-      background: var(--surface);
-      color: var(--text);
-      font-size: 24px;
+      border: 2px solid rgba(163,184,108,0.3);
+      background: rgba(163,184,108,0.08);
+      color: var(--accent);
+      font-size: 22px;
       font-weight: 300;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: all 0.15s;
+      touch-action: manipulation;
+      box-shadow: 0 0 12px rgba(163,184,108,0.1);
+      transition: transform 0.07s cubic-bezier(0.34,1.56,0.64,1), background 0.08s, box-shadow 0.08s;
       -webkit-tap-highlight-color: transparent;
+      user-select: none;
     }
-    .rep-btn:active { border-color: var(--accent); background: var(--accent-dim); }
+    .rep-btn:active, .rep-btn.btn-pressing {
+      transform: scale(0.88);
+      background: rgba(163,184,108,0.25);
+      box-shadow: 0 0 20px rgba(163,184,108,0.25);
+    }
+    .rep-btn.btn-pressing {
+      transition: transform 0.02s ease-out, background 0.05s, box-shadow 0.05s;
+    }
     .rep-count {
       font-family: 'Teko', sans-serif;
       font-weight: 700;
       font-size: 72px;
       line-height: 1;
-      min-width: 60px;
+      min-width: 50px;
       text-align: center;
     }
     .rep-label {
-      font-size: 11px;
+      font-size: 9px;
       font-weight: 600;
       letter-spacing: 0.1em;
       text-transform: uppercase;
@@ -728,28 +801,34 @@
 
     /* Done button */
     .done-btn {
-      width: 120px;
-      height: 90px;
-      min-width: 90px;
-      min-height: 90px;
+      width: 100%;
+      height: 72px;
+      min-width: 72px;
+      min-height: 72px;
       flex-shrink: 0;
-      border-radius: 50%;
+      border-radius: 20px;
       border: none;
-      background: var(--accent);
-      color: #1c1c1c;
+      background: linear-gradient(160deg, #b8cc80 0%, #8fa05a 100%);
+      color: #1a1000;
       font-family: 'Teko', sans-serif;
       font-weight: 700;
-      font-size: 18px;
+      font-size: 20px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       cursor: pointer;
-      transition: all 0.15s ease;
-      box-shadow: 0 0 24px rgba(163,184,108,0.2);
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+      box-shadow: 0 6px 28px rgba(163,184,108,0.45), inset 0 1px 0 rgba(255,220,120,0.4);
       -webkit-tap-highlight-color: transparent;
       position: relative;
       overflow: hidden;
     }
-    .done-btn:active { transform: scale(0.93); background: #8fa05a; }
+    .done-btn::after {
+      content: '';
+      position: absolute; top: 0; left: -60%; width: 35%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+      animation: sweepBtn 4s ease-in-out infinite;
+    }
+    .done-btn:active { transform: scale(0.93); box-shadow: 0 2px 12px rgba(163,184,108,0.15); }
 
     /* Ripple */
     .done-btn .ripple {
@@ -1167,6 +1246,111 @@
       color: var(--accent);
       vertical-align: middle;
       margin-left: 4px;
+    }
+
+    /* Instant PR Toast */
+    .pr-toast-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.75);
+      animation: pr-toast-bg 2.8s ease-out forwards;
+      pointer-events: none;
+    }
+    @keyframes pr-toast-bg {
+      0% { opacity: 1; }
+      75% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    .pr-toast-card {
+      background: #2a2a2a;
+      border: 1px solid rgba(163, 184, 108, 0.3);
+      border-radius: 24px;
+      padding: 32px 40px;
+      text-align: center;
+      max-width: 320px;
+      animation: pr-toast-pop 2.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      box-shadow: 0 0 40px rgba(163, 184, 108, 0.15), 0 0 80px rgba(163, 184, 108, 0.05);
+    }
+    @keyframes pr-toast-pop {
+      0% { transform: scale(0.3); opacity: 0; }
+      10% { transform: scale(1.08); opacity: 1; }
+      18% { transform: scale(1); }
+      75% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0; }
+    }
+    .pr-toast-emoji {
+      font-size: 56px;
+      line-height: 1;
+      margin-bottom: 8px;
+      animation: pr-toast-trophy 0.6s 0.1s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    @keyframes pr-toast-trophy {
+      0% { transform: scale(0) rotate(-30deg); }
+      60% { transform: scale(1.3) rotate(8deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+    .pr-toast-title {
+      font-family: 'Teko', sans-serif;
+      font-size: 34px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .pr-toast-exercise {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .pr-toast-detail {
+      font-size: 13px;
+      color: var(--text-2);
+    }
+    .pr-toast-weight {
+      font-family: 'Teko', sans-serif;
+      font-size: 44px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+      margin: 8px 0 2px;
+    }
+    .pr-toast-delta {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .pr-toast-particles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .pr-toast-particle {
+      position: absolute;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pr-particle-burst 1.4s ease-out forwards;
+    }
+    @keyframes pr-particle-burst {
+      0% { opacity: 1; transform: translate(0, 0) scale(1); }
+      100% { opacity: 0; transform: translate(var(--px), var(--py)) scale(0); }
+    }
+    @keyframes pr-screen-pulse {
+      0% { box-shadow: inset 0 0 0 0 rgba(163, 184, 108, 0); }
+      30% { box-shadow: inset 0 0 60px 10px rgba(163, 184, 108, 0.12); }
+      100% { box-shadow: inset 0 0 0 0 rgba(163, 184, 108, 0); }
+    }
+    .pr-screen-flash {
+      animation: pr-screen-pulse 1s ease-out;
     }
 
     /* ═══════════════════════════════════════════════
@@ -2621,34 +2805,47 @@
     .weight-adjuster {
       display: flex;
       align-items: center;
-      gap: 16px;
-      margin-bottom: 24px;
+      justify-content: center;
+      gap: 12px;
     }
+    .weight-adjuster > div { flex: 1; }
     .weight-adj-btn {
-      width: 52px;
-      height: 52px;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
-      border: 1px solid var(--border-light);
-      background: var(--surface);
-      color: var(--text-2);
+      border: 2px solid rgba(163,184,108,0.3);
+      background: rgba(163,184,108,0.08);
+      color: var(--accent);
       font-size: 22px;
+      font-weight: 300;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      touch-action: manipulation;
+      box-shadow: 0 0 12px rgba(163,184,108,0.1);
+      transition: transform 0.07s cubic-bezier(0.34,1.56,0.64,1), background 0.08s, box-shadow 0.08s;
       -webkit-tap-highlight-color: transparent;
+      user-select: none;
     }
-    .weight-adj-btn:active { border-color: var(--accent); background: var(--accent-dim); }
+    .weight-adj-btn:active, .weight-adj-btn.btn-pressing {
+      transform: scale(0.88);
+      background: rgba(163,184,108,0.25);
+      box-shadow: 0 0 20px rgba(163,184,108,0.25);
+    }
+    .weight-adj-btn.btn-pressing {
+      transition: transform 0.02s ease-out, background 0.05s, box-shadow 0.05s;
+    }
     .weight-display {
       font-family: 'Teko', sans-serif;
       font-weight: 700;
       font-size: 72px;
       line-height: 1;
-      min-width: 60px;
+      min-width: 50px;
       text-align: center;
     }
     .weight-display-label {
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 600;
       letter-spacing: 0.1em;
       text-transform: uppercase;
@@ -3189,6 +3386,7 @@
 
   <!-- ═══════════ WORKOUT OVERLAY ═══════════ -->
   <div id="workout-screen">
+    <button class="workout-more-btn" onclick="showOptionsMenu()">⋯</button>
     <button class="workout-exit" onclick="exitWorkout()">✕</button>
     <div class="progress-bar" id="workout-progress"></div>
     <div class="workout-body" id="workout-body"></div>
@@ -6055,10 +6253,10 @@ function renderTrainHome() {
     el.innerHTML = `
       <div class="card fade-in">
         <div class="rest-badge ready">Workout in progress</div>
-        <div class="mt-16">
+        <div class="mt-12">
           <p class="text-sm text-dim">You have an unfinished workout. Resume or discard it.</p>
         </div>
-        <div class="mt-16" style="display:flex;gap:8px">
+        <div class="mt-12" style="display:flex;gap:8px">
           <button class="btn btn-primary" style="flex:1" onclick="resumeWorkout()">Resume</button>
           <button class="btn btn-secondary" style="flex:1" onclick="discardWorkout()">Discard</button>
         </div>
@@ -6515,13 +6713,9 @@ function renderExercise() {
   // Type badge
   let typeBadge = '';
   let setLabel = `Set ${currentSet} of ${ex.targetSets}`;
-  // Last set motivational message
-  const lastSetMessages = [
-    'Final set. Dig deep.'
-  ];
+  // Last set label
   if (currentSet === ex.targetSets && ex.targetSets > 1) {
-    const msgIdx = Math.floor(Math.random() * lastSetMessages.length);
-    setLabel = lastSetMessages[msgIdx];
+    setLabel = 'Final Working Set';
   }
   const _circuitBadge = getCircuitInfo(workout.exercises, workout.currentExerciseIndex);
   if (_circuitBadge) {
@@ -6539,27 +6733,18 @@ function renderExercise() {
   // Weight display (always show for non-bodyweight exercises)
   let weightHtml = '';
   if (!ex.isBodyweight) {
-    let progBadge = '';
-    if (ex.progressionBadge && currentSet === 1 && ex.completedSets.length === 0) {
-      if (ex.progressionBadge === 'hold') {
-        progBadge = `<div class="progression-badge" style="color:var(--text-3);">● Hold weight — RPE was high last session</div>`;
-      } else {
-        progBadge = `<div class="progression-badge">▲ ${escapeHtml(ex.progressionBadge)}</div>`;
-      }
-    }
     weightHtml = `
       <div class="weight-adjuster">
         <button class="weight-adj-btn"
-          onmousedown="startLongPress(()=>adjustWeight(-1))" onmouseup="stopLongPress()" onmouseleave="stopLongPress()"
-          ontouchstart="startLongPress(()=>adjustWeight(-1));event.preventDefault()" ontouchend="stopLongPress()" ontouchcancel="stopLongPress()">−</button>
+          onmousedown="startLongPress(()=>adjustWeight(-1),this)" onmouseup="stopLongPress(this)" onmouseleave="stopLongPress(this)"
+          ontouchstart="startLongPress(()=>adjustWeight(-1),this);event.preventDefault()" ontouchend="stopLongPress(this)" ontouchcancel="stopLongPress(this)">−</button>
         <div style="text-align:center">
           <div class="weight-display" onclick="tapToEditWeight()" style="cursor:pointer;">${displayWeight(ex.currentWeight)}</div>
           <div class="weight-display-label">${weightLabel()}</div>
-          ${progBadge}
         </div>
         <button class="weight-adj-btn"
-          onmousedown="startLongPress(()=>adjustWeight(1))" onmouseup="stopLongPress()" onmouseleave="stopLongPress()"
-          ontouchstart="startLongPress(()=>adjustWeight(1));event.preventDefault()" ontouchend="stopLongPress()" ontouchcancel="stopLongPress()">+</button>
+          onmousedown="startLongPress(()=>adjustWeight(1),this)" onmouseup="stopLongPress(this)" onmouseleave="stopLongPress(this)"
+          ontouchstart="startLongPress(()=>adjustWeight(1),this);event.preventDefault()" ontouchend="stopLongPress(this)" ontouchcancel="stopLongPress(this)">+</button>
       </div>`;
   }
 
@@ -6624,7 +6809,7 @@ function renderExercise() {
   }
   if (!workout.exerciseReady && currentSet === 1) {
     const prepToggleLabel = ex.notes ? 'Note' : 'Add note';
-    const prepNoteDisplay = `<div class="note-toggle" onclick="togglePrepNote()">\u{1F4DD} ${prepToggleLabel} <span class="note-chevron">${prepNoteExpanded ? '\u25BE' : '\u25B8'}</span></div>`
+    const prepNoteDisplay = `<div class="note-toggle" onclick="togglePrepNote()">✎ ${prepToggleLabel} <span class="note-chevron">${prepNoteExpanded ? '\u25BE' : '\u25B8'}</span></div>`
       + (prepNoteExpanded
         ? (ex.notes
           ? `<div class="prep-note">${escapeHtml(ex.notes)}<span class="prep-note-edit-link" onclick="showWorkoutNoteInput()"> Edit</span></div>`
@@ -6680,12 +6865,12 @@ function renderExercise() {
   let notesHtml = '';
   if (ex.notes || workoutNotesExpanded) {
     const toggleLabel = ex.notes ? 'Notes' : 'Add note';
-    notesHtml = `<div class="note-toggle" onclick="toggleWorkoutNotes()">\u{1F4DD} ${toggleLabel} <span class="note-chevron">${workoutNotesExpanded ? '\u25BE' : '\u25B8'}</span></div>`;
+    notesHtml = `<div class="note-toggle" onclick="toggleWorkoutNotes()">✎ ${toggleLabel} <span class="note-chevron">${workoutNotesExpanded ? '\u25BE' : '\u25B8'}</span></div>`;
     if (workoutNotesExpanded) {
       notesHtml += `<textarea class="exercise-note-edit" rows="2" onblur="updateWorkoutNote(this.value)" onfocus="this.style.borderColor='var(--accent)'">${ex.notes || ''}</textarea>`;
     }
   } else {
-    notesHtml = `<div class="note-toggle" onclick="toggleWorkoutNotes()">\u{1F4DD} Add note <span class="note-chevron">\u25B8</span></div>`;
+    notesHtml = `<div class="note-toggle" onclick="toggleWorkoutNotes()">✎ Add note <span class="note-chevron">\u25B8</span></div>`;
   }
 
   // Weight info for tracking screen (plates or per-dumbbell)
@@ -6696,7 +6881,22 @@ function renderExercise() {
   let lastSessionHtml = '';
   if (lastSession) {
     const repsStr = lastSession.setReps.map(r => r).join(' · ');
-    lastSessionHtml = `<div class="last-session-line">Last: <span>${displayWeight(lastSession.weight)}${weightLabel()}</span> — <span>${repsStr}</span> reps</div>`;
+    lastSessionHtml = `<div class="last-session-line">Last: ${displayWeight(lastSession.weight)}${weightLabel()} × ${repsStr}</div>`;
+  }
+
+  // Target progression pill — combines progression badge + target into one pill
+  let targetHtml = '';
+  if (ex.targetReps) {
+    if (ex.isBodyweight) {
+      targetHtml = `<div class="target-line">Target: ${ex.targetReps} reps</div>`;
+    } else if (ex.progressionBadge && ex.progressionBadge !== 'hold') {
+      // e.g. "+2.5kg vs last week: 100kg × 8"
+      targetHtml = `<div class="target-line">${escapeHtml(ex.progressionBadge)}${weightLabel()} vs last week: ${displayWeight(ex.currentWeight)}${weightLabel()} × ${ex.targetReps}</div>`;
+    } else if (ex.progressionBadge === 'hold') {
+      targetHtml = `<div class="target-line">Hold weight: ${displayWeight(ex.currentWeight)}${weightLabel()} × ${ex.targetReps}</div>`;
+    } else {
+      targetHtml = `<div class="target-line">Target: ${displayWeight(ex.currentWeight)}${weightLabel()} × ${ex.targetReps}</div>`;
+    }
   }
 
   bodyEl.innerHTML = `
@@ -6704,32 +6904,31 @@ function renderExercise() {
       ${typeBadge}
       <div class="exercise-label">Exercise ${workout.currentExerciseIndex + 1} of ${totalExercises}</div>
       <div class="exercise-name">${escapeHtml(ex.name)}</div>
-      <div class="set-indicator">${setLabel}</div>
     </div>
     <div class="set-mid-section">
-      ${weightHtml}
-      ${lastSessionHtml}
-      <div class="rep-adjuster">
+      <div class="set-info-group">
+        <div class="set-indicator">${setLabel}</div>
+        ${(lastSessionHtml || targetHtml) ? `<div class="set-pills-tray">${lastSessionHtml}${targetHtml}</div>` : ''}
+        ${notesHtml}
+      </div>
+      <div class="set-controls-group">
+        ${weightHtml}
+        <div class="rep-adjuster">
         <button class="rep-btn"
-          onmousedown="startLongPress(()=>adjustReps(-1))" onmouseup="stopLongPress()" onmouseleave="stopLongPress()"
-          ontouchstart="startLongPress(()=>adjustReps(-1));event.preventDefault()" ontouchend="stopLongPress()" ontouchcancel="stopLongPress()">−</button>
+          onmousedown="startLongPress(()=>adjustReps(-1),this)" onmouseup="stopLongPress(this)" onmouseleave="stopLongPress(this)"
+          ontouchstart="startLongPress(()=>adjustReps(-1),this);event.preventDefault()" ontouchend="stopLongPress(this)" ontouchcancel="stopLongPress(this)">−</button>
         <div style="text-align:center">
           <div class="rep-count" onclick="tapToEditReps()" style="cursor:pointer;">${ex.currentReps}</div>
           <div class="rep-label">reps</div>
         </div>
         <button class="rep-btn"
-          onmousedown="startLongPress(()=>adjustReps(1))" onmouseup="stopLongPress()" onmouseleave="stopLongPress()"
-          ontouchstart="startLongPress(()=>adjustReps(1));event.preventDefault()" ontouchend="stopLongPress()" ontouchcancel="stopLongPress()">+</button>
+          onmousedown="startLongPress(()=>adjustReps(1),this)" onmouseup="stopLongPress(this)" onmouseleave="stopLongPress(this)"
+          ontouchstart="startLongPress(()=>adjustReps(1),this);event.preventDefault()" ontouchend="stopLongPress(this)" ontouchcancel="stopLongPress(this)">+</button>
+      </div>
       </div>
     </div>
     <div class="set-bottom-section">
-      <button class="done-btn" onclick="completeSet(this)" style="width:100%;border-radius:20px;">Done</button>
-      <div class="workout-actions">
-        ${(workout.currentExerciseIndex > 0 || ex.completedSets.length > 0) ? '<button class="back-btn" onclick="goBackSet()">←<span class="act-lbl">Back</span></button>' : ''}
-        <button class="skip-btn" onclick="skipSet()">⏭<span class="act-lbl">Skip</span></button>
-        <button class="add-set-btn" onclick="addSetDuringWorkout()">＋<span class="act-lbl">Set</span></button>
-        <button class="skip-btn" onclick="showOptionsMenu()">⋯<span class="act-lbl">More</span></button>
-      </div>
+      <button class="done-btn" onclick="completeSet(this)" style="width:100%;border-radius:20px;">Log Set</button>
     </div>
   `;
 
@@ -6744,12 +6943,15 @@ function tapToEditWeight() {
   if (!el || el.querySelector('input')) return;
   const current = ex.currentWeight || 0;
   el.innerHTML = `<input type="number" inputmode="decimal" step="any" value="${current}"
-    style="width:80px;font-size:inherit;font-family:inherit;font-weight:inherit;color:var(--accent);
-    background:transparent;border:none;border-bottom:2px solid var(--accent);text-align:center;outline:none;
-    -moz-appearance:textfield;" id="weight-edit-input">`;
+    class="workout-num-input" id="weight-edit-input">`;
   const input = el.querySelector('input');
+  Object.assign(input.style, {
+    width:'130px', color:'inherit', background:'transparent', border:'none',
+    borderBottom:'2px solid var(--accent)', textAlign:'center', outline:'none',
+    MozAppearance:'textfield', display:'block', margin:'0 auto'
+  });
   input.focus();
-  input.select();
+  const len = input.value.length; input.setSelectionRange(len, len);
   function confirm() {
     const num = parseFloat(input.value);
     if (!isNaN(num) && num >= 0) {
@@ -6770,12 +6972,15 @@ function tapToEditReps() {
   if (!el || el.querySelector('input')) return;
   const current = ex.currentReps || 1;
   el.innerHTML = `<input type="number" inputmode="numeric" step="1" min="1" value="${current}"
-    style="width:60px;font-size:inherit;font-family:inherit;font-weight:inherit;color:var(--accent);
-    background:transparent;border:none;border-bottom:2px solid var(--accent);text-align:center;outline:none;
-    -moz-appearance:textfield;" id="reps-edit-input">`;
+    class="workout-num-input" id="reps-edit-input">`;
   const input = el.querySelector('input');
+  Object.assign(input.style, {
+    width:'80px', color:'inherit', background:'transparent', border:'none',
+    borderBottom:'2px solid var(--accent)', textAlign:'center', outline:'none',
+    MozAppearance:'textfield', display:'block', margin:'0 auto'
+  });
   input.focus();
-  input.select();
+  const len = input.value.length; input.setSelectionRange(len, len);
   function confirm() {
     const num = parseInt(input.value);
     if (!isNaN(num) && num >= 1) {
@@ -6789,18 +6994,41 @@ function tapToEditReps() {
 }
 
 // Long-press acceleration for ± buttons
-let _lpTimer = null, _lpInterval = null;
-function startLongPress(fn) {
-  fn(); // fire immediately on first press
-  _lpTimer = setTimeout(() => {
-    _lpInterval = setInterval(fn, 80);
-  }, 450);
+let _lpTimer = null, _lpStart = 0, _lpBtn = null;
+// Ramp tiers: [ms_into_hold, interval_ms] — faster as hold continues
+const _lpRamp = [[450, 280], [1100, 110], [2400, 55]];
+function _lpSchedule(fn) {
+  const elapsed = Date.now() - _lpStart;
+  let interval = null;
+  for (const [thresh, ms] of _lpRamp) { if (elapsed >= thresh) interval = ms; }
+  if (interval === null) return; // still in initial dead zone
+  if (navigator.vibrate) navigator.vibrate(3);
+  fn();
+  _lpTimer = setTimeout(() => _lpSchedule(fn), interval);
 }
-function stopLongPress() {
+function startLongPress(fn, btn) {
+  stopLongPress();
+  _lpStart = Date.now();
+  _lpBtn = btn || null;
+  if (_lpBtn) _lpBtn.classList.add('btn-pressing');
+  if (navigator.vibrate) navigator.vibrate(7);
+  fn(); // immediate fire on first press
+  _lpTimer = setTimeout(() => _lpSchedule(fn), _lpRamp[0][0]);
+}
+function stopLongPress(btn) {
   clearTimeout(_lpTimer);
-  clearInterval(_lpInterval);
   _lpTimer = null;
-  _lpInterval = null;
+  const b = btn || _lpBtn;
+  if (b) b.classList.remove('btn-pressing');
+  _lpBtn = null;
+}
+
+function pulseBump(el) {
+  if (!el) return;
+  el.classList.remove('bumping');
+  // Force reflow so re-adding the class re-triggers the animation
+  void el.offsetWidth;
+  el.classList.add('bumping');
 }
 
 function adjustWeight(delta) {
@@ -6811,7 +7039,7 @@ function adjustWeight(delta) {
   ex.progressionBadge = null; // clear badge once manually adjusted
   saveWorkoutState();
   const el = document.querySelector('.weight-display');
-  if (el) el.textContent = displayWeight(ex.currentWeight);
+  if (el) { el.textContent = displayWeight(ex.currentWeight); pulseBump(el); }
 
   // Warning if weight increased >10% above session start (opt-in setting)
   if (data.showWeightWarning && ex.startWeight && ex.startWeight > 0) {
@@ -6867,9 +7095,20 @@ function showOptionsMenu() {
     box-shadow:0 -8px 40px rgba(0,0,0,0.6);
     animation:slideUp 0.22s ease;
   `;
+  const canGoBack = workout.currentExerciseIndex > 0 || ex.completedSets.length > 0;
   sheet.innerHTML = `
     <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;"></div>
     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-3);margin-bottom:12px;">Options</div>
+    ${canGoBack ? `<button class="options-row" onclick="document.getElementById('options-sheet').remove();document.querySelector('[style*=\\'inset:0\\']')?.remove();goBackSet();">
+      <span>← Back</span><span class="options-chev">›</span>
+    </button>` : ''}
+    <button class="options-row" onclick="document.getElementById('options-sheet').remove();document.querySelector('[style*=\\'inset:0\\']')?.remove();skipSet();">
+      <span>⏭ Skip Set</span><span class="options-chev">›</span>
+    </button>
+    <button class="options-row" onclick="document.getElementById('options-sheet').remove();document.querySelector('[style*=\\'inset:0\\']')?.remove();addSetDuringWorkout();">
+      <span>＋ Add Set</span><span class="options-chev">›</span>
+    </button>
+    <div style="height:1px;background:var(--border);margin:8px 0;"></div>
     <button class="options-row" onclick="document.getElementById('options-sheet').remove();document.getElementById('notes-backdrop')?.remove();showNotesSheet();">
       <span>📝 Notes</span><span class="options-chev">›</span>
     </button>
@@ -6905,7 +7144,14 @@ function togglePrepNote() {
 }
 
 function toggleWorkoutNotes() {
-  showNotesSheet();
+  workoutNotesExpanded = !workoutNotesExpanded;
+  renderExercise();
+  if (workoutNotesExpanded) {
+    setTimeout(() => {
+      const ta = document.querySelector('.exercise-note-edit');
+      if (ta) ta.focus();
+    }, 50);
+  }
 }
 
 function showNotesSheet() {
@@ -7139,7 +7385,77 @@ function adjustReps(delta) {
   ex.currentReps = Math.max(1, ex.currentReps + delta);
   saveWorkoutState();
   const repCountEl = document.querySelector('.rep-count');
-  if (repCountEl) repCountEl.textContent = ex.currentReps;
+  if (repCountEl) { repCountEl.textContent = ex.currentReps; pulseBump(repCountEl); }
+}
+
+function checkInstantPR(exerciseName, weight) {
+  if (!weight || weight <= 0 || !data.sessions || data.sessions.length === 0) return null;
+  if (workout && workout.isDeload) return null;
+
+  // Find previous max for this exercise across all past sessions
+  let previousMax = 0;
+  for (const session of data.sessions) {
+    const pastEx = session.exercises?.find(e => e.name === exerciseName);
+    if (!pastEx) continue;
+    for (const set of (pastEx.sets || [])) {
+      const ns = normalizeSet(set);
+      if (!ns.skipped && ns.weight != null && ns.weight > previousMax) previousMax = ns.weight;
+    }
+  }
+
+  // PR: heavier than any previous session (and there IS history)
+  if (previousMax > 0 && weight > previousMax) {
+    return { previous: previousMax, delta: weight - previousMax };
+  }
+  return null;
+}
+
+function showInstantPR(exerciseName, weight, prInfo) {
+  // Haptic: strong celebratory vibration pattern
+  if (navigator.vibrate) navigator.vibrate([50, 30, 80, 30, 120]);
+
+  // Screen pulse on workout screen
+  const ws = document.getElementById('workout-screen');
+  if (ws) { ws.classList.remove('pr-screen-flash'); void ws.offsetWidth; ws.classList.add('pr-screen-flash'); }
+
+  // Build toast overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'pr-toast-overlay';
+
+  // Particles
+  let particles = '';
+  for (let i = 0; i < 24; i++) {
+    const angle = (Math.PI * 2 * i) / 24;
+    const dist = 60 + Math.random() * 80;
+    const px = Math.cos(angle) * dist;
+    const py = Math.sin(angle) * dist;
+    const delay = Math.random() * 0.3;
+    const hue = Math.random() > 0.5 ? '' : 'filter: hue-rotate(30deg);';
+    particles += `<div class="pr-toast-particle" style="left:50%;top:50%;--px:${px.toFixed(0)}px;--py:${py.toFixed(0)}px;animation-delay:${delay.toFixed(2)}s;${hue}"></div>`;
+  }
+
+  const unit = weightLabel();
+  const deltaStr = `+${displayWeight(prInfo.delta)}${unit}`;
+  const prevStr = `Previous best: ${displayWeight(prInfo.previous)}${unit}`;
+
+  overlay.innerHTML = `
+    <div class="pr-toast-card" style="position:relative;overflow:hidden;">
+      <div class="pr-toast-particles">${particles}</div>
+      <div class="pr-toast-emoji">🏆</div>
+      <div class="pr-toast-title">New PR!</div>
+      <div class="pr-toast-exercise">${escapeHtml(exerciseName)}</div>
+      <div class="pr-toast-weight">${displayWeight(weight)}${unit}</div>
+      <div class="pr-toast-delta">${deltaStr}</div>
+      <div class="pr-toast-detail">${prevStr}</div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Auto-dismiss
+  setTimeout(() => {
+    if (overlay.parentNode) overlay.remove();
+  }, 3000);
 }
 
 function completeSet(btnEl) {
@@ -7183,6 +7499,12 @@ function completeSet(btnEl) {
     ex.currentReps = ex.targetReps;
   } else {
     ex.completedSets.push({ reps: ex.currentReps, weight: ex.currentWeight, skipped: false });
+  }
+
+  // ── INSTANT PR CHECK ──
+  if (!ex.isBodyweight) {
+    const prInfo = checkInstantPR(ex.name, ex.currentWeight);
+    if (prInfo) showInstantPR(ex.name, ex.currentWeight, prInfo);
   }
 
   // ── CIRCUIT / SUPERSET: chain directly to next exercise (no rest) ──
