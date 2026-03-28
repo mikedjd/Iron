@@ -12310,13 +12310,10 @@ async function handleAuthStateChange(event, session) {
       load(userId);
     }
 
-    try {
-      await cloudPull();
-    } finally {
-      clearPendingAuthSeed();
-      document.getElementById('auth-screen').style.display = 'none';
-      renderCurrentTab();
-    }
+    clearPendingAuthSeed();
+    document.getElementById('auth-screen').style.display = 'none';
+    renderCurrentTab();
+    cloudPull();
   } else {
     currentUser = null;
     syncInFlight = false;
@@ -12844,8 +12841,8 @@ sb.auth.onAuthStateChange(handleAuthStateChange);
     currentUser = session.user;
     load(session.user.id);
     renderCurrentTab();
-    await cloudPull();
     document.getElementById('auth-screen').style.display = 'none';
+    cloudPull();
   } else {
     currentUser = null;
     load();
